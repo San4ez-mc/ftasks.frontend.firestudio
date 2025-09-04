@@ -3,16 +3,15 @@
 import type { Task, TaskStatus, TaskType } from "@/types/task";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Clock, Edit, MoreVertical, Plus } from "lucide-react";
+import { CalendarIcon, Clock, Edit, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { TableRow, TableCell } from "@/components/ui/table";
@@ -38,7 +37,7 @@ const typeLabels: Record<TaskType, string> = {
 };
 
 function formatTime(minutes: number): string {
-    if (!minutes) return '-';
+    if (!minutes && minutes !== 0) return '-';
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     const hStr = h > 0 ? `${h}h` : '';
@@ -48,6 +47,13 @@ function formatTime(minutes: number): string {
 
 export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+    const [title, setTitle] = useState(task.title);
+    const [actualTime, setActualTime] = useState(task.actualTime);
+    
+    useEffect(() => {
+        setTitle(task.title);
+        setActualTime(task.actualTime);
+    }, [task]);
 
     const handleCheckedChange = (checked: boolean | 'indeterminate') => {
         if (checked && task.status !== 'done') {
@@ -61,13 +67,13 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
         event.preventDefault();
         const formData = new FormData(event.currentTarget);
         const actualResult = formData.get('actualResult') as string;
-        const actualTime = formData.get('actualTime') as string;
+        const actualTimeValue = formData.get('actualTime') as string;
         
         onUpdate({
             ...task,
             status: 'done',
             actualResult,
-            actualTime: parseInt(actualTime, 10)
+            actualTime: parseInt(actualTimeValue, 10)
         });
         setIsCompleteDialogOpen(false);
     };
@@ -75,6 +81,21 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
     const handleDateChange = (date: Date | undefined) => {
         if (date) {
             onUpdate({ ...task, dueDate: date.toISOString().split('T')[0] });
+        }
+    };
+
+    const handleTitleBlur = () => {
+        if (title.trim() && title !== task.title) {
+            onUpdate({ ...task, title });
+        } else {
+            setTitle(task.title);
+        }
+    };
+
+    const handleActualTimeBlur = () => {
+        const newTime = actualTime === undefined ? undefined : Number(actualTime);
+        if (newTime !== task.actualTime) {
+            onUpdate({ ...task, actualTime: newTime });
         }
     };
 
@@ -89,13 +110,18 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
                     className="mt-1"
                 />
             </TableCell>
-             <TableCell className="font-medium cursor-pointer" onClick={onSelect}>
-                {task.resultName && <p className="text-xs text-muted-foreground">{task.resultName}</p>}
-                <p className={cn(
-                    task.status === 'done' && "line-through text-muted-foreground"
-                )}>
-                    {task.title}
-                </p>
+             <TableCell className="font-medium">
+                {task.resultName && <p className="text-xs text-muted-foreground cursor-pointer" onClick={onSelect}>{task.resultName}</p>}
+                 <Input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    onBlur={handleTitleBlur}
+                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                    className={cn(
+                        "h-auto p-0 border-none focus-visible:ring-0 shadow-none bg-transparent",
+                        task.status === 'done' && "line-through text-muted-foreground"
+                    )}
+                />
             </TableCell>
             <TableCell className="hidden md:table-cell">
                 <TooltipProvider>
@@ -110,7 +136,16 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
                 </TooltipProvider>
             </TableCell>
             <TableCell className="hidden sm:table-cell text-xs">{formatTime(task.expectedTime)}</TableCell>
-            <TableCell className="hidden sm:table-cell text-xs">{formatTime(task.actualTime ?? 0)}</TableCell>
+            <TableCell className="hidden sm:table-cell text-xs">
+                <Input
+                    type="number"
+                    value={actualTime ?? ''}
+                    onChange={(e) => setActualTime(e.target.value ? Number(e.target.value) : undefined)}
+                    onBlur={handleActualTimeBlur}
+                    placeholder="-"
+                    className="h-7 w-20 text-xs border-none focus-visible:ring-1 bg-transparent"
+                />
+            </TableCell>
              <TableCell className="text-right">
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end">
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onSelect} title="Редагувати"><Edit className="h-3 w-3"/></Button>

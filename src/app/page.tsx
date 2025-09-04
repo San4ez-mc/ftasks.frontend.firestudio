@@ -146,7 +146,7 @@ export default function TasksPage() {
             onDateChange={handleDateChange}
           />
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-            <div className="border rounded-md">
+            <div className="border-y">
                 <Table>
                     <TableHeader>
                         <TableRow>

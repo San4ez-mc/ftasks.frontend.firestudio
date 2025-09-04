@@ -3,7 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDate } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 type TasksHeaderProps = {
     currentDate: Date;
@@ -17,15 +19,34 @@ export default function TasksHeader({ currentDate, onDateChange }: TasksHeaderPr
         onDateChange(newDate);
     };
 
+    const handleDateSelect = (date: Date | undefined) => {
+        if (date) {
+            onDateChange(date);
+        }
+    }
+
     return (
         <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={() => changeDate(-1)}>
                     <ChevronLeft />
                 </Button>
-                <h2 className="text-xl font-semibold text-center whitespace-nowrap">
-                    Мої задачі на {formatDate(currentDate)}
-                </h2>
+                <Popover>
+                    <PopoverTrigger asChild>
+                         <Button variant="ghost" className="text-xl font-semibold text-center whitespace-nowrap">
+                            <CalendarIcon className="mr-2 h-5 w-5" />
+                            Мої задачі на {formatDate(currentDate)}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                            mode="single"
+                            selected={currentDate}
+                            onSelect={handleDateSelect}
+                            initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
                 <Button variant="ghost" size="icon" onClick={() => changeDate(1)}>
                     <ChevronRight />
                 </Button>
