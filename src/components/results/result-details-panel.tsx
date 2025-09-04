@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { cn, formatDate } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -27,18 +28,17 @@ type ResultDetailsPanelProps = {
   result: Result;
   onUpdate: (result: Result) => void;
   onClose: () => void;
-  isCreating?: boolean;
 };
 
 const mockUsers = [
-  { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-  { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-  { name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-  { name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+  { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
+  { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+  { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+  { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
 ];
 
 
-export default function ResultDetailsPanel({ result, onUpdate, isCreating = false, onClose }: ResultDetailsPanelProps) {
+export default function ResultDetailsPanel({ result, onUpdate, onClose }: ResultDetailsPanelProps) {
     const [name, setName] = useState(result.name);
     const [description, setDescription] = useState(result.description);
     const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
@@ -51,17 +51,17 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
     }, [result])
     
     useEffect(() => {
-        if (isCreating && nameInputRef.current) {
+        if (result.id.startsWith('new-') && nameInputRef.current) {
             nameInputRef.current.focus();
         }
-    }, [isCreating]);
+    }, [result.id]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setName(e.target.value);
     }
     
     const handleNameBlur = () => {
-        if(name !== result.name){
+        if(name !== result.name && (!result.id.startsWith('new-') || name.trim() !== '')){
             onUpdate({...result, name: name});
         }
     }
@@ -88,6 +88,11 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
         );
         onUpdate({ ...result, subResults: updatedSubResults });
     };
+
+    const handleSubResultDelete = (id: string) => {
+        const updatedSubResults = subResults.filter(sr => sr.id !== id);
+        onUpdate({ ...result, subResults: updatedSubResults });
+    };
      
     const handleSubResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, id: string) => {
         if (e.key === 'Enter') {
@@ -107,7 +112,6 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                     onChange={handleNameChange}
                     onBlur={handleNameBlur}
                     onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                    autoFocus={isCreating}
                     placeholder="Назва результату"
                     className={cn(
                         "text-lg font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto", 
@@ -132,7 +136,12 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                 <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
                         <p className="text-muted-foreground mb-1">Відповідальний</p>
-                         <Select defaultValue={result.assignee.name}>
+                         <Select 
+                            value={result.assignee.id} 
+                            onValueChange={(userId) => {
+                                const user = mockUsers.find(u => u.id === userId);
+                                if (user) onUpdate({...result, assignee: user})
+                            }}>
                             <SelectTrigger className="h-8 text-xs">
                                 <div className="flex items-center gap-2">
                                     <Avatar className="h-6 w-6"><AvatarImage src={result.assignee.avatar} /></Avatar>
@@ -141,7 +150,7 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                             </SelectTrigger>
                             <SelectContent>
                                 {mockUsers.map(user => (
-                                    <SelectItem key={user.name} value={user.name}>
+                                    <SelectItem key={user.id} value={user.id}>
                                          <div className="flex items-center gap-2">
                                             <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
                                             <span>{user.name}</span>
@@ -179,7 +188,7 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                     </div>
                      <div>
                         <p className="text-muted-foreground mb-1">Статус</p>
-                         <Select defaultValue={result.status} onValueChange={(status) => onUpdate({...result, status})}>
+                         <Select value={result.status} onValueChange={(status) => onUpdate({...result, status})}>
                             <SelectTrigger className="h-8 text-xs">
                                  <SelectValue />
                             </SelectTrigger>
@@ -189,6 +198,10 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                                  <SelectItem value="Виконано">Виконано</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Switch id="urgent-mode" checked={result.isUrgent} onCheckedChange={(checked) => onUpdate({...result, isUrgent: checked})}/>
+                        <Label htmlFor="urgent-mode" className="text-xs">Терміновий</Label>
                     </div>
                 </div>
                 <div>
@@ -210,7 +223,7 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                     <h3 className="font-semibold text-xs mb-2">Підрезультати</h3>
                     <div className="space-y-1">
                         {subResults.map((sr, index) => (
-                            <div key={sr.id} className="flex items-center gap-2">
+                            <div key={sr.id} className="flex items-center gap-2 group/sub-result">
                                 <Checkbox 
                                     checked={sr.completed} 
                                     onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
@@ -223,6 +236,9 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                                     className="h-7 text-xs border-none focus-visible:ring-1"
                                     autoFocus={!sr.name && index === subResults.length - 1}
                                 />
+                                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleSubResultDelete(sr.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
                             </div>
                         ))}
                         <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-7" onClick={handleAddSubResult}>
@@ -287,5 +303,3 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
         </div>
     );
 }
-
-    

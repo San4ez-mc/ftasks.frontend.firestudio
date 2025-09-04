@@ -1,5 +1,6 @@
 
 type User = {
+    id: string;
     name: string;
     avatar?: string;
 };
@@ -26,6 +27,7 @@ export interface Result {
   name: string;
   status: string;
   completed: boolean;
+  isUrgent?: boolean;
   deadline: string;
   assignee: User;
   reporter: User;
