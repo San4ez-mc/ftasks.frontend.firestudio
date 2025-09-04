@@ -116,11 +116,16 @@ const tasksTourSteps: TourStep[] = [
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(initialTasks[0]);
   const [activeTab, setActiveTab] = useState('mine');
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   const taskTitleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Set the date only on the client side to avoid hydration mismatch
+    setCurrentDate(new Date());
+  }, []);
 
   useEffect(() => {
     if (selectedTask && taskTitleInputRef.current) {
@@ -147,7 +152,7 @@ export default function TasksPage() {
     const newTask: Task = {
       id: `task-${Date.now()}`,
       title: title,
-      dueDate: currentDate.toISOString().split('T')[0],
+      dueDate: (currentDate || new Date()).toISOString().split('T')[0],
       status: 'todo',
       type: 'important-not-urgent', // Default type
       expectedTime: 30, // Default time
@@ -190,6 +195,8 @@ export default function TasksPage() {
   };
 
   const { totalExpectedTime, totalActualTime, filteredTasks } = useMemo(() => {
+    if (!currentDate) return { totalExpectedTime: 0, totalActualTime: 0, filteredTasks: [] };
+    
     const selectedDateString = currentDate.toISOString().split('T')[0];
     let dateFilteredTasks = tasks.filter(task => task.dueDate === selectedDateString);
     
@@ -233,6 +240,10 @@ export default function TasksPage() {
     }, {} as Record<string, { id?: string, name: string; avatar?: string; results: Task[] }>);
 
   }, [filteredTasks, activeTab]);
+  
+  if (!currentDate) {
+    return null; // or a loading skeleton
+  }
 
   return (
     <div className="flex h-screen">
