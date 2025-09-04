@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import ResultDetailsPanel from '@/components/results/result-details-panel';
-import type { Result } from '@/types/result';
+import type { Result, SubResult } from '@/types/result';
 import { cn, formatDate } from '@/lib/utils';
 
 
@@ -60,7 +60,7 @@ export default function ResultsPage() {
   const newResultInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isCreating && newResultInputRef.current) {
+    if (isCreating && selectedResult && newResultInputRef.current) {
         newResultInputRef.current.focus();
     }
   }, [isCreating, selectedResult]);
@@ -75,26 +75,29 @@ export default function ResultsPage() {
   };
 
   const handleSelectResult = (result: Result | null) => {
-    finalizeNewResult(true); // Finalize any existing new result before selecting another
+    if (isCreating) {
+      finalizeNewResult();
+    }
     setSelectedResult(result);
     setIsCreating(false);
   }
 
-  const finalizeNewResult = (forceClose: boolean = false) => {
+  const finalizeNewResult = () => {
     if (!isCreating || !selectedResult) {
-      setIsCreating(false);
       return;
     };
 
     if (selectedResult.name.trim() === '') {
       setResults(prev => prev.filter(r => r.id !== selectedResult.id));
-      if(!forceClose) setSelectedResult(null);
+      setSelectedResult(null);
     }
     setIsCreating(false);
   }
   
   const createNewResult = (name = '', index?: number) => {
-    finalizeNewResult(true);
+    if (isCreating) {
+      finalizeNewResult();
+    }
     
     const newResult: Result = {
       id: `new-${Date.now()}`,
@@ -120,16 +123,11 @@ export default function ResultsPage() {
     setSelectedResult(newResult);
     setIsCreating(true);
   }
-  
-  const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if(e.key === 'Enter'){
-      finalizeNewResult();
-      e.currentTarget.blur();
-    }
-  }
-  
+    
   const handleClosePanel = () => {
-    finalizeNewResult(true);
+    if (isCreating) {
+      finalizeNewResult();
+    }
     setSelectedResult(null);
   }
 
@@ -172,6 +170,7 @@ export default function ResultsPage() {
               isCreating={isCreating}
               selectedResult={selectedResult}
               newResultInputRef={newResultInputRef}
+              onFinalizeNewResult={finalizeNewResult}
             />
           ) : (
             <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={(r) => handleSelectResult(r)} onResultUpdate={handleResultUpdate} />
@@ -201,6 +200,7 @@ type ResultsTableProps = {
   isCreating: boolean;
   selectedResult: Result | null;
   newResultInputRef: React.RefObject<HTMLInputElement>;
+  onFinalizeNewResult: () => void;
 };
 
 
@@ -211,7 +211,8 @@ function ResultsTable({
   createNewResult,
   isCreating,
   selectedResult,
-  newResultInputRef
+  newResultInputRef,
+  onFinalizeNewResult,
 }: ResultsTableProps) {
   
   const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,17 +224,17 @@ function ResultsTable({
 
   const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if(e.key === 'Enter'){
+      onFinalizeNewResult();
       (e.target as HTMLInputElement).blur();
     }
   }
   
-  const handleBlur = () => {
-     if (isCreating && selectedResult && selectedResult.name.trim() === '') {
-        onResultUpdate({...selectedResult, id: 'delete-me' }); // a bit of a hack to trigger deletion
-        onResultSelect(null);
-     }
-     // Finalize is now handled by selecting another element or closing
-  }
+  const handleSubResultChange = (result: Result, subResultId: string, field: 'name' | 'completed', value: string | boolean) => {
+    const updatedSubResults = result.subResults.map(sr => 
+        sr.id === subResultId ? { ...sr, [field]: value } : sr
+    );
+    onResultUpdate({ ...result, subResults: updatedSubResults });
+  };
 
   const renderRow = (result: Result, index: number) => {
     if (isCreating && selectedResult?.id === result.id) {
@@ -250,7 +251,7 @@ function ResultsTable({
                 value={result.name}
                 onChange={handleNewResultNameChange}
                 onKeyDown={handleNewResultKeyDown}
-                onBlur={handleBlur}
+                onBlur={onFinalizeNewResult}
                 className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
               />
             </div>
@@ -260,58 +261,85 @@ function ResultsTable({
     }
 
     return (
-      <div key={result.id} className="relative group">
-        <button
-          onClick={() => createNewResult('', index)}
-          className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-        <div className={cn(
-            "grid grid-cols-12 p-2 border-t items-center",
-            selectedResult?.id === result.id && "bg-accent"
-            )}>
-          <div className="col-span-1 flex justify-center">
-            <Checkbox
-              checked={result.completed}
-              onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
-            />
-          </div>
-          <div className="col-span-4 font-medium flex items-center gap-2">
-            <span
-              onClick={() => onResultSelect(result)}
-              className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}
+      <div key={result.id} className="group/parent">
+        <div className="relative group/row">
+            <button
+            onClick={() => createNewResult('', index)}
+            className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity hidden sm:flex"
             >
-              {result.name || <span className="text-muted-foreground">Без назви</span>}
-            </span>
-          </div>
-          <div onClick={() => onResultSelect(result)} className="col-span-2 text-xs text-muted-foreground cursor-pointer">
-            {formatDate(result.deadline)}
-          </div>
-          <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
-              <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
-          </div>
-          <div className="col-span-2 flex justify-between items-center">
-            <Badge variant={result.completed ? 'secondary' : 'outline'} className="cursor-pointer" onClick={() => onResultSelect(result)}>
-              {result.completed ? 'Виконано' : result.status}
-            </Badge>
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <FilePlus className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Trash2 className="h-3 w-3" />
-              </Button>
+                <Plus className="h-4 w-4" />
+            </button>
+            <div className={cn(
+                "grid grid-cols-12 p-2 border-t items-center",
+                selectedResult?.id === result.id && "bg-accent"
+                )}>
+            <div className="col-span-1 flex justify-center">
+                <Checkbox
+                checked={result.completed}
+                onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+                />
             </div>
-          </div>
+            <div className="col-span-4 font-medium flex items-center gap-2">
+                <span
+                onClick={() => onResultSelect(result)}
+                className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}
+                >
+                {result.name || <span className="text-muted-foreground">Без назви</span>}
+                </span>
+            </div>
+            <div onClick={() => onResultSelect(result)} className="col-span-2 text-xs text-muted-foreground cursor-pointer">
+                {formatDate(result.deadline)}
+            </div>
+            <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
+                <Avatar className="h-6 w-6">
+                <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
+                <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
+            </div>
+            <div className="col-span-2 flex justify-between items-center">
+                <Badge variant={result.completed ? 'secondary' : 'outline'} className="cursor-pointer" onClick={() => onResultSelect(result)}>
+                {result.completed ? 'Виконано' : result.status}
+                </Badge>
+                <div className="opacity-0 group-hover/row:opacity-100 transition-opacity flex items-center">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Edit className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <FilePlus className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <Trash2 className="h-3 w-3" />
+                </Button>
+                </div>
+            </div>
+            </div>
         </div>
+        {result.subResults.length > 0 && (
+            <div className="pl-8 border-t">
+                 {result.subResults.map((sr) => (
+                    <div key={sr.id} className="grid grid-cols-12 p-2 items-center text-xs">
+                        <div className="col-span-1 flex justify-center">
+                            <Checkbox 
+                                checked={sr.completed}
+                                onCheckedChange={(checked) => handleSubResultChange(result, sr.id, 'completed', !!checked)}
+                            />
+                        </div>
+                        <div className="col-span-11 -ml-2">
+                             <Input 
+                                value={sr.name}
+                                onChange={(e) => handleSubResultChange(result, sr.id, 'name', e.target.value)}
+                                placeholder="Підрезультат..."
+                                className={cn(
+                                    "h-auto p-0 border-none focus-visible:ring-0 shadow-none text-xs bg-transparent",
+                                    sr.completed && "line-through text-muted-foreground"
+                                )}
+                            />
+                        </div>
+                    </div>
+                 ))}
+            </div>
+        )}
       </div>
     );
   };
@@ -323,7 +351,9 @@ function ResultsTable({
                 <div className="col-span-3">Відповідальний</div>
                 <div className="col-span-2">Статус</div>
             </div>
-            {results.map(renderRow)}
+            <div>
+              {results.map(renderRow)}
+            </div>
              <div className="p-2 border-t">
                   <button onClick={() => createNewResult('', results.length -1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
                       <Plus className="h-3 w-3" /> Створити результат
@@ -367,5 +397,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
 
     
