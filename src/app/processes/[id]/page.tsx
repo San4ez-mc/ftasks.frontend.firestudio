@@ -375,7 +375,7 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart, onUpdate }: {
             draggable
             onDragStart={onDragStart}
         >
-            <div className="absolute top-2 left-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute z-10 top-1/2 -translate-y-1/2 -left-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-card/50 rounded-full">
                 <GripVertical className="h-4 w-4" />
             </div>
             <div className="absolute top-2 right-2 flex items-center gap-1">
