@@ -2,6 +2,7 @@
 'use client';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDate } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type TasksHeaderProps = {
@@ -23,7 +24,7 @@ export default function TasksHeader({ currentDate, onDateChange }: TasksHeaderPr
                     <ChevronLeft />
                 </Button>
                 <h2 className="text-xl font-semibold text-center whitespace-nowrap">
-                    Мої задачі на {currentDate.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' })}
+                    Мої задачі на {formatDate(currentDate)}
                 </h2>
                 <Button variant="ghost" size="icon" onClick={() => changeDate(1)}>
                     <ChevronRight />

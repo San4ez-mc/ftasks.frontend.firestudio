@@ -24,6 +24,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDate } from '@/lib/utils';
 
 const initialResults = [
   { id: '1', name: 'Конверсія з сайту', value: '12%', date: '2024-08-01' },
@@ -108,7 +109,7 @@ export default function AimsPage() {
                       <TableRow key={result.id}>
                       <TableCell className="font-medium">{result.name}</TableCell>
                       <TableCell>{result.value}</TableCell>
-                      <TableCell>{result.date}</TableCell>
+                      <TableCell>{formatDate(result.date)}</TableCell>
                       </TableRow>
                   ))}
                   </TableBody>

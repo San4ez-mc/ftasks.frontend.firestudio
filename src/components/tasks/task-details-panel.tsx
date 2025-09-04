@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { formatDate } from '@/lib/utils';
 
 type TaskDetailsPanelProps = {
   task: Task;
@@ -139,7 +140,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             </div>
             <div>
                 <Label className="text-muted-foreground mb-2 block">Дата виконання</Label>
-                <p>{new Date(task.dueDate).toLocaleDateString('uk-UA')}</p>
+                <p>{formatDate(task.dueDate)}</p>
             </div>
              <div>
                 <Label className="text-muted-foreground mb-2 block">Тип задачі</Label>

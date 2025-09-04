@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatDate } from '@/lib/utils';
 
 const initialTemplates = [
   { 
@@ -124,12 +125,12 @@ export default function TemplatesPage() {
                             </div>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 bg-muted/50 rounded-md">
-                            <p className="text-sm text-muted-foreground mb-2">Дата початку: {template.startDate}</p>
+                            <p className="text-sm text-muted-foreground mb-2">Дата початку: {formatDate(template.startDate)}</p>
                              <h4 className="font-semibold mb-2">Згенеровані задачі:</h4>
                              <div className="space-y-1">
                                 {template.tasksGenerated.map(task => (
                                     <div key={task.id} className="flex justify-between items-center text-sm p-1">
-                                        <span>Задача від {task.date}</span>
+                                        <span>Задача від {formatDate(task.date)}</span>
                                         <Badge variant={task.status === 'done' ? 'secondary' : 'default'}>
                                             {task.status === 'done' ? 'Виконано' : 'В роботі'}
                                         </Badge>

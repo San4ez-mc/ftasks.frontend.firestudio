@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LayoutGrid, List, Plus, FilePlus, Clock, MoreVertical, Paperclip, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,12 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { cn, formatDate } from '@/lib/utils';
 
 const initialResults = [
   {
     id: 'res-1',
     name: 'Запустити рекламну кампанію в Google Ads',
     status: 'В роботі',
+    completed: false,
     deadline: '2024-09-01',
     assignee: { name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
     reporter: { name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
@@ -35,6 +37,7 @@ const initialResults = [
     id: 'res-2',
     name: 'Розробити новий модуль аналітики',
     status: 'Заплановано',
+    completed: true,
     deadline: '2024-10-15',
     assignee: { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
     reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
@@ -49,6 +52,14 @@ type Result = (typeof initialResults)[0];
 export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
+  const [results, setResults] = useState(initialResults);
+
+  const handleResultUpdate = (updatedResult: Result) => {
+    setResults(results.map(r => r.id === updatedResult.id ? updatedResult : r));
+    if (selectedResult && selectedResult.id === updatedResult.id) {
+      setSelectedResult(updatedResult);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -77,9 +88,9 @@ export default function ResultsPage() {
       
       <main className="flex-1 overflow-y-auto px-4 md:px-6">
         {viewMode === 'table' ? (
-          <ResultsTable results={initialResults} onResultSelect={setSelectedResult} />
+          <ResultsTable results={results} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
         ) : (
-          <ResultsCards results={initialResults} onResultSelect={setSelectedResult} />
+          <ResultsCards results={results} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
         )}
       </main>
 
@@ -97,28 +108,36 @@ export default function ResultsPage() {
   );
 }
 
-function ResultsTable({ results, onResultSelect }: { results: Result[], onResultSelect: (result: Result) => void }) {
+function ResultsTable({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result) => void, onResultUpdate: (result: Result) => void }) {
     return (
         <div className="border rounded-lg">
              <div className="grid grid-cols-12 p-2 bg-muted text-muted-foreground font-medium text-sm">
-                <div className="col-span-6">Назва</div>
+                <div className="col-span-5">Назва</div>
                 <div className="col-span-2">Дедлайн</div>
-                <div className="col-span-2">Відповідальний</div>
+                <div className="col-span-3">Відповідальний</div>
                 <div className="col-span-2">Статус</div>
             </div>
             {results.map(result => (
-                <div key={result.id} onClick={() => onResultSelect(result)} className="grid grid-cols-12 p-2 border-t cursor-pointer hover:bg-accent">
-                    <div className="col-span-6 font-medium">{result.name}</div>
-                    <div className="col-span-2 text-sm text-muted-foreground">{result.deadline}</div>
-                    <div className="col-span-2 flex items-center gap-2">
+                <div key={result.id} className="grid grid-cols-12 p-2 border-t items-center">
+                    <div className="col-span-5 font-medium flex items-center gap-2">
+                        <Checkbox
+                            checked={result.completed}
+                            onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+                        />
+                         <span onClick={() => onResultSelect(result)} className={cn("cursor-pointer", result.completed && "line-through text-muted-foreground")}>
+                            {result.name}
+                         </span>
+                    </div>
+                    <div onClick={() => onResultSelect(result)} className="col-span-2 text-sm text-muted-foreground cursor-pointer">{formatDate(result.deadline)}</div>
+                    <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
                         <Avatar className="h-6 w-6">
                             <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
                             <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm hidden lg:inline">{result.assignee.name}</span>
                     </div>
-                    <div className="col-span-2">
-                        <Badge variant="outline">{result.status}</Badge>
+                    <div onClick={() => onResultSelect(result)} className="col-span-2 cursor-pointer">
+                        <Badge variant={result.completed ? 'secondary' : 'outline'}>{result.completed ? 'Виконано' : result.status}</Badge>
                     </div>
                 </div>
             ))}
@@ -126,16 +145,24 @@ function ResultsTable({ results, onResultSelect }: { results: Result[], onResult
     )
 }
 
-function ResultsCards({ results, onResultSelect }: { results: Result[], onResultSelect: (result: Result) => void }) {
+function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result) => void, onResultUpdate: (result: Result) => void }) {
     return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {results.map(result => (
-                <Card key={result.id} onClick={() => onResultSelect(result)} className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card key={result.id} className={cn("hover:shadow-lg transition-shadow", result.completed && "bg-muted/50")}>
                     <CardHeader>
-                        <CardTitle>{result.name}</CardTitle>
-                        <CardDescription>Дедлайн: {result.deadline}</CardDescription>
+                         <CardTitle className="flex items-start gap-2">
+                           <Checkbox
+                                id={`card-check-${result.id}`}
+                                className="mt-1"
+                                checked={result.completed}
+                                onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+                            />
+                            <label htmlFor={`card-check-${result.id}`} className={cn(result.completed && "line-through text-muted-foreground")}>{result.name}</label>
+                         </CardTitle>
+                        <CardDescription onClick={() => onResultSelect(result)} className="cursor-pointer">Дедлайн: {formatDate(result.deadline)}</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent onClick={() => onResultSelect(result)} className="cursor-pointer">
                         <div className="flex items-center justify-between">
                              <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
@@ -144,7 +171,7 @@ function ResultsCards({ results, onResultSelect }: { results: Result[], onResult
                                 </Avatar>
                                 <span>{result.assignee.name}</span>
                             </div>
-                            <Badge>{result.status}</Badge>
+                            <Badge variant={result.completed ? 'secondary' : 'default'}>{result.completed ? 'Виконано' : result.status}</Badge>
                         </div>
                     </CardContent>
                 </Card>
@@ -153,13 +180,14 @@ function ResultsCards({ results, onResultSelect }: { results: Result[], onResult
     )
 }
 
+
 function ResultDetailsPanel({ result }: { result: Result }) {
     return (
         <div className="flex flex-col h-full">
             <header className="p-4 border-b">
                 <div className="flex items-start gap-3">
-                    <Checkbox id={`res-check-${result.id}`} className="mt-1" />
-                    <h2 className="text-xl font-semibold flex-1">{result.name}</h2>
+                    <Checkbox id={`res-check-${result.id}`} className="mt-1" checked={result.completed} />
+                    <h2 className={cn("text-xl font-semibold flex-1", result.completed && "line-through text-muted-foreground")}>{result.name}</h2>
                     <Button variant="ghost" size="icon"><FilePlus className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon"><Plus className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon"><Clock className="h-4 w-4" /></Button>
@@ -185,11 +213,11 @@ function ResultDetailsPanel({ result }: { result: Result }) {
                     </div>
                     <div>
                         <p className="text-muted-foreground mb-1">Дедлайн</p>
-                        <p>{result.deadline}</p>
+                        <p>{formatDate(result.deadline)}</p>
                     </div>
                      <div>
                         <p className="text-muted-foreground mb-1">Статус</p>
-                        <Badge>{result.status}</Badge>
+                        <Badge variant={result.completed ? 'secondary' : 'default'}>{result.completed ? 'Виконано' : result.status}</Badge>
                     </div>
                 </div>
                 <div>
@@ -206,7 +234,7 @@ function ResultDetailsPanel({ result }: { result: Result }) {
                         {result.subResults.map(sub => (
                              <div key={sub.id} className="flex items-center gap-2 p-1 rounded hover:bg-accent">
                                 <Checkbox id={`sub-${sub.id}`} checked={sub.completed}/>
-                                <label htmlFor={`sub-${sub.id}`} className="flex-1 text-sm">{sub.name}</label>
+                                <label htmlFor={`sub-${sub.id}`} className={cn("flex-1 text-sm", sub.completed && "line-through text-muted-foreground")}>{sub.name}</label>
                             </div>
                         ))}
                         <Input placeholder="+ Додати підрезультат" className="border-dashed"/>
@@ -255,6 +283,3 @@ function ResultDetailsPanel({ result }: { result: Result }) {
         </div>
     );
 }
-
-
-    
