@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -56,9 +56,15 @@ export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [results, setResults] = useState(initialResults);
-  const [newResultName, setNewResultName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [creatingAtIndex, setCreatingAtIndex] = useState<number | null>(null);
+  const newResultInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isCreating && creatingAtIndex !== null && newResultInputRef.current) {
+        newResultInputRef.current.focus();
+    }
+  }, [isCreating, creatingAtIndex]);
 
   const handleResultUpdate = (updatedResult: Result) => {
     setResults(results.map(r => r.id === updatedResult.id ? updatedResult : r));
@@ -68,13 +74,28 @@ export default function ResultsPage() {
   };
 
   const handleSelectResult = (result: Result) => {
+    if (isCreating && selectedResult?.name.trim() === '') {
+        setResults(results.filter(r => r.id !== selectedResult.id));
+    }
     setIsCreating(false);
-    setNewResultName('');
+    setCreatingAtIndex(null);
     setSelectedResult(result);
   }
 
-  const createNewResult = (name = '', index: number | null = null): Result => {
-     const newResult: Result = {
+  const finalizeNewResult = () => {
+    if (isCreating && selectedResult) {
+       if (selectedResult.name.trim() === '') {
+        setResults(prev => prev.filter(r => r.id !== selectedResult.id));
+        setSelectedResult(null);
+      }
+    }
+    setIsCreating(false);
+    setCreatingAtIndex(null);
+  }
+  
+  const createNewResult = (name = '', index: number | null = null) => {
+    finalizeNewResult(); // Finalize any existing creation
+    const newResult: Result = {
       id: `new-${Date.now()}`,
       name: name,
       status: 'Заплановано',
@@ -87,17 +108,22 @@ export default function ResultsPage() {
       tasks: [],
       templates: []
     };
+    
+    let insertionIndex: number;
     if (index !== null) {
+      insertionIndex = index + 1;
       const newResults = [...results];
-      newResults.splice(index + 1, 0, newResult);
+      newResults.splice(insertionIndex, 0, newResult);
       setResults(newResults);
-      setCreatingAtIndex(index + 1);
     } else {
+      insertionIndex = 0;
       setResults(prev => [newResult, ...prev]);
-      setCreatingAtIndex(0);
     }
+
+    setCreatingAtIndex(insertionIndex);
     setSelectedResult(newResult);
     setIsCreating(true);
+    
     return newResult;
   }
 
@@ -106,49 +132,27 @@ export default function ResultsPage() {
   }
   
   const handleAddInBetween = (index: number) => {
-    // If a new item is already being created, finalize it first
-    if (isCreating && selectedResult) {
-      if (selectedResult.name.trim() === '') {
-        setResults(results.filter(r => r.id !== selectedResult.id));
-      }
-    }
     createNewResult('', index);
   };
 
 
   const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
-    setNewResultName(name);
     if(selectedResult && isCreating){
       const updatedResult = {...selectedResult, name};
       setSelectedResult(updatedResult);
-      setResults(results.map(r => r.id === updatedResult.id ? updatedResult : r));
+      setResults(prevResults => prevResults.map(r => r.id === updatedResult.id ? updatedResult : r));
     }
   }
 
   const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if(e.key === 'Enter' && selectedResult && isCreating){
-      if(newResultName.trim() === ''){
-        // remove the empty result
-        setResults(results.filter(r => r.id !== selectedResult.id));
-        setSelectedResult(null);
-      }
-      setIsCreating(false);
-      setNewResultName('');
-      setCreatingAtIndex(null);
+    if(e.key === 'Enter'){
+      finalizeNewResult();
     }
   }
   
   const handleBlur = () => {
-    if (isCreating && selectedResult) {
-      if (selectedResult.name.trim() === '') {
-        setResults(results.filter(r => r.id !== selectedResult.id));
-        setSelectedResult(null);
-      }
-      setIsCreating(false);
-      setNewResultName('');
-      setCreatingAtIndex(null);
-    }
+    finalizeNewResult();
   }
 
   return (
@@ -186,10 +190,11 @@ export default function ResultsPage() {
               onAddNewInBetween={handleAddInBetween}
               isCreating={isCreating}
               creatingAtIndex={creatingAtIndex}
-              newResultName={newResultName}
+              selectedResult={selectedResult}
               onNewResultNameChange={handleNewResultNameChange}
               onNewResultKeyDown={handleNewResultKeyDown}
               onBlur={handleBlur}
+              newResultInputRef={newResultInputRef}
             />
           ) : (
             <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={handleSelectResult} onResultUpdate={handleResultUpdate} />
@@ -219,10 +224,11 @@ type ResultsTableProps = {
   onAddNewInBetween: (index: number) => void;
   isCreating: boolean;
   creatingAtIndex: number | null;
-  newResultName: string;
+  selectedResult: Result | null;
   onNewResultNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onNewResultKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onBlur: () => void;
+  newResultInputRef: React.RefObject<HTMLInputElement>;
 };
 
 
@@ -233,10 +239,11 @@ function ResultsTable({
   onAddNewInBetween,
   isCreating,
   creatingAtIndex,
-  newResultName,
+  selectedResult,
   onNewResultNameChange,
   onNewResultKeyDown,
   onBlur,
+  newResultInputRef
 }: ResultsTableProps) {
     const renderRow = (result: Result, index: number) => {
     if (isCreating && creatingAtIndex === index) {
@@ -247,9 +254,9 @@ function ResultsTable({
           </div>
           <div className="col-span-11 -ml-2">
             <Input
-              autoFocus
+              ref={newResultInputRef}
               placeholder="Назва нового результату..."
-              value={newResultName}
+              value={selectedResult?.name || ''}
               onChange={onNewResultNameChange}
               onKeyDown={onNewResultKeyDown}
               onBlur={onBlur}
@@ -360,5 +367,3 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-    
