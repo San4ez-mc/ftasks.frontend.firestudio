@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,9 @@ import { Input } from '@/components/ui/input';
 import ResultDetailsPanel from '@/components/results/result-details-panel';
 import type { Result, SubResult } from '@/types/result';
 import { cn, formatDate } from '@/lib/utils';
-
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 const initialResults: Result[] = [
   {
@@ -101,16 +103,14 @@ const initialResults: Result[] = [
 
 // Assume current user for filtering
 const currentUserId = 'user-4';
-type SortKey = 'name' | 'deadline' | 'reporter' | 'status';
-type SortDirection = 'asc' | 'desc';
-
+const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
 export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [results, setResults] = useState(initialResults);
   const [activeTab, setActiveTab] = useState('mine');
-  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>(allStatuses);
   const newResultInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -206,56 +206,34 @@ export default function ResultsPage() {
     };
   }, []);
 
-  const handleSort = (key: SortKey) => {
-    let direction: SortDirection = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
   
-  const sortedResults = useMemo(() => {
-    let sortableItems = [...results];
-    if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        let aValue, bValue;
-        switch(sortConfig.key) {
-            case 'reporter':
-                aValue = a.reporter.name;
-                bValue = b.reporter.name;
-                break;
-            default:
-                aValue = a[sortConfig.key];
-                bValue = b[sortConfig.key];
-        }
-
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [results, sortConfig]);
-
-  const getFilteredResults = () => {
+  const filteredResults = useMemo(() => {
+    let filtered = results;
+    
+    // Primary tab filtering
     switch(activeTab) {
         case 'delegated':
-            return sortedResults.filter(r => r.reporter.id === currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => r.reporter.id === currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+            break;
         case 'subordinates':
-            return sortedResults.filter(r => r.reporter.id !== currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => r.reporter.id !== currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+            break;
         case 'postponed':
-            return sortedResults.filter(r => r.status === 'Відкладено');
+            filtered = filtered.filter(r => r.status === 'Відкладено');
+            break;
         case 'mine':
         default:
-            return sortedResults.filter(r => r.assignee.id === currentUserId && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => r.assignee.id === currentUserId && r.status !== 'Відкладено');
+            break;
     }
-  };
-  
-  const filteredResults = getFilteredResults();
+
+    // Status filter
+    if (activeTab !== 'postponed') {
+       filtered = filtered.filter(r => statusFilter.includes(r.status));
+    }
+    
+    return filtered;
+  }, [results, activeTab, statusFilter]);
 
   const groupedResults = activeTab === 'mine' 
     ? { [currentUserId]: {id: currentUserId, name: 'Мої результати', results: filteredResults } } 
@@ -295,13 +273,34 @@ export default function ResultsPage() {
                       <TabsTrigger value="postponed">Відкладені</TabsTrigger>
                   </TabsList>
               </Tabs>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Сортувати:</span>
-                <Button variant="ghost" size="sm" onClick={() => handleSort('name')}>Назва <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
-                <Button variant="ghost" size="sm" onClick={() => handleSort('deadline')}>Дата <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
-                <Button variant="ghost" size="sm" onClick={() => handleSort('reporter')}>Постановник <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
-                <Button variant="ghost" size="sm" onClick={() => handleSort('status')}>Статус <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm">
+                        <Filter className="mr-2 h-4 w-4" />
+                        Статус
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2">
+                    <div className="space-y-2">
+                        <Label className="font-semibold text-xs">Фільтрувати за статусом</Label>
+                        <Separator />
+                        {allStatuses.map(status => (
+                            <div key={status} className="flex items-center gap-2">
+                                <Checkbox 
+                                    id={`status-${status}`}
+                                    checked={statusFilter.includes(status)}
+                                    onCheckedChange={(checked) => {
+                                        setStatusFilter(prev => 
+                                            checked ? [...prev, status] : prev.filter(s => s !== status)
+                                        )
+                                    }}
+                                />
+                                <Label htmlFor={`status-${status}`} className="text-xs font-normal">{status}</Label>
+                            </div>
+                        ))}
+                    </div>
+                </PopoverContent>
+              </Popover>
           </div>
         </header>
         
@@ -398,25 +397,6 @@ function ResultsTable({
   const renderRow = (result: Result, index: number, allResults: Result[]) => {
     const isCreating = result.id.startsWith('new-');
     const globalIndex = allResults.findIndex(r => r.id === result.id);
-
-    if (isCreating) {
-      return (
-        <div key={`creating-${result.id}`} className="relative group p-2 bg-muted/50 text-sm">
-          <div className="flex items-center gap-2">
-            <Checkbox disabled />
-            <Input
-              ref={newResultInputRef}
-              placeholder="Назва нового результату..."
-              value={result.name}
-              onChange={(e) => handleNewResultUpdate(result, e.target.value)}
-              onBlur={() => onResultUpdate(result)}
-              onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-              className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm bg-transparent"
-            />
-          </div>
-        </div>
-      );
-    }
     
     return (
       <div key={result.id} className="group/parent text-sm border-b last:border-b-0">
@@ -439,12 +419,24 @@ function ResultsTable({
                 </div>
                 <div className="col-span-11 md:col-span-5 font-medium flex items-center gap-2">
                     <div className="flex-1">
-                        <span
-                        onClick={() => onResultSelect(result)}
-                        className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}
-                        >
-                        {result.name || <span className="text-muted-foreground">Без назви</span>}
-                        </span>
+                        {isCreating ? (
+                            <Input
+                                ref={newResultInputRef}
+                                placeholder="Назва нового результату..."
+                                value={result.name}
+                                onChange={(e) => handleNewResultUpdate(result, e.target.value)}
+                                onBlur={() => onResultUpdate(result)}
+                                onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                                className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm bg-transparent"
+                            />
+                        ) : (
+                            <span
+                                onClick={() => onResultSelect(result)}
+                                className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}
+                                >
+                                {result.name || <span className="text-muted-foreground">Без назви</span>}
+                            </span>
+                        )}
                     </div>
                      <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)} title="Редагувати"><Edit className="h-3 w-3"/></Button>
@@ -473,14 +465,14 @@ function ResultsTable({
                 <div className="col-span-3 md:col-span-2 flex items-center cursor-pointer" onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
-                        <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : 'default')} className="text-xs">
+                        <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : (result.status === 'В роботі' ? 'default' : 'secondary'))} className={cn("text-xs", {'bg-pink-600 text-white': result.status === 'В роботі'})}>
                             {result.completed ? 'Виконано' : result.status}
                         </Badge>
                     </div>
                 </div>
             </div>
         </div>
-        {(result.subResults.length > 0 || selectedResultId === result.id) && (
+        {(result.subResults.length > 0 || (selectedResultId === result.id && !isCreating)) && (
             <div className="pl-8 md:pl-12 py-1 pr-2 space-y-1">
                  {result.subResults.map((sr) => (
                     <div key={sr.id} className="flex items-center gap-2 text-xs group/sub-result">
@@ -526,14 +518,23 @@ function ResultsTable({
                     )}
                     <div className="border rounded-lg">
                         {group.results.map((result, index) => renderRow(result, index, allResults))}
+                         {!group.results.some(r => r.id.startsWith('new-')) && (
+                             <div className="p-2">
+                                <button onClick={() => createNewResult(allResults.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+                                    <Plus className="h-3 w-3" /> Створити результат
+                                </button>
+                            </div>
+                         )}
                     </div>
                 </div>
              ))}
-             <div className="p-2">
-                  <button onClick={() => createNewResult()} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
-                      <Plus className="h-3 w-3" /> Створити результат
-                  </button>
-              </div>
+              {Object.keys(groupedResults).length === 0 && (
+                 <div className="p-2">
+                    <button onClick={() => createNewResult()} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+                        <Plus className="h-3 w-3" /> Створити результат
+                    </button>
+                </div>
+              )}
         </div>
     )
 }
@@ -572,3 +573,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
