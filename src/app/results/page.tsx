@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -54,13 +54,45 @@ const initialResults: Result[] = [
   {
     id: 'res-3',
     name: 'Підготувати квартальний звіт для інвесторів',
-    status: 'Заплановано',
+    status: 'В роботі',
     completed: false,
     isUrgent: false,
     deadline: '2024-09-30',
-    assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     description: 'Звіт має містити аналіз фінансових показників, досягнень та планів на наступний квартал.',
+    subResults: [
+         { id: 'sub-3-1', name: 'Зібрати фінансові дані', completed: true },
+         { id: 'sub-3-2', name: 'Проаналізувати маркетингові метрики', completed: true },
+         { id: 'sub-3-3', name: 'Сформувати презентацію', completed: false },
+    ],
+    tasks: [],
+    templates: []
+  },
+   {
+    id: 'res-4',
+    name: 'Оновити дизайн головної сторінки',
+    status: 'Заплановано',
+    completed: false,
+    isUrgent: false,
+    deadline: '2024-08-25',
+    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+    description: 'Переробити UI/UX для підвищення конверсії на 15%.',
+    subResults: [],
+    tasks: [],
+    templates: []
+  },
+  {
+    id: 'res-5',
+    name: 'Провести A/B тестування цін',
+    status: 'Виконано',
+    completed: true,
+    isUrgent: false,
+    deadline: '2024-07-30',
+    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    reporter: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+    description: 'Визначити оптимальну цінову стратегію для нового продукту.',
     subResults: [],
     tasks: [],
     templates: []
@@ -117,6 +149,35 @@ export default function ResultsPage() {
     const newResult = createNewResult(index);
     setSelectedResult(newResult);
   };
+  
+    const handleCreateTask = (result: Result) => {
+        // This is a placeholder. In a real app, this would trigger
+        // a global state change or an API call to create a task.
+        const newTask = {
+            id: `task-${Date.now()}`,
+            title: result.name,
+            status: 'todo' as 'todo' | 'done'
+        };
+        handleResultUpdate({ ...result, tasks: [...result.tasks, newTask] });
+        alert(`Задача "${result.name}" створена на сьогодні!`);
+    }
+    
+     const handleCreateTemplate = (result: Result) => {
+        const newTemplate = {
+            id: `tpl-${Date.now()}`,
+            name: result.name,
+            repeatability: 'Щоденно',
+        };
+        handleResultUpdate({ ...result, templates: [...result.templates, newTemplate] });
+    }
+
+    const handleDeleteResult = (resultId: string) => {
+        setResults(prev => prev.filter(r => r.id !== resultId));
+        if (selectedResult?.id === resultId) {
+            setSelectedResult(null);
+        }
+    }
+
 
   useEffect(() => {
     if (selectedResult?.id.startsWith('new-') && newResultInputRef.current) {
@@ -208,6 +269,9 @@ export default function ResultsPage() {
               newResultInputRef={newResultInputRef}
               activeTab={activeTab}
               panelOpen={!!selectedResult}
+              handleCreateTask={handleCreateTask}
+              handleCreateTemplate={handleCreateTemplate}
+              handleDeleteResult={handleDeleteResult}
             />
           ) : (
             <ResultsCards results={filteredResults.filter(r => !r.id.startsWith('new-'))} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
@@ -240,6 +304,9 @@ type ResultsTableProps = {
   newResultInputRef: React.RefObject<HTMLInputElement>;
   activeTab: string;
   panelOpen: boolean;
+  handleCreateTask: (result: Result) => void;
+  handleCreateTemplate: (result: Result) => void;
+  handleDeleteResult: (resultId: string) => void;
 };
 
 
@@ -252,6 +319,9 @@ function ResultsTable({
   newResultInputRef,
   activeTab,
   panelOpen,
+  handleCreateTask,
+  handleCreateTemplate,
+  handleDeleteResult,
 }: ResultsTableProps) {
   
   const handleNewResultUpdate = (result: Result, name: string) => {
@@ -325,11 +395,11 @@ function ResultsTable({
                     {result.name || <span className="text-muted-foreground">Без назви</span>}
                     </span>
                 </div>
-                <div className={cn("col-span-4 md:col-span-2 text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen && "hidden xl:block")} onClick={() => onResultSelect(result)}>
+                <div className={cn("col-span-3 md:col-span-2 text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen && "hidden xl:block")} onClick={() => onResultSelect(result)}>
                     <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
                     {formatDate(result.deadline)}
                 </div>
-                <div className={cn("col-span-4 md:col-span-3 flex items-center gap-2 cursor-pointer transition-all duration-300", panelOpen && "hidden lg:flex")} onClick={() => onResultSelect(result)}>
+                <div className={cn("col-span-3 md:col-span-2 flex items-center gap-2 cursor-pointer transition-all duration-300", panelOpen && "hidden lg:flex")} onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' ? 'Постановник' : 'Відповідальний'}</p>
                         <div className="flex items-center gap-2">
@@ -341,12 +411,20 @@ function ResultsTable({
                         </div>
                     </div>
                 </div>
-                <div className="col-span-4 md:col-span-2 flex items-center cursor-pointer" onClick={() => onResultSelect(result)}>
+                <div className="col-span-3 md:col-span-2 flex items-center cursor-pointer" onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
                         <Badge variant={result.completed ? 'secondary' : 'outline'} className="text-xs">
                             {result.completed ? 'Виконано' : result.status}
                         </Badge>
+                    </div>
+                </div>
+                <div className="col-span-2 md:col-span-1 flex items-center justify-end">
+                    <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)}><Edit className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)}><Plus className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)}><FileText className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteResult(result.id)}><Trash2 className="h-3 w-3"/></Button>
                     </div>
                 </div>
             </div>
