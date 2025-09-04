@@ -18,17 +18,19 @@ import {
   Workflow,
   Settings,
   LogOut,
-  Target,
   FileClock,
+  Building,
+  Send,
 } from 'lucide-react';
 
 const menuItems = [
-  { href: '/', label: 'Задачі', icon: LayoutDashboard },
   { href: '/results', label: 'Результати', icon: Trophy },
-  { href: '/aims', label: 'Цілі', icon: Target },
-  { href: '/org-structure', label: 'Оргструктура', icon: Users },
-  { href: '/processes', label: 'Бізнес-процеси', icon: Workflow },
+  { href: '/', label: 'Задачі щоденні', icon: LayoutDashboard },
   { href: '/templates', label: 'Шаблони', icon: FileClock },
+  { href: '/org-structure', label: 'Орг.структура', icon: Users },
+  { href: '/processes', label: 'Бізнес процеси', icon: Workflow },
+  { href: '/company', label: 'Компанія', icon: Building },
+  { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
 ];
 
 export default function SidebarNav() {
