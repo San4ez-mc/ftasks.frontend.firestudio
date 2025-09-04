@@ -1,0 +1,29 @@
+'use server';
+
+import type { Task, TaskPrioritizationInput, TaskPrioritizationOutput } from '@/ai/flows/ai-task-prioritization';
+import { suggestTaskPriorities } from '@/ai/flows/ai-task-prioritization';
+
+type ActionResult = {
+  success: boolean;
+  data?: TaskPrioritizationOutput;
+  error?: string;
+};
+
+export async function getTaskPriorities(tasks: Task[], overallGoal: string): Promise<ActionResult> {
+  if (!tasks || tasks.length === 0 || !overallGoal) {
+    return { success: false, error: 'Tasks and overall goal are required.' };
+  }
+
+  const input: TaskPrioritizationInput = {
+    tasks,
+    overallGoal,
+  };
+
+  try {
+    const output = await suggestTaskPriorities(input);
+    return { success: true, data: output };
+  } catch (error) {
+    console.error('Error in task prioritization flow:', error);
+    return { success: false, error: 'Failed to get task priorities from AI.' };
+  }
+}
