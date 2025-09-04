@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +72,7 @@ const initialResults: Result[] = [
    {
     id: 'res-4',
     name: 'Оновити дизайн головної сторінки',
-    status: 'Заплановано',
+    status: 'Відкладено',
     completed: false,
     isUrgent: false,
     deadline: '2024-08-25',
@@ -101,6 +101,8 @@ const initialResults: Result[] = [
 
 // Assume current user for filtering
 const currentUserId = 'user-4';
+type SortKey = 'name' | 'deadline' | 'reporter' | 'status';
+type SortDirection = 'asc' | 'desc';
 
 
 export default function ResultsPage() {
@@ -108,6 +110,7 @@ export default function ResultsPage() {
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [results, setResults] = useState(initialResults);
   const [activeTab, setActiveTab] = useState('mine');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const newResultInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -151,8 +154,6 @@ export default function ResultsPage() {
   };
   
     const handleCreateTask = (result: Result) => {
-        // This is a placeholder. In a real app, this would trigger
-        // a global state change or an API call to create a task.
         const newTask = {
             id: `task-${Date.now()}`,
             title: result.name,
@@ -178,6 +179,9 @@ export default function ResultsPage() {
         }
     }
 
+    const handlePostponeResult = (result: Result) => {
+        handleResultUpdate({ ...result, status: 'Відкладено' });
+    }
 
   useEffect(() => {
     if (selectedResult?.id.startsWith('new-') && newResultInputRef.current) {
@@ -202,17 +206,52 @@ export default function ResultsPage() {
     };
   }, []);
 
+  const handleSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const sortedResults = useMemo(() => {
+    let sortableItems = [...results];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue, bValue;
+        switch(sortConfig.key) {
+            case 'reporter':
+                aValue = a.reporter.name;
+                bValue = b.reporter.name;
+                break;
+            default:
+                aValue = a[sortConfig.key];
+                bValue = b[sortConfig.key];
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [results, sortConfig]);
+
   const getFilteredResults = () => {
     switch(activeTab) {
         case 'delegated':
-            return results.filter(r => r.reporter.id === currentUserId && r.assignee.id !== currentUserId);
+            return sortedResults.filter(r => r.reporter.id === currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
         case 'subordinates':
-            // This is a placeholder logic. A real app would have a manager-subordinate relationship.
-            // Here, we'll just show results not assigned to or reported by the current user.
-            return results.filter(r => r.reporter.id !== currentUserId && r.assignee.id !== currentUserId);
+            return sortedResults.filter(r => r.reporter.id !== currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+        case 'postponed':
+            return sortedResults.filter(r => r.status === 'Відкладено');
         case 'mine':
         default:
-            return results.filter(r => r.assignee.id === currentUserId);
+            return sortedResults.filter(r => r.assignee.id === currentUserId && r.status !== 'Відкладено');
     }
   };
   
@@ -235,8 +274,8 @@ export default function ResultsPage() {
         "flex flex-col transition-all duration-300 w-full",
         selectedResult ? "md:w-1/2" : "w-full"
       )}>
-        <header className="p-4 md:p-6">
-          <div className="flex items-center justify-center relative mb-4">
+        <header className="p-4 md:p-6 space-y-4">
+          <div className="flex items-center justify-center relative">
             <h1 className="text-xl font-bold tracking-tight font-headline text-center">Результати</h1>
             <div className="absolute right-0 flex items-center gap-2">
               <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('table')}>
@@ -247,14 +286,22 @@ export default function ResultsPage() {
               </Button>
             </div>
           </div>
-          <div className="flex justify-center">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
                       <TabsTrigger value="mine">Мої</TabsTrigger>
                       <TabsTrigger value="delegated">Делеговані</TabsTrigger>
                       <TabsTrigger value="subordinates">Підлеглих</TabsTrigger>
+                      <TabsTrigger value="postponed">Відкладені</TabsTrigger>
                   </TabsList>
               </Tabs>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Сортувати:</span>
+                <Button variant="ghost" size="sm" onClick={() => handleSort('name')}>Назва <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleSort('deadline')}>Дата <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleSort('reporter')}>Постановник <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleSort('status')}>Статус <ArrowUpDown className="ml-2 h-3 w-3"/></Button>
+              </div>
           </div>
         </header>
         
@@ -272,6 +319,7 @@ export default function ResultsPage() {
               handleCreateTask={handleCreateTask}
               handleCreateTemplate={handleCreateTemplate}
               handleDeleteResult={handleDeleteResult}
+              handlePostponeResult={handlePostponeResult}
             />
           ) : (
             <ResultsCards results={filteredResults.filter(r => !r.id.startsWith('new-'))} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
@@ -307,6 +355,7 @@ type ResultsTableProps = {
   handleCreateTask: (result: Result) => void;
   handleCreateTemplate: (result: Result) => void;
   handleDeleteResult: (resultId: string) => void;
+  handlePostponeResult: (result: Result) => void;
 };
 
 
@@ -322,6 +371,7 @@ function ResultsTable({
   handleCreateTask,
   handleCreateTemplate,
   handleDeleteResult,
+  handlePostponeResult,
 }: ResultsTableProps) {
   
   const handleNewResultUpdate = (result: Result, name: string) => {
@@ -372,28 +422,37 @@ function ResultsTable({
       <div key={result.id} className="group/parent text-sm border-b last:border-b-0">
         <div className="relative group/row">
             <button
-            onClick={() => createNewResult(globalIndex)}
-            className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity hidden sm:flex"
+            onClick={(e) => { e.stopPropagation(); createNewResult(globalIndex); }}
+            className="absolute z-10 -left-4 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity hidden sm:flex"
             >
                 <Plus className="h-4 w-4" />
             </button>
             <div className={cn(
-                "grid grid-cols-12 p-2 items-center gap-x-2 md:gap-x-4",
+                "grid grid-cols-12 p-2 items-start gap-x-2 md:gap-x-4",
                 selectedResultId === result.id && "bg-accent"
                 )}>
-                <div className="col-span-1 flex justify-center">
+                <div className="col-span-1 flex justify-center pt-1">
                     <Checkbox
                     checked={result.completed}
                     onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
                     />
                 </div>
                 <div className="col-span-11 md:col-span-5 font-medium flex items-center gap-2">
-                    <span
-                    onClick={() => onResultSelect(result)}
-                    className={cn("cursor-pointer flex-1 text-sm", result.completed && "line-through text-muted-foreground")}
-                    >
-                    {result.name || <span className="text-muted-foreground">Без назви</span>}
-                    </span>
+                    <div className="flex-1">
+                        <span
+                        onClick={() => onResultSelect(result)}
+                        className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}
+                        >
+                        {result.name || <span className="text-muted-foreground">Без назви</span>}
+                        </span>
+                    </div>
+                     <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)} title="Редагувати"><Edit className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePostponeResult(result)} title="Відкласти"><Clock className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)} title="Створити шаблон"><FileText className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteResult(result.id)} title="Видалити"><Trash2 className="h-3 w-3"/></Button>
+                    </div>
                 </div>
                 <div className={cn("col-span-3 md:col-span-2 text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen && "hidden xl:block")} onClick={() => onResultSelect(result)}>
                     <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
@@ -414,17 +473,9 @@ function ResultsTable({
                 <div className="col-span-3 md:col-span-2 flex items-center cursor-pointer" onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
-                        <Badge variant={result.completed ? 'secondary' : 'outline'} className="text-xs">
+                        <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : 'default')} className="text-xs">
                             {result.completed ? 'Виконано' : result.status}
                         </Badge>
-                    </div>
-                </div>
-                <div className="col-span-2 md:col-span-1 flex items-center justify-end">
-                    <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)}><Edit className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)}><Plus className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)}><FileText className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteResult(result.id)}><Trash2 className="h-3 w-3"/></Button>
                     </div>
                 </div>
             </div>
@@ -513,7 +564,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
                                 </Avatar>
                                 <span className="text-xs">{result.assignee.name}</span>
                             </div>
-                            <Badge variant={result.completed ? 'secondary' : 'default'}>{result.completed ? 'Виконано' : result.status}</Badge>
+                            <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : 'default')}>{result.completed ? 'Виконано' : result.status}</Badge>
                         </div>
                     </CardContent>
                 </Card>
@@ -521,7 +572,3 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-    
-
-    
