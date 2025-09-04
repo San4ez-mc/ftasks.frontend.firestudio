@@ -60,7 +60,7 @@ export default function ResultsPage() {
   const newResultInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isCreating && newResultInputRef.current) {
+    if (isCreating && selectedResult && newResultInputRef.current) {
         newResultInputRef.current.focus();
     }
   }, [isCreating, selectedResult]);
@@ -73,8 +73,8 @@ export default function ResultsPage() {
   };
 
   const handleSelectResult = (result: Result | null) => {
-    if (isCreating && selectedResult?.name.trim() === '') {
-        setResults(results.filter(r => r.id !== selectedResult.id));
+    if (isCreating && selectedResult && selectedResult.name.trim() === '') {
+        setResults(prev => prev.filter(r => r.id !== selectedResult.id));
     }
     setIsCreating(false);
     setSelectedResult(result);
@@ -85,15 +85,13 @@ export default function ResultsPage() {
        if (selectedResult.name.trim() === '') {
         setResults(prev => prev.filter(r => r.id !== selectedResult.id));
         setSelectedResult(null);
-      } else {
-         // Potentially save the new result here
       }
     }
     setIsCreating(false);
   }
   
-  const createNewResult = (name = '', index: number) => {
-    finalizeNewResult(); // Finalize any existing creation before starting a new one
+  const createNewResult = (name = '', index?: number) => {
+    finalizeNewResult();
     
     const newResult: Result = {
       id: `new-${Date.now()}`,
@@ -109,8 +107,9 @@ export default function ResultsPage() {
       templates: []
     };
     
+    const insertionIndex = index !== undefined ? index + 1 : results.length;
     const newResults = [...results];
-    newResults.splice(index + 1, 0, newResult); // Insert after the specified index
+    newResults.splice(insertionIndex, 0, newResult);
     setResults(newResults);
     
     setSelectedResult(newResult);
@@ -130,8 +129,8 @@ export default function ResultsPage() {
     const name = e.target.value;
     if(selectedResult && isCreating){
       const updatedResult = {...selectedResult, name};
-      setSelectedResult(updatedResult); // Update local state for sync
-      handleResultUpdate(updatedResult); // Update the list
+      setSelectedResult(updatedResult);
+      handleResultUpdate(updatedResult);
     }
   }
 
@@ -153,8 +152,8 @@ export default function ResultsPage() {
   return (
     <div className="flex h-screen overflow-hidden">
       <div className={cn(
-        "flex flex-col transition-all duration-300",
-        selectedResult ? "w-full md:w-1/2" : "w-full"
+        "flex flex-col transition-all duration-300 w-full",
+        selectedResult ? "md:w-1/2" : "w-full"
       )}>
         <header className="p-4 md:p-6">
           <div className="flex items-center justify-center relative mb-4">
@@ -380,5 +379,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
 
     
