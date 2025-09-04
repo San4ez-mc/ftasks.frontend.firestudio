@@ -16,12 +16,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ResultsList from '@/components/tasks/results-list';
 import type { Result as ResultType } from '@/components/tasks/results-list';
+import { formatTime } from '@/lib/timeUtils';
 
 
 const initialTasks: Task[] = [
     { 
         id: '1', 
         title: 'Розробити API для авторизації', 
+        description: 'Створити ендпоінти для реєстрації, входу та виходу користувача. Використовувати JWT для автентифікації.',
         dueDate: '2024-08-15', 
         status: 'todo', 
         type: 'important-urgent', 
@@ -185,15 +187,6 @@ export default function TasksPage() {
     }, {} as Record<string, { id?: string, name: string; avatar?: string; results: Task[] }>);
 
   }, [filteredTasks, activeTab]);
-
-  const formatTime = (minutes: number): string => {
-    if (!minutes && minutes !== 0) return '-';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const hStr = h > 0 ? `${h}h` : '';
-    const mStr = m > 0 ? `${m}m` : '';
-    return `${hStr} ${mStr}`.trim() || '0m';
-  };
 
   return (
     <div className="flex h-screen">

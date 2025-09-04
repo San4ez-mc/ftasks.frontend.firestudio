@@ -1,7 +1,7 @@
 
 'use client';
 import type { Task, TaskType } from '@/types/task';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { parseTime, formatTime } from '@/lib/timeUtils';
 
 type TaskDetailsPanelProps = {
   task: Task;
@@ -55,6 +56,14 @@ const mockResults = [
 export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetailsPanelProps) {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description || '');
+  const [expectedTime, setExpectedTime] = useState(formatTime(task.expectedTime));
+  
+  useEffect(() => {
+      setTitle(task.title);
+      setDescription(task.description || '');
+      setExpectedTime(formatTime(task.expectedTime));
+  }, [task]);
 
   const handleCheckedChange = (checked: boolean | 'indeterminate') => {
     if (checked && task.status !== 'done') {
@@ -74,7 +83,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
       ...task,
       status: 'done',
       actualResult,
-      actualTime: parseInt(actualTime, 10),
+      actualTime: parseTime(actualTime),
     });
     setIsCompleteDialogOpen(false);
   };
@@ -85,6 +94,21 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
     } else if (title !== task.title) {
         onUpdate({ ...task, title });
     }
+  };
+  
+  const handleDescriptionBlur = () => {
+    if (description !== (task.description || '')) {
+        onUpdate({ ...task, description });
+    }
+  };
+  
+  const handleExpectedTimeBlur = () => {
+    const newTimeInMinutes = parseTime(expectedTime);
+    if (newTimeInMinutes !== task.expectedTime) {
+      onUpdate({ ...task, expectedTime: newTimeInMinutes });
+    }
+    // Reformat the input to a consistent format
+    setExpectedTime(formatTime(newTimeInMinutes));
   };
 
 
@@ -179,12 +203,17 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             </div>
              <div>
                 <Label className="text-muted-foreground mb-2 block">Очікуваний час</Label>
-                <Input type="number" defaultValue={task.expectedTime} className="h-8 w-24" onChange={e => onUpdate({...task, expectedTime: parseInt(e.target.value, 10) || 0})}/>
+                <Input 
+                    value={expectedTime} 
+                    onChange={e => setExpectedTime(e.target.value)}
+                    onBlur={handleExpectedTimeBlur}
+                    className="h-8 w-24"
+                />
             </div>
             {task.status === 'done' && (
                 <div>
                     <Label className="text-muted-foreground mb-2 block">Фактичний час</Label>
-                    <p>{task.actualTime} хв.</p>
+                    <p>{formatTime(task.actualTime)}</p>
                 </div>
             )}
              <div>
@@ -204,6 +233,18 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
 
         <Separator />
         
+        <div>
+            <Label htmlFor="description" className="font-semibold">Опис</Label>
+            <Textarea 
+                id="description" 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={handleDescriptionBlur} 
+                className="mt-2 bg-transparent border-dashed min-h-[100px]"
+                placeholder="Додайте детальний опис задачі тут..."
+            />
+        </div>
+
         <div>
             <Label htmlFor="expectedResult" className="font-semibold">Очікуваний результат</Label>
             <Textarea id="expectedResult" defaultValue={task.expectedResult} onBlur={(e) => onUpdate({...task, expectedResult: e.target.value})} className="mt-2 bg-transparent border-dashed"/>
@@ -281,8 +322,8 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
                             <Textarea id="actualResult" name="actualResult" defaultValue={task.expectedResult} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="actualTime">Фактичний час (хв)</Label>
-                            <Input id="actualTime" name="actualTime" type="number" defaultValue={task.expectedTime} />
+                            <Label htmlFor="actualTime">Фактичний час</Label>
+                            <Input id="actualTime" name="actualTime" defaultValue={formatTime(task.expectedTime)} />
                         </div>
                     </div>
                     <DialogFooter>

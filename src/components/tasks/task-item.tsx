@@ -15,6 +15,7 @@ import { useState, useRef, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { TableRow, TableCell } from "@/components/ui/table";
+import { formatTime, parseTime } from "@/lib/timeUtils";
 
 type TaskItemProps = {
     task: Task;
@@ -37,23 +38,15 @@ const typeLabels: Record<TaskType, string> = {
     'not-important-not-urgent': 'Неважлива, нетермінова',
 };
 
-function formatTime(minutes: number): string {
-    if (!minutes && minutes !== 0) return '-';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const hStr = h > 0 ? `${h}h` : '';
-    const mStr = m > 0 ? `${m}m` : '';
-    return `${hStr} ${mStr}`.trim() || '0m';
-}
 
 export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
     const [title, setTitle] = useState(task.title);
-    const [actualTime, setActualTime] = useState(task.actualTime?.toString() ?? '');
+    const [actualTime, setActualTime] = useState(formatTime(task.actualTime));
     
     useEffect(() => {
         setTitle(task.title);
-        setActualTime(task.actualTime?.toString() ?? '');
+        setActualTime(formatTime(task.actualTime));
     }, [task]);
 
     const handleCheckedChange = (checked: boolean | 'indeterminate') => {
@@ -74,7 +67,7 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
             ...task,
             status: 'done',
             actualResult,
-            actualTime: parseInt(actualTimeValue, 10)
+            actualTime: parseTime(actualTimeValue)
         });
         setIsCompleteDialogOpen(false);
     };
@@ -94,10 +87,12 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
     };
 
     const handleActualTimeBlur = () => {
-        const newTime = actualTime === '' ? undefined : Number(actualTime);
-        if (newTime !== task.actualTime) {
-            onUpdate({ ...task, actualTime: newTime });
+        const newTimeInMinutes = parseTime(actualTime);
+        if (newTimeInMinutes !== task.actualTime) {
+            onUpdate({ ...task, actualTime: newTimeInMinutes });
         }
+        // Reformat the input to a consistent format
+        setActualTime(formatTime(newTimeInMinutes));
     };
 
     return (
@@ -186,8 +181,8 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
                             <Textarea id="actualResult" name="actualResult" defaultValue={task.expectedResult} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="actualTime">Фактичний час (хв)</Label>
-                            <Input id="actualTime" name="actualTime" type="number" defaultValue={task.expectedTime} />
+                            <Label htmlFor="actualTime">Фактичний час</Label>
+                            <Input id="actualTime" name="actualTime" defaultValue={formatTime(task.expectedTime)} />
                         </div>
                     </div>
                     <DialogFooter>
@@ -203,5 +198,3 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
         </>
     )
 }
-
-    
