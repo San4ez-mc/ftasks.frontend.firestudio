@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent, deptId: string) => void; }) {
+function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent) => void; }) {
     const manager = employees.find(e => e.id === department.managerId);
     
     const handleFieldChange = (field: keyof Department, value: string | string[]) => {
@@ -176,6 +176,7 @@ export default function OrgStructurePage() {
   const [divisions, setDivisions] = useState<Division[]>(mockDivisions);
   const [draggedDeptId, setDraggedDeptId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
+  const [draggedItemHeight, setDraggedItemHeight] = useState(0);
 
   const handleAddDepartment = (divisionId: string) => {
     const newDepartment: Department = {
@@ -195,10 +196,13 @@ export default function OrgStructurePage() {
   
   const handleDragStart = (e: React.DragEvent, deptId: string) => {
     setDraggedDeptId(deptId);
+    setDraggedItemHeight(e.currentTarget.clientHeight);
+    e.dataTransfer.effectAllowed = 'move';
   };
   
   const handleDragOver = (e: React.DragEvent, divisionId: string) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
     if(divisionId !== isDraggingOver) {
         setIsDraggingOver(divisionId);
     }
@@ -219,6 +223,7 @@ export default function OrgStructurePage() {
     }
     setDraggedDeptId(null);
     setIsDraggingOver(null);
+    setDraggedItemHeight(0);
   };
   
   return (
@@ -239,10 +244,7 @@ export default function OrgStructurePage() {
                 return (
                     <div 
                         key={division.id} 
-                        className={cn(
-                            "flex flex-col gap-4 p-2 rounded-lg transition-colors",
-                            isDraggingOver === division.id && "bg-primary/10"
-                        )}
+                        className="flex flex-col gap-4 p-2 rounded-lg"
                         onDragOver={(e) => handleDragOver(e, division.id)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, division.id)}
@@ -262,6 +264,12 @@ export default function OrgStructurePage() {
                                 />
                             ))}
                         </div>
+                        {isDraggingOver === division.id && (
+                             <div 
+                                className="w-full rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-all"
+                                style={{ height: `${draggedItemHeight}px` }}
+                             ></div>
+                        )}
                          <Button variant="outline" className="mt-auto" onClick={() => handleAddDepartment(division.id)}>
                             <Plus className="mr-2 h-4 w-4" /> Додати відділ
                         </Button>
