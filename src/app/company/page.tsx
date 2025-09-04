@@ -5,24 +5,33 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, Search, MoreVertical, Trash2 } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
+// --- MOCK DATA ---
 
-// Mock data assuming multi-company context
-// All data here belongs to the *current* company_id
-const mockCompany = {
-    id: 'company-a',
-    name: 'Fineko'
-};
+const mockPositions = [
+    { id: 'pos-1', name: 'Frontend Developer' },
+    { id: 'pos-2', name: 'Backend Developer' },
+    { id: 'pos-3', name: 'Project Manager' },
+    { id: 'pos-4', name: 'Marketing Manager' },
+    { id: 'pos-5', name: 'UI/UX Designer' },
+    { id: 'pos-6', 'name': 'CEO' },
+    { id: 'pos-7', 'name': 'CTO' },
+];
+
+const mockGroups = [
+    { id: 'grp-1', name: 'Основна команда розробки' },
+    { id: 'grp-2', name: 'Менеджмент' },
+    { id: 'grp-3', name: 'Маркетинг' },
+];
 
 const mockEmployeesData = [
     { 
@@ -33,8 +42,8 @@ const mockEmployeesData = [
         lastName: 'Петренко',
         avatar: 'https://picsum.photos/100/100?random=1',
         status: 'active',
-        notes: 'Ключовий розробник, спеціалізується на React та Next.js.',
-        positions: ['pos-1'],
+        notes: 'Ключовий розробник, спеціалізується на React та Next.js. Відповідальний за архітектуру фронтенду.',
+        positions: ['pos-1', 'pos-7'], // Multiple positions
         groups: ['grp-1'],
         synonyms: ['Ваня', 'Іван П.'],
     },
@@ -46,7 +55,7 @@ const mockEmployeesData = [
         lastName: 'Сидоренко',
         avatar: 'https://picsum.photos/100/100?random=2',
         status: 'active',
-        notes: 'Менеджер проектів, відповідає за комунікацію з клієнтами.',
+        notes: 'Менеджер проектів, відповідає за комунікацію з клієнтами та планування спринтів.',
         positions: ['pos-3'],
         groups: ['grp-1', 'grp-2'],
         synonyms: ['Маша'],
@@ -59,257 +68,273 @@ const mockEmployeesData = [
         lastName: 'Ковальчук',
         avatar: 'https://picsum.photos/100/100?random=3',
         status: 'vacation',
-        notes: '',
+        notes: 'Сильний дизайнер з досвідом у мобільних додатках.',
+        positions: ['pos-5'],
+        groups: ['grp-1'],
+        synonyms: [],
+    },
+    { 
+        id: 'emp-4',
+        telegramUserId: 'tg-101',
+        telegramUsername: 'petro_i',
+        firstName: 'Петро',
+        lastName: 'Іваненко',
+        avatar: 'https://picsum.photos/100/100?random=4',
+        status: 'active',
+        notes: 'Засновник та ідейний лідер компанії.',
+        positions: ['pos-6'],
+        groups: ['grp-2'],
+        synonyms: ['Петя'],
+    },
+     { 
+        id: 'emp-5',
+        telegramUserId: 'tg-112',
+        telegramUsername: 'andriy_b',
+        firstName: 'Андрій',
+        lastName: 'Бондаренко',
+        avatar: 'https://picsum.photos/100/100?random=5',
+        status: 'inactive',
+        notes: 'Спеціаліст з контекстної реклами та SEO.',
         positions: ['pos-4'],
-        groups: [],
+        groups: ['grp-3'],
         synonyms: [],
     },
 ];
 
-const mockPositions = [
-    { id: 'pos-1', name: 'Frontend Developer' },
-    { id: 'pos-2', name: 'Backend Developer' },
-    { id: 'pos-3', name: 'Project Manager' },
-    { id: 'pos-4', name: 'Marketing Manager' },
-];
-
-const mockGroups = [
-    { id: 'grp-1', name: 'Основна команда розробки' },
-    { id: 'grp-2', name: 'Менеджмент' },
-];
-
 type Employee = typeof mockEmployeesData[0];
 
+// --- MAIN COMPONENT ---
 
 export default function CompanyPage() {
-    const [companyName, setCompanyName] = useState(mockCompany.name);
     const [employees, setEmployees] = useState(mockEmployeesData);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     
     const handleEmployeeUpdate = (updatedEmployee: Employee) => {
         setEmployees(employees.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
-        setSelectedEmployee(updatedEmployee);
+        if (selectedEmployee?.id === updatedEmployee.id) {
+            setSelectedEmployee(updatedEmployee);
+        }
     };
+    
+    const handleClosePanel = () => {
+        setSelectedEmployee(null);
+    }
 
     return (
         <div className="flex h-screen overflow-hidden">
             {/* Employee List */}
-            <div className="w-full md:w-1/3 lg:w-1/4 border-r flex flex-col">
+            <div className={cn(
+                "flex flex-col w-full transition-all duration-300",
+                selectedEmployee ? "md:w-1/2" : "w-full"
+            )}>
                 <header className="p-4 border-b">
-                    <Input 
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="text-lg font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
-                    />
+                    <div className="flex items-center justify-between">
+                         <h1 className="text-xl font-bold tracking-tight font-headline">Співробітники</h1>
+                         <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Запросити
+                        </Button>
+                    </div>
                      <div className="relative mt-2">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input placeholder="Пошук співробітників..." className="pl-8" />
                     </div>
                 </header>
                 <div className="flex-1 overflow-y-auto">
-                    {employees.map(emp => {
-                        const employeePositions = emp.positions.map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
-                        return (
-                        <button 
-                            key={emp.id}
-                            onClick={() => setSelectedEmployee(emp)}
-                            className={cn(
-                                "flex items-start gap-3 p-3 text-left w-full hover:bg-accent",
-                                selectedEmployee?.id === emp.id && "bg-accent"
-                            )}
-                        >
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={emp.avatar} alt={`${emp.firstName} ${emp.lastName}`} />
-                                <AvatarFallback>{emp.firstName[0]}{emp.lastName[0]}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                                <p className="font-semibold text-sm">{emp.firstName} {emp.lastName}</p>
-                                <Link 
-                                    href={`https://t.me/${emp.telegramUsername}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-xs text-blue-500 hover:underline"
-                                >
-                                    @{emp.telegramUsername}
-                                </Link>
-                                <p className="text-xs text-muted-foreground mt-1">{employeePositions.join(', ')}</p>
-                            </div>
-                        </button>
-                    )})}
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Ім'я</TableHead>
+                                <TableHead>Посада</TableHead>
+                                <TableHead>Telegram</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {employees.map(emp => {
+                                const employeePositions = emp.positions.map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
+                                return (
+                                    <TableRow 
+                                        key={emp.id} 
+                                        onClick={() => setSelectedEmployee(emp)}
+                                        className={cn(
+                                            "cursor-pointer",
+                                            selectedEmployee?.id === emp.id && "bg-accent"
+                                        )}
+                                    >
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={emp.avatar} alt={emp.firstName} />
+                                                    <AvatarFallback>{emp.firstName[0]}{emp.lastName[0]}</AvatarFallback>
+                                                </Avatar>
+                                                <span>{emp.firstName} {emp.lastName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-xs">
+                                            {employeePositions.map(p => <div key={p}>{p}</div>)}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Link 
+                                                href={`https://t.me/${emp.telegramUsername}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="text-xs text-blue-500 hover:underline"
+                                            >
+                                                @{emp.telegramUsername}
+                                            </Link>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
                 </div>
-                <footer className="p-4 border-t">
-                    <Button className="w-full">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Запросити співробітника
-                    </Button>
-                </footer>
             </div>
 
             {/* Employee Details Panel */}
              <div className={cn(
-                "flex-shrink-0 bg-card transition-all duration-300 ease-in-out overflow-y-auto w-full md:w-2/3 lg:w-3/4",
-                 selectedEmployee ? "block" : "hidden md:block"
+                "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
+                 selectedEmployee ? "w-full md:w-1/2" : "w-0"
             )}>
-                {selectedEmployee ? (
-                    <EmployeeDetails employee={selectedEmployee} onUpdate={handleEmployeeUpdate} />
-                ) : (
-                    <div className="h-full flex items-center justify-center">
-                        <p className="text-muted-foreground">Оберіть співробітника для перегляду деталей</p>
-                    </div>
+                {selectedEmployee && (
+                    <EmployeeDetails 
+                        key={selectedEmployee.id} // Re-mount component on selection change
+                        employee={selectedEmployee} 
+                        onUpdate={handleEmployeeUpdate}
+                        onClose={handleClosePanel}
+                    />
                 )}
             </div>
         </div>
     );
 }
 
+// --- DETAILS PANEL COMPONENT ---
 
-function EmployeeDetails({ employee, onUpdate }: { employee: Employee; onUpdate: (employee: Employee) => void; }) {
-    const [isEditing, setIsEditing] = useState(false);
+function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; onUpdate: (employee: Employee) => void; onClose: () => void; }) {
     
-    const employeePositions = employee.positions.map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
-    const employeeGroups = employee.groups.map(gId => mockGroups.find(g => g.id === gId)?.name).filter(Boolean);
+    // Local state for edits
+    const [formData, setFormData] = useState<Partial<Employee>>(employee);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleStatusChange = (value: Employee['status']) => {
+        setFormData(prev => ({ ...prev, status: value }));
+    };
+
+    const handlePositionChange = (positionId: string) => {
+        setFormData(prev => {
+            const currentPositions = prev.positions || [];
+            const newPositions = currentPositions.includes(positionId)
+                ? currentPositions.filter(p => p !== positionId)
+                : [...currentPositions, positionId];
+            return { ...prev, positions: newPositions };
+        });
+    };
+    
+    const handleSaveChanges = () => {
+        onUpdate({ ...employee, ...formData });
+        // Optional: show a toast notification
+    };
+
+    const employeePositions = formData.positions?.map(pId => mockPositions.find(p => p.id === pId)).filter(Boolean) || [];
 
     return (
-        <div className="p-4 md:p-6 space-y-4">
-            <header className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                     <Avatar className="h-16 w-16">
-                        <AvatarImage src={employee.avatar} alt={`${employee.firstName} ${employee.lastName}`} />
-                        <AvatarFallback className="text-xl">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>
-                    </Avatar>
+        <div className="p-4 md:p-6 space-y-4 text-sm flex flex-col h-full">
+            <header className="flex-shrink-0 flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                     <div className="relative group">
+                        <Avatar className="h-16 w-16">
+                            <AvatarImage src={formData.avatar} alt={`${formData.firstName} ${formData.lastName}`} />
+                            <AvatarFallback className="text-xl">{formData.firstName?.[0]}{formData.lastName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <label htmlFor="avatar-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer">
+                            <Upload className="h-6 w-6" />
+                            <input id="avatar-upload" type="file" className="sr-only" />
+                        </label>
+                     </div>
                     <div>
-                        <h2 className="text-lg font-bold font-headline">{employee.firstName} {employee.lastName}</h2>
-                        <p className="text-sm text-muted-foreground">{employeePositions.join(', ')}</p>
-                        <Badge variant={employee.status === 'active' ? 'secondary' : 'outline'} className="mt-2 capitalize text-xs">{employee.status}</Badge>
+                        <h2 className="text-lg font-bold font-headline">{formData.firstName} {formData.lastName}</h2>
+                        <p className="text-xs text-muted-foreground">{employeePositions.map(p => p?.name).join(', ')}</p>
                     </div>
                 </div>
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreVertical className="h-5 w-5" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setIsEditing(true)}>Редагувати</DropdownMenuItem>
-                        <DropdownMenuItem>Призначити задачу</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Видалити з компанії</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                 <div className="flex items-center gap-2">
+                    <Button onClick={handleSaveChanges}>Зберегти</Button>
+                    <Button variant="ghost" onClick={onClose}>Скасувати</Button>
+                </div>
             </header>
             
-            <div className="grid md:grid-cols-2 gap-4">
-                <InfoCard title="Контактна інформація">
-                    <InfoRow label="Telegram" value={`@${employee.telegramUsername}`} isLink href={`https://t.me/${employee.telegramUsername}`} />
-                </InfoCard>
-
-                 <InfoCard title="Нотатки">
-                    <p className="text-xs text-muted-foreground">{employee.notes || 'Немає нотаток.'}</p>
-                </InfoCard>
-            </div>
-
-            <InfoCard title="Посади та групи">
-                <InfoRow label="Посади" items={employeePositions} />
-                <InfoRow label="Групи" items={employeeGroups} />
-            </InfoCard>
-
-             <InfoCard title="Синоніми">
-                <div className="flex flex-wrap gap-2">
-                    {employee.synonyms.map((s, i) => <Badge key={i} variant="outline" className="text-xs">{s}</Badge>)}
-                    {employee.synonyms.length === 0 && <p className="text-xs text-muted-foreground">Немає синонімів.</p>}
-                </div>
-            </InfoCard>
-
-
-            {/* Edit Employee Dialog */}
-            <Dialog open={isEditing} onOpenChange={setIsEditing}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Редагувати дані</DialogTitle>
-                        <DialogDescription>
-                            Оновіть інформацію для {employee.firstName} {employee.lastName}.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form id="edit-employee-form" onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.currentTarget);
-                        const updatedEmployee: Employee = {
-                            ...employee,
-                            firstName: formData.get('firstName') as string,
-                            lastName: formData.get('lastName') as string,
-                            status: formData.get('status') as 'active' | 'vacation' | 'inactive',
-                            notes: formData.get('notes') as string,
-                        };
-                        onUpdate(updatedEmployee);
-                        setIsEditing(false);
-                    }}>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="firstName" className="text-xs">Ім'я</Label>
-                                    <Input id="firstName" name="firstName" defaultValue={employee.firstName} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="lastName" className="text-xs">Прізвище</Label>
-                                    <Input id="lastName" name="lastName" defaultValue={employee.lastName} />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="status" className="text-xs">Статус</Label>
-                                <Select name="status" defaultValue={employee.status}>
-                                    <SelectTrigger id="status">
-                                        <SelectValue placeholder="Обрати статус" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">Активний</SelectItem>
-                                        <SelectItem value="vacation">У відпустці</SelectItem>
-                                        <SelectItem value="inactive">Неактивний</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="notes" className="text-xs">Нотатки</Label>
-                                <Textarea id="notes" name="notes" defaultValue={employee.notes} />
-                            </div>
+            <div className="flex-1 overflow-y-auto space-y-4">
+                <Card>
+                    <CardHeader className="p-4">
+                         <CardTitle className="text-sm font-semibold">Основна інформація</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 grid md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label htmlFor="firstName" className="text-xs">Ім'я</Label>
+                            <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleInputChange} className="h-8 text-sm"/>
                         </div>
-                    </form>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setIsEditing(false)}>Скасувати</Button>
-                        <Button type="submit" form="edit-employee-form">Зберегти</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </div>
-    )
-}
+                        <div className="space-y-1">
+                            <Label htmlFor="lastName" className="text-xs">Прізвище</Label>
+                            <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} className="h-8 text-sm"/>
+                        </div>
+                         <div className="space-y-1">
+                            <Label htmlFor="status" className="text-xs">Статус</Label>
+                            <Select name="status" value={formData.status} onValueChange={handleStatusChange}>
+                                <SelectTrigger id="status" className="h-8 text-sm">
+                                    <SelectValue placeholder="Обрати статус" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="active">Активний</SelectItem>
+                                    <SelectItem value="vacation">У відпустці</SelectItem>
+                                    <SelectItem value="inactive">Неактивний</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </CardContent>
+                </Card>
 
-function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-         <Card>
-            <CardHeader className="p-4">
-                <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-3 text-xs">
-                {children}
-            </CardContent>
-        </Card>
-    )
-}
+                <Card>
+                    <CardHeader className="p-4">
+                         <CardTitle className="text-sm font-semibold">Посади</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                        <div className="flex flex-wrap gap-2">
+                            {mockPositions.map(pos => (
+                                <button
+                                    key={pos.id}
+                                    onClick={() => handlePositionChange(pos.id)}
+                                    className={cn(
+                                        "px-2 py-1 text-xs rounded-md border",
+                                        formData.positions?.includes(pos.id) 
+                                            ? "bg-primary text-primary-foreground border-transparent"
+                                            : "bg-transparent hover:bg-accent"
+                                    )}
+                                >
+                                    {pos.name}
+                                </button>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
 
-function InfoRow({ label, value, items, isLink, href }: { label: string; value?: string, items?: string[], isLink?: boolean, href?: string }) {
-    return (
-        <div>
-            <p className="text-xs font-medium text-muted-foreground">{label}</p>
-            {value && (
-                 isLink ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline">{value}</a>
-                 ) : (
-                    <p className="text-xs">{value}</p>
-                 )
-            )}
-            {items && (
-                 <div className="flex flex-wrap gap-1 mt-1">
-                    {items.map((item, i) => <Badge key={i} variant="secondary" className="text-xs">{item}</Badge>)}
-                    {items.length === 0 && <p className="text-xs text-muted-foreground/80">Не призначено.</p>}
-                </div>
-            )}
+                 <Card>
+                    <CardHeader className="p-4">
+                        <CardTitle className="text-sm font-semibold">Нотатки</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                         <Textarea id="notes" name="notes" value={formData.notes} onChange={handleInputChange} className="min-h-[80px] text-xs"/>
+                    </CardContent>
+                </Card>
+
+                 <Button variant="destructive" className="w-full">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Видалити з компанії
+                </Button>
+            </div>
         </div>
     )
 }
