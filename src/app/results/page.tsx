@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect }d from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,6 +42,7 @@ const initialResults: Result[] = [
     name: 'Розробити новий модуль аналітики',
     status: 'Заплановано',
     completed: false,
+    isUrgent: false,
     deadline: '2024-10-15',
     assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
     reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
@@ -55,6 +56,7 @@ const initialResults: Result[] = [
     name: 'Підготувати квартальний звіт для інвесторів',
     status: 'Заплановано',
     completed: false,
+    isUrgent: false,
     deadline: '2024-09-30',
     assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
     reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
@@ -86,29 +88,13 @@ export default function ResultsPage() {
     }
   };
 
-  const createNewTask = (title: string, index?: number): Task => {
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
-      title: title,
-      dueDate: new Date().toISOString().split('T')[0],
-      status: 'todo',
-      type: 'important-not-urgent',
-      expectedTime: 30,
-      expectedResult: 'Очікуваний результат генерується GPT',
-      assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
-      reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' },
-    };
-    // This is a simplified placeholder. In a real app, you would add this to your tasks state.
-    console.log("New task created:", newTask);
-    return newTask;
-  };
-
-  const handleCreateNewResult = (index?: number) => {
+  const createNewResult = (index?: number): Result => {
     const newResult: Result = {
       id: `new-${Date.now()}`,
       name: '',
       status: 'Заплановано',
       completed: false,
+      isUrgent: false,
       deadline: new Date().toISOString().split('T')[0],
       assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
       reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
@@ -124,6 +110,11 @@ export default function ResultsPage() {
         newResults.splice(insertionIndex, 0, newResult);
         return newResults;
     });
+    return newResult;
+  };
+
+  const handleCreateNewResult = (index?: number) => {
+    const newResult = createNewResult(index);
     setSelectedResult(newResult);
   };
 
@@ -167,7 +158,7 @@ export default function ResultsPage() {
   const filteredResults = getFilteredResults();
 
   const groupedResults = activeTab === 'mine' 
-    ? { [currentUserId]: filteredResults } 
+    ? { [currentUserId]: {id: currentUserId, name: 'Мої результати', results: filteredResults } } 
     : filteredResults.reduce((acc, result) => {
         const key = result.assignee.id;
         if (!acc[key]) {
@@ -284,8 +275,9 @@ function ResultsTable({
     onResultUpdate({ ...result, subResults: updatedSubResults });
   };
 
-  const renderRow = (result: Result, index: number) => {
+  const renderRow = (result: Result, index: number, allResults: Result[]) => {
     const isCreating = result.id.startsWith('new-');
+    const globalIndex = allResults.findIndex(r => r.id === result.id);
 
     if (isCreating) {
       return (
@@ -310,7 +302,7 @@ function ResultsTable({
       <div key={result.id} className="group/parent text-sm border-b last:border-b-0">
         <div className="relative group/row">
             <button
-            onClick={() => createNewResult(index)}
+            onClick={() => createNewResult(globalIndex)}
             className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity hidden sm:flex"
             >
                 <Plus className="h-4 w-4" />
@@ -328,7 +320,7 @@ function ResultsTable({
                 <div className="col-span-11 md:col-span-5 font-medium flex items-center gap-2">
                     <span
                     onClick={() => onResultSelect(result)}
-                    className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}
+                    className={cn("cursor-pointer flex-1 text-sm", result.completed && "line-through text-muted-foreground")}
                     >
                     {result.name || <span className="text-muted-foreground">Без назви</span>}
                     </span>
@@ -349,10 +341,10 @@ function ResultsTable({
                         </div>
                     </div>
                 </div>
-                <div className="col-span-4 md:col-span-2 flex items-center cursor-pointer">
+                <div className="col-span-4 md:col-span-2 flex items-center cursor-pointer" onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
-                        <Badge variant={result.completed ? 'secondary' : 'outline'} className="text-xs" onClick={() => onResultSelect(result)}>
+                        <Badge variant={result.completed ? 'secondary' : 'outline'} className="text-xs">
                             {result.completed ? 'Виконано' : result.status}
                         </Badge>
                     </div>
@@ -389,6 +381,7 @@ function ResultsTable({
       </div>
     );
   };
+    const allResults = Object.values(groupedResults).flatMap(g => g.results);
     return (
         <div className="text-sm">
              {Object.values(groupedResults).map(group => (
@@ -403,7 +396,7 @@ function ResultsTable({
                         </div>
                     )}
                     <div className="border rounded-lg">
-                        {group.results.map(renderRow)}
+                        {group.results.map((result, index) => renderRow(result, index, allResults))}
                     </div>
                 </div>
              ))}
@@ -429,7 +422,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
                                 checked={result.completed}
                                 onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
                             />
-                            <label htmlFor={`card-check-${result.id}`} onClick={() => onResultSelect(result)} className={cn("cursor-pointer", result.completed && "line-through text-muted-foreground")}>{result.name || <span className="text-muted-foreground">Без назви</span>}</label>
+                            <label htmlFor={`card-check-${result.id}`} onClick={() => onResultSelect(result)} className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}>{result.name || <span className="text-muted-foreground">Без назви</span>}</label>
                          </CardTitle>
                         <CardDescription onClick={() => onResultSelect(result)} className="cursor-pointer">Дедлайн: {formatDate(result.deadline)}</CardDescription>
                     </CardHeader>
@@ -450,5 +443,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
 
     
