@@ -197,12 +197,12 @@ export default function TasksPage() {
 
   return (
     <div className="flex h-screen">
-      <main className="flex-1 grid grid-cols-12 overflow-hidden">
+      <main className={cn(
+        "flex-1 flex transition-all duration-300",
+         selectedTask ? "w-1/2" : "w-full"
+      )}>
         {/* Main Content */}
-        <div className={cn(
-          "flex flex-col gap-6 p-4 md:p-6 transition-all duration-300",
-          selectedTask ? "col-span-12 md:col-span-7" : "col-span-12 lg:col-span-8 xl:col-span-9"
-        )}>
+        <div className="flex flex-col gap-6 p-4 md:p-6 w-full">
           <TasksHeader 
             currentDate={currentDate}
             onDateChange={handleDateChange}
@@ -268,34 +268,26 @@ export default function TasksPage() {
                 onKeyDown={handleNewTaskKeyDown}
              />
           </div>
+          <div className="mt-auto pt-4">
+            <ResultsList onResultClick={handleResultClick} />
+          </div>
         </div>
         
-        {/* Right Columns */}
-        <div className={cn("col-span-5 transition-all duration-300", selectedTask ? "block" : "hidden lg:block")}>
-             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
-                <div className={cn(
-                    "lg:col-span-4 xl:col-span-3 h-full transition-all duration-300",
-                    selectedTask ? "hidden lg:block" : "block"
-                )}>
-                    <div className="p-6 h-full overflow-y-auto">
-                        <ResultsList onResultClick={handleResultClick} />
-                    </div>
-                </div>
-                <div className={cn(
-                    "transition-all duration-300",
-                    selectedTask ? "col-span-5" : "hidden"
-                )}>
-                     {selectedTask && (
-                        <TaskDetailsPanel 
-                            task={selectedTask}
-                            onUpdate={handleTaskUpdate}
-                            onClose={handleClosePanel}
-                        />
-                    )}
-                </div>
-            </div>
-        </div>
       </main>
+
+       {/* Details Panel */}
+      <div className={cn(
+          "transition-all duration-300",
+          selectedTask ? "w-1/2" : "w-0 hidden"
+      )}>
+            {selectedTask && (
+              <TaskDetailsPanel 
+                  task={selectedTask}
+                  onUpdate={handleTaskUpdate}
+                  onClose={handleClosePanel}
+              />
+          )}
+      </div>
 
       {/* FAB */}
       <Button 
