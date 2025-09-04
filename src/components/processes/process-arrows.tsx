@@ -32,11 +32,19 @@ export default function ProcessArrows({ allSteps, containerRef }: ProcessArrowsP
         }
       });
 
-      const sortedSteps = [...allSteps].sort((a, b) => a.order - b.order);
+      const stepsByOrder = new Map<number, Step>();
+      allSteps.forEach(s => stepsByOrder.set(s.order, s));
+      
+      const sortedOrders = Array.from(stepsByOrder.keys()).sort((a,b) => a - b);
 
-      for (let i = 0; i < sortedSteps.length - 1; i++) {
-        const currentStep = sortedSteps[i];
-        const nextStep = sortedSteps[i + 1];
+      for (let i = 0; i < sortedOrders.length - 1; i++) {
+        const currentOrder = sortedOrders[i];
+        const nextOrder = sortedOrders[i+1];
+        
+        const currentStep = stepsByOrder.get(currentOrder);
+        const nextStep = stepsByOrder.get(nextOrder);
+
+        if(!currentStep || !nextStep) continue;
 
         const fromEl = stepElements.get(currentStep.id);
         const toEl = stepElements.get(nextStep.id);
@@ -45,11 +53,13 @@ export default function ProcessArrows({ allSteps, containerRef }: ProcessArrowsP
           const fromRect = fromEl.getBoundingClientRect();
           const toRect = toEl.getBoundingClientRect();
           const containerRect = containerRef.current.getBoundingClientRect();
+          const scrollLeft = containerRef.current.scrollLeft;
+          const scrollTop = containerRef.current.scrollTop;
           
-          const x1 = fromRect.right - containerRect.left;
-          const y1 = fromRect.top + fromRect.height / 2 - containerRect.top;
-          const x2 = toRect.left - containerRect.left;
-          const y2 = toRect.top + toRect.height / 2 - containerRect.top;
+          const x1 = fromRect.right - containerRect.left + scrollLeft;
+          const y1 = fromRect.top + fromRect.height / 2 - containerRect.top + scrollTop;
+          const x2 = toRect.left - containerRect.left + scrollLeft;
+          const y2 = toRect.top + toRect.height / 2 - containerRect.top + scrollTop;
 
           newArrows.push({ x1, y1, x2, y2 });
         }
@@ -57,17 +67,19 @@ export default function ProcessArrows({ allSteps, containerRef }: ProcessArrowsP
       setArrows(newArrows);
     };
 
-    calculateArrows();
+    // Use a timeout to ensure elements are rendered before calculating arrows
+    const timer = setTimeout(calculateArrows, 100);
+
     const resizeObserver = new ResizeObserver(calculateArrows);
     if (containerRef.current) {
         resizeObserver.observe(containerRef.current);
     }
     
-    // Recalculate on scroll as well
     const mainContent = containerRef.current;
     mainContent?.addEventListener('scroll', calculateArrows);
 
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
       mainContent?.removeEventListener('scroll', calculateArrows);
     };
@@ -83,7 +95,7 @@ export default function ProcessArrows({ allSteps, containerRef }: ProcessArrowsP
           id="arrowhead"
           markerWidth="10"
           markerHeight="7"
-          refX="0"
+          refX="9"
           refY="3.5"
           orient="auto"
         >
@@ -103,5 +115,3 @@ export default function ProcessArrows({ allSteps, containerRef }: ProcessArrowsP
     </svg>
   );
 }
-
-    

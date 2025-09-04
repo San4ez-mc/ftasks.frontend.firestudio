@@ -99,37 +99,46 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
   const [editingStep, setEditingStep] = useState<Step | null>(null);
   const [draggedStep, setDraggedStep] = useState<{ stepId: string; fromLaneId: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [maxOrder, setMaxOrder] = useState(0);
 
   const allSteps = process.lanes.flatMap(lane => lane.steps);
+
+  useEffect(() => {
+    const highestOrder = Math.max(0, ...allSteps.map(s => s.order));
+    setMaxOrder(highestOrder);
+  }, [allSteps])
 
   const addNewStep = (afterStep: Step) => {
       const fromLane = process.lanes.find(l => l.steps.some(s => s.id === afterStep.id));
       if (!fromLane) return;
+      
+      const newStepOrder = afterStep.order + 1;
 
       const newStep: Step = {
         id: `step-${Date.now()}`,
         name: 'Новий крок',
         responsibleId: mockUsers[0].id,
-        order: afterStep.order + 1,
+        order: newStepOrder,
         connections: [],
         status: 'new',
         notes: ''
       };
 
-      setProcess(prev => ({
-          ...prev,
-          lanes: prev.lanes.map(lane => {
-              if (lane.id !== fromLane.id) return lane;
-              return {
-                  ...lane,
-                  steps: lane.steps.map(s => s.order > afterStep.order ? { ...s, order: s.order + 1} : s)
-              }
-          })
-      }))
-      
-      const updatedLaneSteps = [...fromLane.steps, newStep].sort((a,b) => a.order - b.order);
-      const updatedLanes = process.lanes.map(l => l.id === fromLane.id ? { ...l, steps: updatedLaneSteps } : l);
-      setProcess(prev => ({ ...prev, lanes: updatedLanes }));
+      setProcess(prev => {
+        const updatedLanes = prev.lanes.map(lane => {
+            return {
+                ...lane,
+                steps: lane.steps.map(s => s.order >= newStepOrder ? { ...s, order: s.order + 1} : s)
+            }
+        });
+        
+        const targetLane = updatedLanes.find(l => l.id === fromLane.id);
+        if(targetLane){
+            targetLane.steps.push(newStep);
+        }
+
+        return { ...prev, lanes: updatedLanes };
+      });
   };
 
   const handleStepUpdate = (updatedStep: Step) => {
@@ -210,7 +219,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
       </header>
 
       <main ref={containerRef} className="flex-1 overflow-x-auto p-4 md:p-8 relative">
-        <div className="inline-block min-w-full">
+        <div className="inline-block min-w-full" style={{ width: `${maxOrder * (192 + 24) + 240}px` }}>
             <ProcessArrows allSteps={allSteps} containerRef={containerRef} />
             <div className="space-y-1">
                 {process.lanes.map(lane => (
@@ -220,14 +229,14 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, lane.id)}
                 >
-                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-20">
+                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-20 h-full">
                     <Input 
                         defaultValue={lane.role}
                         className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
                     />
                     </div>
                     <div className="flex-1 flex items-center p-4 min-h-[10rem] relative">
-                    {lane.steps.sort((a,b) => a.order - b.order).map(step => (
+                    {lane.steps.map(step => (
                         <div 
                             key={step.id} 
                             id={`step-${step.id}`}
@@ -359,7 +368,7 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart }: {
             
              <button
                 onClick={(e) => { e.stopPropagation(); onAddClick(); }}
-                className="absolute right-[-1.1rem] top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex z-10"
+                className="absolute right-[-1.5rem] top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex z-10"
                 title="Додати наступний крок"
             >
                 <Plus className="h-4 w-4" />
@@ -367,5 +376,3 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart }: {
         </div>
     )
 }
-
-    
