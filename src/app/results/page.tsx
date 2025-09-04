@@ -255,21 +255,29 @@ function ResultsTable({
     
     if (isCreating && creatingAtIndex === index) {
       return (
-        <div key={`creating-${result.id}`} className="grid grid-cols-12 p-2 border-b border-t items-center gap-2 bg-muted/50 text-sm">
-          <div className="col-span-1 flex justify-center">
-            <Checkbox disabled />
+        <div key={`creating-${result.id}`} className="relative group">
+          <div className="grid grid-cols-12 p-2 border-b border-t items-center gap-2 bg-muted/50 text-sm">
+            <div className="col-span-1 flex justify-center">
+              <Checkbox disabled />
+            </div>
+            <div className="col-span-11 -ml-2">
+              <Input
+                ref={newResultInputRef}
+                placeholder="Назва нового результату..."
+                value={selectedResult?.name || ''}
+                onChange={onNewResultNameChange}
+                onKeyDown={onNewResultKeyDown}
+                onBlur={onBlur}
+                className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
+              />
+            </div>
           </div>
-          <div className="col-span-11 -ml-2">
-            <Input
-              ref={newResultInputRef}
-              placeholder="Назва нового результату..."
-              value={selectedResult?.name || ''}
-              onChange={onNewResultNameChange}
-              onKeyDown={onNewResultKeyDown}
-              onBlur={onBlur}
-              className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
-            />
-          </div>
+          <button
+            onClick={() => onAddNewInBetween(index)}
+            className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
+            >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
       );
     }
@@ -384,3 +392,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
