@@ -1,12 +1,13 @@
 
 'use client';
 import type { Result } from '@/types/result';
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Paperclip, Send, Calendar as CalendarIcon, Edit, PlusCircle, Trash2, X } from 'lucide-react';
+import { MoreVertical, Paperclip, Send, Calendar as CalendarIcon, Edit, PlusCircle, Trash2, X, FilePlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
