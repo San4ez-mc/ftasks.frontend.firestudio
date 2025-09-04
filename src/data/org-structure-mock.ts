@@ -2,13 +2,13 @@
 import type { Division, Department, Employee } from '@/types/org-structure';
 
 export const mockDivisions: Division[] = [
-  { id: 'div-1', name: 'Div 1 - Виконавча', description: 'Стратегія, цілі, управління', order: 1 },
-  { id: 'div-2', name: 'Div 2 - Маркетинг', description: 'Ліди, контент, бренд', order: 2 },
-  { id: 'div-3', name: 'Div 3 - Фінанси', description: 'Бюджети, P&L, платежі', order: 3 },
-  { id: 'div-4', name: 'Div 4 - Виробництво', description: 'Виконання послуг, SLA', order: 4 },
-  { id: 'div-5', name: 'Div 5 - Якість / HR', description: 'Найм, навчання, QA', order: 5 },
-  { id: 'div-6', name: 'Div 6 - Продажі / PR', description: 'Продажі, клієнти, репутація', order: 6 },
-  { id: 'div-7', name: 'Div 7 - Розвиток', description: 'Нові продукти, R&D', order: 7 },
+  { id: 'div-1', name: '1. Відділення побудови', description: 'Стратегія, цілі, управління', order: 1 },
+  { id: 'div-2', name: '2. Відділення поширення', description: 'Ліди, контент, бренд', order: 2 },
+  { id: 'div-3', name: '3. Фінансове відділення', description: 'Бюджети, P&L, платежі', order: 3 },
+  { id: 'div-4', name: '4. Технічне відділення', description: 'Виконання послуг, SLA', order: 4 },
+  { id: 'div-5', name: '5. Відділення кваліфікації', description: 'Найм, навчання, QA', order: 5 },
+  { id: 'div-6', name: '6. Відділення по роботі з публікою', description: 'Продажі, клієнти, репутація', order: 6 },
+  { id: 'div-7', name: '7. Адміністративне відділення', description: 'Нові продукти, R&D', order: 7 },
 ];
 
 export const mockEmployees: Employee[] = [
@@ -71,3 +71,4 @@ export const mockDepartments: Department[] = [
 
 // --- Deprecated Data ---
 export const mockPositions = [];
+
