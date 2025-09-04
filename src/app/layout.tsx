@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/app-shell';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
-  title: 'Fineko TaskFlow',
+  title: 'Fineko',
   description: 'Веб-додаток для управління завданнями, оргструктурою, та результатами',
 };
 
