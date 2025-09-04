@@ -24,7 +24,7 @@ const initialTasks: Task[] = [
         id: '1', 
         title: 'Розробити API для авторизації', 
         description: 'Створити ендпоінти для реєстрації, входу та виходу користувача. Використовувати JWT для автентифікації.',
-        dueDate: '2024-08-15', 
+        dueDate: new Date().toISOString().split('T')[0], 
         status: 'todo', 
         type: 'important-urgent', 
         expectedTime: 60,
@@ -35,7 +35,7 @@ const initialTasks: Task[] = [
     { 
         id: '2', 
         title: 'Створити UI/UX для сторінки задач', 
-        dueDate: '2024-08-20', 
+        dueDate: new Date().toISOString().split('T')[0], 
         status: 'todo',
         type: 'important-not-urgent',
         expectedTime: 120,
@@ -45,26 +45,37 @@ const initialTasks: Task[] = [
     { 
         id: '3', 
         title: 'Налаштувати інтеграцію з Telegram', 
-        dueDate: '2024-08-18', 
+        dueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
         status: 'done',
         type: 'not-important-urgent',
         expectedTime: 45,
         actualTime: 50,
         expectedResult: 'Інтеграція має бути налаштована',
         actualResult: 'Інтеграція налаштована і протестована',
-        assignee: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
         reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
         resultName: 'Запустити рекламну кампанію в Google Ads'
     },
     { 
         id: '4', 
         title: 'Підготувати презентацію для клієнта', 
-        dueDate: '2024-08-10', 
+        dueDate: new Date().toISOString().split('T')[0], 
         status: 'todo',
         type: 'not-important-not-urgent',
         expectedTime: 30,
         assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
         reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+    },
+    { 
+        id: '5', 
+        title: 'Задача від керівника', 
+        description: 'Перевірити звіти за минулий місяць.',
+        dueDate: new Date().toISOString().split('T')[0], 
+        status: 'todo', 
+        type: 'important-urgent', 
+        expectedTime: 90,
+        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     },
 ];
 
@@ -86,7 +97,6 @@ export default function TasksPage() {
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
-    // Here you would fetch tasks for the new date
   };
 
   const handleTaskSelect = (task: Task) => {
@@ -108,6 +118,7 @@ export default function TasksPage() {
       status: 'todo',
       type: 'important-not-urgent', // Default type
       expectedTime: 30, // Default time
+      description: '',
       expectedResult: 'Очікуваний результат генерується GPT',
       assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
       reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
@@ -146,23 +157,25 @@ export default function TasksPage() {
   };
 
   const { totalExpectedTime, totalActualTime, filteredTasks } = useMemo(() => {
-    let filtered = tasks;
-
+    const selectedDateString = currentDate.toISOString().split('T')[0];
+    let dateFilteredTasks = tasks.filter(task => task.dueDate === selectedDateString);
+    
+    let tabFilteredTasks;
     switch(activeTab) {
         case 'delegated':
-            filtered = tasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
+            tabFilteredTasks = dateFilteredTasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
             break;
         case 'subordinates':
             // This is a simplified logic. A real app would have a proper user hierarchy.
-             filtered = tasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
+             tabFilteredTasks = dateFilteredTasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
             break;
         case 'mine':
         default:
-            filtered = tasks.filter(t => t.assignee.id === currentUserId);
+            tabFilteredTasks = dateFilteredTasks.filter(t => t.assignee.id === currentUserId);
             break;
     }
 
-    const totals = filtered.reduce(
+    const totals = tabFilteredTasks.reduce(
       (acc, task) => {
         acc.totalExpectedTime += task.expectedTime || 0;
         acc.totalActualTime += task.actualTime || 0;
@@ -170,8 +183,8 @@ export default function TasksPage() {
       },
       { totalExpectedTime: 0, totalActualTime: 0 }
     );
-    return { ...totals, filteredTasks: filtered };
-  }, [tasks, activeTab]);
+    return { ...totals, filteredTasks: tabFilteredTasks };
+  }, [tasks, activeTab, currentDate]);
   
   const groupedTasks = useMemo(() => {
     if (activeTab === 'mine') {
