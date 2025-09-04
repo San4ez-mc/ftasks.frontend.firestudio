@@ -40,7 +40,7 @@ const initialResults: Result[] = [
     id: 'res-2',
     name: 'Розробити новий модуль аналітики',
     status: 'Заплановано',
-    completed: true,
+    completed: false,
     deadline: '2024-10-15',
     assignee: { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
     reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
@@ -111,11 +111,13 @@ export default function ResultsPage() {
       templates: [],
     };
 
-    const newResults = [...results];
-    const insertionIndex = index !== undefined ? index + 1 : results.length;
-    newResults.splice(insertionIndex, 0, newResult);
+    setResults(currentResults => {
+        const newResults = [...currentResults];
+        const insertionIndex = index !== undefined ? index + 1 : currentResults.length;
+        newResults.splice(insertionIndex, 0, newResult);
+        return newResults;
+    });
     
-    setResults(newResults);
     setSelectedResult(newResult);
     setIsCreating(true);
   };
