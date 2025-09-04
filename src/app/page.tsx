@@ -7,12 +7,11 @@ import {
   Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
 import { Input } from '@/components/ui/input';
 import ResultsList from '@/components/tasks/results-list';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 
 const initialTasks: Task[] = [
@@ -79,9 +78,9 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <main className="flex-1 grid grid-cols-12 gap-6 p-4 md:p-6">
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-6">
         {/* Main Content */}
-        <div className="col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
+        <div className="md:col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
           <TasksHeader 
             currentDate={currentDate}
             onDateChange={handleDateChange}
@@ -102,14 +101,14 @@ export default function TasksPage() {
         </div>
 
         {/* Right Column */}
-        <div className="col-span-12 lg:col-span-4 xl:col-span-3">
+        <div className="md:col-span-12 lg:col-span-4 xl:col-span-3">
           <ResultsList />
         </div>
       </main>
 
        {/* Task Details Panel */}
       <Sheet open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
-        <SheetContent className="sm:max-w-lg w-full p-0">
+        <SheetContent className="w-full sm:max-w-lg p-0">
           {selectedTask && (
             <div className="p-6">
                  <SheetHeader>
@@ -124,7 +123,7 @@ export default function TasksPage() {
 
 
       {/* FAB */}
-      <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg">
+      <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
         <Plus className="h-8 w-8" />
         <span className="sr-only">Створити задачу</span>
       </Button>

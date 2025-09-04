@@ -81,35 +81,37 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="flex h-full">
-      <main className="flex-1 grid grid-cols-12 gap-6 p-4 md:p-6">
+    <div className="flex flex-col h-full">
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-6">
         {/* Main Content */}
-        <div className="col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
+        <div className="md:col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
             <header>
                 <h1 className="text-3xl font-bold tracking-tight font-headline text-center mb-4">Шаблони</h1>
-                <div className="flex items-center gap-4">
-                    <div className="relative flex-1">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input placeholder="Пошук шаблонів..." className="pl-10" />
                     </div>
-                     <Select>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="За типом" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="result">Результат</SelectItem>
-                            <SelectItem value="task">Задача</SelectItem>
-                        </SelectContent>
-                    </Select>
-                     <Select>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="За автором" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="me">Мої</SelectItem>
-                            <SelectItem value="ivan">Іван Петренко</SelectItem>
-                        </SelectContent>
-                    </Select>
+                     <div className="flex gap-2 w-full sm:w-auto">
+                        <Select>
+                            <SelectTrigger className="flex-1 sm:w-[180px]">
+                                <SelectValue placeholder="За типом" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="result">Результат</SelectItem>
+                                <SelectItem value="task">Задача</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select>
+                            <SelectTrigger className="flex-1 sm:w-[180px]">
+                                <SelectValue placeholder="За автором" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="me">Мої</SelectItem>
+                                <SelectItem value="ivan">Іван Петренко</SelectItem>
+                            </SelectContent>
+                        </Select>
+                     </div>
                 </div>
             </header>
             <Accordion type="single" collapsible className="w-full">
@@ -117,8 +119,8 @@ export default function TemplatesPage() {
                     <AccordionItem value={template.id} key={template.id}>
                         <AccordionTrigger>
                             <div className="flex justify-between w-full pr-4">
-                                <span className="font-medium">{template.name}</span>
-                                <Badge variant="outline">{template.repeatability}</Badge>
+                                <span className="font-medium text-left">{template.name}</span>
+                                <Badge variant="outline" className="text-right whitespace-nowrap ml-2">{template.repeatability}</Badge>
                             </div>
                         </AccordionTrigger>
                         <AccordionContent className="p-4 bg-muted/50 rounded-md">
@@ -134,7 +136,7 @@ export default function TemplatesPage() {
                                     </div>
                                 ))}
                              </div>
-                             <div className="mt-4 flex gap-2">
+                             <div className="mt-4 flex gap-2 flex-wrap">
                                 <Button size="sm">Редагувати</Button>
                                 <Button size="sm" variant="outline">Вимкнути</Button>
                                 <Button size="sm" variant="destructive">Видалити</Button>
@@ -146,7 +148,7 @@ export default function TemplatesPage() {
         </div>
 
         {/* Right Column */}
-        <div className="col-span-12 lg:col-span-4 xl:col-span-3">
+        <div className="md:col-span-12 lg:col-span-4 xl:col-span-3">
              <Card className="h-full">
                 <CardHeader>
                     <CardTitle>Результати</CardTitle>
@@ -167,7 +169,7 @@ export default function TemplatesPage() {
       {/* FAB */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-                <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg">
+                <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
                     <PlusCircle className="h-8 w-8" />
                     <span className="sr-only">Створити шаблон</span>
                 </Button>

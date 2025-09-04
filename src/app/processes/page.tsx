@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,7 +42,7 @@ export default function ProcessesPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight font-headline">Бізнес-процеси</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -68,13 +69,13 @@ export default function ProcessesPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {processes.map(process => (
           <Card key={process.id}>
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                {process.name}
-                <Button variant="ghost" size="icon" onClick={() => setEditingProcess(process)}>
+              <CardTitle className="flex justify-between items-start">
+                <span className="flex-1">{process.name}</span>
+                <Button variant="ghost" size="icon" onClick={() => setEditingProcess(process)} className="shrink-0 ml-2">
                     <Edit className="h-4 w-4" />
                 </Button>
               </CardTitle>

@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog';
@@ -51,7 +50,7 @@ export default function OrgStructurePage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex gap-2">
           <Dialog open={isDepartmentDialogOpen} onOpenChange={setIsDepartmentDialogOpen}>
@@ -99,24 +98,26 @@ export default function OrgStructurePage() {
             <CardTitle>Структура компанії</CardTitle>
         </CardHeader>
         <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Відділ</TableHead>
-                    <TableHead>Посада</TableHead>
-                    <TableHead>Співробітник</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {structure.map(item => (
-                    <TableRow key={item.id}>
-                    <TableCell>{item.department}</TableCell>
-                    <TableCell className="font-medium">{item.position}</TableCell>
-                    <TableCell>{item.employee}</TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                  <TableHeader>
+                  <TableRow>
+                      <TableHead>Відділ</TableHead>
+                      <TableHead>Посада</TableHead>
+                      <TableHead>Співробітник</TableHead>
+                  </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {structure.map(item => (
+                      <TableRow key={item.id}>
+                      <TableCell>{item.department}</TableCell>
+                      <TableCell className="font-medium">{item.position}</TableCell>
+                      <TableCell>{item.employee}</TableCell>
+                      </TableRow>
+                  ))}
+                  </TableBody>
+              </Table>
+            </div>
         </CardContent>
       </Card>
     </div>
