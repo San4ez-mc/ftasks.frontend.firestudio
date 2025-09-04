@@ -58,6 +58,7 @@ export default function ResultsPage() {
   const [results, setResults] = useState(initialResults);
   const [newResultName, setNewResultName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [creatingAtIndex, setCreatingAtIndex] = useState<number | null>(null);
 
   const handleResultUpdate = (updatedResult: Result) => {
     setResults(results.map(r => r.id === updatedResult.id ? updatedResult : r));
@@ -72,7 +73,7 @@ export default function ResultsPage() {
     setSelectedResult(result);
   }
 
-  const createNewResult = (name = ''): Result => {
+  const createNewResult = (name = '', index: number | null = null): Result => {
      const newResult: Result = {
       id: `new-${Date.now()}`,
       name: name,
@@ -86,7 +87,15 @@ export default function ResultsPage() {
       tasks: [],
       templates: []
     };
-    setResults(prev => [newResult, ...prev]);
+    if (index !== null) {
+      const newResults = [...results];
+      newResults.splice(index + 1, 0, newResult);
+      setResults(newResults);
+      setCreatingAtIndex(index + 1);
+    } else {
+      setResults(prev => [newResult, ...prev]);
+      setCreatingAtIndex(0);
+    }
     setSelectedResult(newResult);
     setIsCreating(true);
     return newResult;
@@ -95,6 +104,17 @@ export default function ResultsPage() {
   const handleAddNewClick = () => {
     createNewResult();
   }
+  
+  const handleAddInBetween = (index: number) => {
+    // If a new item is already being created, finalize it first
+    if (isCreating && selectedResult) {
+      if (selectedResult.name.trim() === '') {
+        setResults(results.filter(r => r.id !== selectedResult.id));
+      }
+    }
+    createNewResult('', index);
+  };
+
 
   const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
@@ -115,6 +135,19 @@ export default function ResultsPage() {
       }
       setIsCreating(false);
       setNewResultName('');
+      setCreatingAtIndex(null);
+    }
+  }
+  
+  const handleBlur = () => {
+    if (isCreating && selectedResult) {
+      if (selectedResult.name.trim() === '') {
+        setResults(results.filter(r => r.id !== selectedResult.id));
+        setSelectedResult(null);
+      }
+      setIsCreating(false);
+      setNewResultName('');
+      setCreatingAtIndex(null);
     }
   }
 
@@ -145,39 +178,18 @@ export default function ResultsPage() {
         </header>
         
         <main className="flex-1 overflow-y-auto px-4 md:px-6">
-           {isCreating && viewMode === 'table' && (
-                <div className="grid grid-cols-12 p-2 border-b items-center gap-2 bg-muted/50 text-sm">
-                    <div className="col-span-1 flex justify-center">
-                        <Checkbox disabled />
-                    </div>
-                    <div className="col-span-11 -ml-2">
-                        <Input 
-                            autoFocus
-                            placeholder="Назва нового результату..."
-                            value={newResultName}
-                            onChange={handleNewResultNameChange}
-                            onKeyDown={handleNewResultKeyDown}
-                            onBlur={() => {
-                                if(isCreating) {
-                                    setIsCreating(false);
-                                    setNewResultName('');
-                                    if(selectedResult && selectedResult.name.trim() === '') {
-                                        setResults(results.filter(r => r.id !== selectedResult.id));
-                                        setSelectedResult(null);
-                                    }
-                                }
-                            }}
-                            className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
-                        />
-                    </div>
-                </div>
-            )}
           {viewMode === 'table' ? (
             <ResultsTable 
-              results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} 
+              results={results} 
               onResultSelect={handleSelectResult} 
               onResultUpdate={handleResultUpdate}
-              onAddNew={createNewResult}
+              onAddNewInBetween={handleAddInBetween}
+              isCreating={isCreating}
+              creatingAtIndex={creatingAtIndex}
+              newResultName={newResultName}
+              onNewResultNameChange={handleNewResultNameChange}
+              onNewResultKeyDown={handleNewResultKeyDown}
+              onBlur={handleBlur}
             />
           ) : (
             <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={handleSelectResult} onResultUpdate={handleResultUpdate} />
@@ -200,7 +212,107 @@ export default function ResultsPage() {
   );
 }
 
-function ResultsTable({ results, onResultSelect, onResultUpdate, onAddNew }: { results: Result[], onResultSelect: (result: Result) => void, onResultUpdate: (result: Result) => void, onAddNew: (name?: string) => void }) {
+type ResultsTableProps = {
+  results: Result[];
+  onResultSelect: (result: Result) => void;
+  onResultUpdate: (result: Result) => void;
+  onAddNewInBetween: (index: number) => void;
+  isCreating: boolean;
+  creatingAtIndex: number | null;
+  newResultName: string;
+  onNewResultNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onNewResultKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onBlur: () => void;
+};
+
+
+function ResultsTable({
+  results,
+  onResultSelect,
+  onResultUpdate,
+  onAddNewInBetween,
+  isCreating,
+  creatingAtIndex,
+  newResultName,
+  onNewResultNameChange,
+  onNewResultKeyDown,
+  onBlur,
+}: ResultsTableProps) {
+    const renderRow = (result: Result, index: number) => {
+    if (isCreating && creatingAtIndex === index) {
+      return (
+        <div key={`creating-${result.id}`} className="grid grid-cols-12 p-2 border-b border-t items-center gap-2 bg-muted/50 text-sm">
+          <div className="col-span-1 flex justify-center">
+            <Checkbox disabled />
+          </div>
+          <div className="col-span-11 -ml-2">
+            <Input
+              autoFocus
+              placeholder="Назва нового результату..."
+              value={newResultName}
+              onChange={onNewResultNameChange}
+              onKeyDown={onNewResultKeyDown}
+              onBlur={onBlur}
+              className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div key={result.id} className="relative group">
+        <button
+          onClick={() => onAddNewInBetween(index)}
+          className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <div className="grid grid-cols-12 p-2 border-t items-center">
+          <div className="col-span-1 flex justify-center">
+            <Checkbox
+              checked={result.completed}
+              onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+            />
+          </div>
+          <div className="col-span-4 font-medium flex items-center gap-2">
+            <span
+              onClick={() => onResultSelect(result)}
+              className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}
+            >
+              {result.name || <span className="text-muted-foreground">Без назви</span>}
+            </span>
+          </div>
+          <div onClick={() => onResultSelect(result)} className="col-span-2 text-xs text-muted-foreground cursor-pointer">
+            {formatDate(result.deadline)}
+          </div>
+          <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
+              <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
+          </div>
+          <div className="col-span-2 flex justify-between items-center">
+            <Badge variant={result.completed ? 'secondary' : 'outline'} className="cursor-pointer" onClick={() => onResultSelect(result)}>
+              {result.completed ? 'Виконано' : result.status}
+            </Badge>
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Edit className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <FilePlus className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
     return (
         <div className="border rounded-lg text-sm">
              <div className="grid grid-cols-12 p-2 bg-muted text-muted-foreground font-medium text-xs uppercase tracking-wider">
@@ -209,42 +321,7 @@ function ResultsTable({ results, onResultSelect, onResultUpdate, onAddNew }: { r
                 <div className="col-span-3">Відповідальний</div>
                 <div className="col-span-2">Статус</div>
             </div>
-            {results.map(result => (
-                <div key={result.id} className="relative group">
-                  <button onClick={() => onAddNew()} className="absolute -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
-                      <Plus className="h-4 w-4" />
-                  </button>
-                  <div className="grid grid-cols-12 p-2 border-t items-center">
-                      <div className="col-span-1 flex justify-center">
-                          <Checkbox
-                              checked={result.completed}
-                              onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
-                          />
-                      </div>
-                      <div className="col-span-4 font-medium flex items-center gap-2">
-                           <span onClick={() => onResultSelect(result)} className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}>
-                              {result.name || <span className="text-muted-foreground">Без назви</span>}
-                           </span>
-                      </div>
-                      <div onClick={() => onResultSelect(result)} className="col-span-2 text-xs text-muted-foreground cursor-pointer">{formatDate(result.deadline)}</div>
-                      <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
-                          <Avatar className="h-6 w-6">
-                              <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
-                              <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
-                      </div>
-                      <div className="col-span-2 flex justify-between items-center">
-                        <Badge variant={result.completed ? 'secondary' : 'outline'} className="cursor-pointer" onClick={() => onResultSelect(result)}>{result.completed ? 'Виконано' : result.status}</Badge>
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-                            <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-3 w-3"/></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6"><FilePlus className="h-3 w-3"/></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6"><Trash2 className="h-3 w-3"/></Button>
-                        </div>
-                      </div>
-                  </div>
-                </div>
-            ))}
+            {results.map(renderRow)}
         </div>
     )
 }
@@ -283,3 +360,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
