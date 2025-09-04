@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 type TaskItemProps = {
     task: Task;
@@ -44,7 +46,7 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
 
     const handleCheckedChange = (checked: boolean | 'indeterminate') => {
-        if (checked) {
+        if (checked && task.status !== 'done') {
             setIsCompleteDialogOpen(true);
         } else {
             onUpdate({ ...task, status: 'todo' });
@@ -64,6 +66,12 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
             actualTime: parseInt(actualTime, 10)
         });
         setIsCompleteDialogOpen(false);
+    };
+
+    const handleDateChange = (date: Date | undefined) => {
+        if (date) {
+            onUpdate({ ...task, dueDate: date.toISOString().split('T')[0] });
+        }
     };
 
     return (
@@ -105,25 +113,47 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
                 <AvatarFallback>{task.assignee.name.charAt(0)}</AvatarFallback>
             </Avatar>
 
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hidden sm:flex">
-                <CalendarIcon className="h-4 w-4" />
-            </Button>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hidden sm:flex">
+                        <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                        mode="single"
+                        selected={new Date(task.dueDate)}
+                        onSelect={handleDateChange}
+                        initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+
 
             <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Завершення задачі: {task.title}</DialogTitle>
+                         <DialogDescription>
+                            Заповніть фактичні результати для завершення задачі.
+                        </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleCompleteTask}>
                         <div className="grid gap-4 py-4">
-                            <Label htmlFor="actualResult">Фактичний результат</Label>
-                            <Textarea id="actualResult" name="actualResult" defaultValue={task.expectedResult} />
-                            
-                            <Label htmlFor="actualTime">Фактичний час (хв)</Label>
-                            <Input id="actualTime" name="actualTime" type="number" defaultValue={task.expectedTime} />
+                            <div className="grid gap-2">
+                                <Label htmlFor="actualResult">Фактичний результат</Label>
+                                <Textarea id="actualResult" name="actualResult" defaultValue={task.expectedResult} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="actualTime">Фактичний час (хв)</Label>
+                                <Input id="actualTime" name="actualTime" type="number" defaultValue={task.expectedTime} />
+                            </div>
                         </div>
                         <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsCompleteDialogOpen(false)}>Скасувати</Button>
+                            <Button type="button" variant="secondary" onClick={() => {
+                                setIsCompleteDialogOpen(false);
+                                onUpdate({ ...task, status: 'todo' }); // Revert checkbox state
+                            }}>Скасувати</Button>
                             <Button type="submit">OK</Button>
                         </DialogFooter>
                     </form>

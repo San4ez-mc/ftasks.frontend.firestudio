@@ -2,7 +2,7 @@
 'use client';
 
 import type { Task } from '@/types/task';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Plus,
 } from 'lucide-react';
@@ -11,7 +11,8 @@ import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
 import { Input } from '@/components/ui/input';
 import ResultsList, { type Result } from '@/components/tasks/results-list';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import TaskDetailsPanel from '@/components/tasks/task-details-panel';
 
 
 const initialTasks: Task[] = [
@@ -23,7 +24,7 @@ const initialTasks: Task[] = [
         type: 'important-urgent', 
         expectedTime: 60,
         assignee: { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-        reporter: { name: 'Марія Сидоренко' }
+        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
     },
     { 
         id: '2', 
@@ -33,7 +34,7 @@ const initialTasks: Task[] = [
         type: 'important-not-urgent',
         expectedTime: 120,
         assignee: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { name: 'Марія Сидоренко' }
+        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
     },
     { 
         id: '3', 
@@ -42,8 +43,11 @@ const initialTasks: Task[] = [
         status: 'done',
         type: 'not-important-urgent',
         expectedTime: 45,
+        actualTime: 50,
+        expectedResult: 'Інтеграція має бути налаштована',
+        actualResult: 'Інтеграція налаштована і протестована',
         assignee: { name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-        reporter: { name: 'Марія Сидоренко' }
+        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
     },
     { 
         id: '4', 
@@ -53,7 +57,7 @@ const initialTasks: Task[] = [
         type: 'not-important-not-urgent',
         expectedTime: 30,
         assignee: { name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-        reporter: { name: 'Марія Сидоренко' }
+        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
     },
 ];
 
@@ -63,6 +67,13 @@ export default function TasksPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const newTaskInputRef = useRef<HTMLInputElement>(null);
+  const taskTitleInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectedTask && taskTitleInputRef.current) {
+        taskTitleInputRef.current.focus();
+    }
+  }, [selectedTask]);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
@@ -75,6 +86,9 @@ export default function TasksPage() {
   
   const handleTaskUpdate = (updatedTask: Task) => {
     setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+    if (selectedTask && selectedTask.id === updatedTask.id) {
+        setSelectedTask(updatedTask);
+    }
   }
 
   const createNewTask = (title: string, resultId?: string): Task => {
@@ -85,8 +99,9 @@ export default function TasksPage() {
       status: 'todo',
       type: 'important-not-urgent', // Default type
       expectedTime: 30, // Default time
-      assignee: { name: ' поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
-      reporter: { name: ' поточний користувач' }, // Placeholder for current user
+      expectedResult: 'Очікуваний результат генерується GPT',
+      assignee: { name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
+      reporter: { name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
       resultId: resultId,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
@@ -134,7 +149,7 @@ export default function TasksPage() {
                     onSelect={() => handleTaskSelect(task)}
                     onUpdate={handleTaskUpdate}
                   />
-                   <button className="absolute -left-7 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
+                   <button onClick={handleFabClick} className="absolute -left-7 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
                       <Plus className="h-4 w-4" />
                     </button>
                 </div>
@@ -157,15 +172,13 @@ export default function TasksPage() {
 
        {/* Task Details Panel */}
       <Sheet open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
-        <SheetContent className="w-full sm:max-w-lg p-0">
+        <SheetContent className="w-full sm:max-w-2xl p-0 overflow-y-auto">
           {selectedTask && (
-            <div className="p-6">
-                 <SheetHeader>
-                    <SheetTitle>Task Details</SheetTitle>
-                </SheetHeader>
-                <p>Details for: {selectedTask.title}</p>
-                 {/* Full task detail form will go here */}
-            </div>
+            <TaskDetailsPanel 
+                task={selectedTask}
+                onUpdate={handleTaskUpdate}
+                onClose={() => setSelectedTask(null)}
+            />
           )}
         </SheetContent>
       </Sheet>
