@@ -162,7 +162,7 @@ function EmployeeDetails({ employee }: { employee: Employee }) {
                         <AvatarFallback className="text-2xl">{employee.firstName[0]}{employee.lastName[0]}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <h2 className="text-2xl font-bold font-headline">{employee.firstName} {employee.lastName}</h2>
+                        <h2 className="text-xl font-bold font-headline">{employee.firstName} {employee.lastName}</h2>
                         <p className="text-muted-foreground">{employeePositions.join(', ')}</p>
                         <Badge variant={employee.status === 'active' ? 'secondary' : 'outline'} className="mt-2 capitalize">{employee.status}</Badge>
                     </div>

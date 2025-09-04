@@ -91,7 +91,7 @@ export default function TelegramGroupsPage() {
       )}>
         <header className="p-4 md:p-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight font-headline">Телеграм групи</h1>
+            <h1 className="text-xl font-bold tracking-tight font-headline">Телеграм групи</h1>
             <Dialog>
                 <DialogTrigger asChild>
                     <Button><PlusCircle className="mr-2 h-4 w-4"/>Додати групу</Button>
@@ -152,7 +152,7 @@ function TelegramGroupDetails({ group, onClose }: { group: Group, onClose: () =>
     return (
         <div className="flex flex-col h-full">
             <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
-                <h2 className="text-xl font-semibold font-headline">{group.title}</h2>
+                <h2 className="text-lg font-semibold font-headline">{group.title}</h2>
                 <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
             </header>
             <div className="flex-1 overflow-y-auto p-4 space-y-6">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -51,7 +52,7 @@ export default function OrgStructurePage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Організаційна структура</h1>
+        <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex gap-2">
           <Dialog open={isDepartmentDialogOpen} onOpenChange={setIsDepartmentDialogOpen}>
             <DialogTrigger asChild>

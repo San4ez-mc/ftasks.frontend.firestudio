@@ -102,7 +102,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             onChange={(e) => setTitle(e.target.value)}
             onBlur={handleTitleBlur}
             onKeyDown={(e) => { if(e.key === 'Enter') e.currentTarget.blur()}}
-            className="text-xl font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto"
+            className="text-lg font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto"
             placeholder="Назва задачі"
           />
          <DropdownMenu>

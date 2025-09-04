@@ -87,7 +87,7 @@ export default function TemplatesPage() {
         {/* Main Content */}
         <div className="md:col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
             <header>
-                <h1 className="text-3xl font-bold tracking-tight font-headline text-center mb-4">Шаблони</h1>
+                <h1 className="text-xl font-bold tracking-tight font-headline text-center mb-4">Шаблони</h1>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

@@ -48,7 +48,7 @@ export default function ProcessesPage() {
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Бізнес-процеси</h1>
+        <h1 className="text-xl font-bold tracking-tight font-headline">Бізнес-процеси</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
                 <Button>

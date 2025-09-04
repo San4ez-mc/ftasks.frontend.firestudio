@@ -142,7 +142,7 @@ export default function ResultsPage() {
       )}>
         <header className="p-4 md:p-6">
           <div className="flex items-center justify-center relative mb-4">
-            <h1 className="text-3xl font-bold tracking-tight font-headline text-center">Результати</h1>
+            <h1 className="text-xl font-bold tracking-tight font-headline text-center">Результати</h1>
             <div className="absolute right-0 flex items-center gap-2">
               <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('table')}>
                 <List className="h-5 w-5" />
