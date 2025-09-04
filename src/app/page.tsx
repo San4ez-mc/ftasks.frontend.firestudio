@@ -2,7 +2,7 @@
 'use client';
 
 import type { Task } from '@/types/task';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Plus,
 } from 'lucide-react';
@@ -12,7 +12,7 @@ import TaskItem from '@/components/tasks/task-item';
 import { Input } from '@/components/ui/input';
 import TaskDetailsPanel from '@/components/tasks/task-details-panel';
 import { cn } from '@/lib/utils';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 
 
 const initialTasks: Task[] = [
@@ -133,6 +133,26 @@ export default function TasksPage() {
     setSelectedTask(null);
   };
 
+  const { totalExpectedTime, totalActualTime } = useMemo(() => {
+    return tasks.reduce(
+      (acc, task) => {
+        acc.totalExpectedTime += task.expectedTime || 0;
+        acc.totalActualTime += task.actualTime || 0;
+        return acc;
+      },
+      { totalExpectedTime: 0, totalActualTime: 0 }
+    );
+  }, [tasks]);
+  
+  const formatTime = (minutes: number): string => {
+    if (!minutes && minutes !== 0) return '-';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    const hStr = h > 0 ? `${h}h` : '';
+    const mStr = m > 0 ? `${m}m` : '';
+    return `${hStr} ${mStr}`.trim() || '0m';
+  };
+
   return (
     <div className="flex h-screen">
       <main className="flex-1 grid grid-cols-12 overflow-hidden">
@@ -168,6 +188,14 @@ export default function TasksPage() {
                             />
                         ))}
                     </TableBody>
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell colSpan={3} className="font-bold">Всього</TableCell>
+                            <TableCell className="hidden sm:table-cell font-bold text-xs">{formatTime(totalExpectedTime)}</TableCell>
+                            <TableCell className="hidden sm:table-cell font-bold text-xs">{formatTime(totalActualTime)}</TableCell>
+                            <TableCell></TableCell>
+                        </TableRow>
+                    </TableFooter>
                 </Table>
             </div>
              <Input 
