@@ -2,7 +2,7 @@
 'use client';
 
 import type { Task } from '@/types/task';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Plus,
 } from 'lucide-react';
@@ -62,6 +62,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const newTaskInputRef = useRef<HTMLInputElement>(null);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
@@ -76,20 +77,43 @@ export default function TasksPage() {
     setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
   }
 
-  const handleResultClick = (result: Result) => {
+  const createNewTask = (title: string, resultId?: string): Task => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      title: result.name,
+      title: title,
       dueDate: currentDate.toISOString().split('T')[0],
       status: 'todo',
       type: 'important-not-urgent', // Default type
       expectedTime: 30, // Default time
       assignee: { name: ' поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
       reporter: { name: ' поточний користувач' }, // Placeholder for current user
-      resultId: result.id,
+      resultId: resultId,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
+    return newTask;
+  };
+
+  const handleResultClick = (result: Result) => {
+    const newTask = createNewTask(result.name, result.id);
     setSelectedTask(newTask);
+  };
+
+  const handleNewTaskKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const inputElement = event.currentTarget;
+      const title = inputElement.value.trim();
+      if (title) {
+        createNewTask(title);
+        inputElement.value = '';
+      }
+    }
+  };
+
+  const handleFabClick = () => {
+    const newTask = createNewTask('');
+    setSelectedTask(newTask);
+    newTaskInputRef.current?.focus();
   };
 
   return (
@@ -116,7 +140,12 @@ export default function TasksPage() {
                 </div>
               ))}
             </div>
-             <Input placeholder="Нова задача..." className="bg-card mt-2"/>
+             <Input 
+                ref={newTaskInputRef}
+                placeholder="Нова задача..." 
+                className="bg-card mt-2"
+                onKeyDown={handleNewTaskKeyDown}
+             />
           </div>
         </div>
 
@@ -143,7 +172,10 @@ export default function TasksPage() {
 
 
       {/* FAB */}
-      <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
+      <Button 
+        onClick={handleFabClick}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20"
+      >
         <Plus className="h-8 w-8" />
         <span className="sr-only">Створити задачу</span>
       </Button>
