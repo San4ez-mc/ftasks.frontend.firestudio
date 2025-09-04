@@ -33,13 +33,13 @@ const mockInitialProcess = {
       id: 'lane-1',
       role: 'Керівник відділу',
       steps: [
-        { id: 'step-1', name: 'Створення заявки на вакансію', responsibleId: 'user-1', order: 1, connections: [{ to: 'step-2' }], status: 'ok', notes: '', isDataSavePoint: true },
+        { id: 'step-1', name: 'Створення заявки на вакансію', responsibleId: 'user-1', order: 1, connections: [{ to: 'step-2' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'CRM > New Vacancy Request' },
         { id: 'step-6', name: 'Технічна співбесіда', responsibleId: 'user-2', order: 6, connections: [{ to: 'step-7' }], status: 'ok', notes: '' },
         { id: 'step-7', name: 'Фінальна співбесіда', responsibleId: 'user-1', order: 7, connections: [{ to: 'step-8' }], status: 'ok', notes: '' },
         { id: 'step-9', name: 'Підготовка плану на випробувальний термін', responsibleId: 'user-1', order: 9, connections: [{ to: 'step-12' }], status: 'new', notes: 'Важливо чітко визначити цілі' },
         { id: 'step-12', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 12, connections: [{ to: 'step-15' }], status: 'ok', notes: '' },
         { id: 'step-15', name: 'Щотижневі one-to-one', responsibleId: 'user-1', order: 15, connections: [{ to: 'step-18' }], status: 'ok', notes: '' },
-        { id: 'step-18', name: 'Оцінка за результатами випробувального терміну', responsibleId: 'user-1', order: 18, connections: [], status: 'ok', notes: '', isDataSavePoint: true },
+        { id: 'step-18', name: 'Оцінка за результатами випробувального терміну', responsibleId: 'user-1', order: 18, connections: [], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'HRIS > Employee Record' },
       ],
     },
     {
@@ -47,10 +47,10 @@ const mockInitialProcess = {
       role: 'HR Менеджер',
       steps: [
         { id: 'step-2', name: 'Публікація вакансії', responsibleId: 'user-3', order: 2, connections: [{ to: 'step-3' }], status: 'ok', notes: '' },
-        { id: 'step-3', name: 'Скринінг резюме', responsibleId: 'user-3', order: 3, connections: [{ to: 'step-4' }], status: 'ok', notes: '', isDataSavePoint: true },
+        { id: 'step-3', name: 'Скринінг резюме', responsibleId: 'user-3', order: 3, connections: [{ to: 'step-4' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'Applicant Tracking System' },
         { id: 'step-4', name: 'Первинна співбесіда з HR', responsibleId: 'user-3', order: 4, connections: [{ to: 'step-5' }], status: 'ok', notes: '' },
         { id: 'step-5', name: 'Надсилання тестового завдання', responsibleId: 'user-3', order: 5, connections: [{ to: 'step-6' }], status: 'outdated', notes: 'Оновити тестове для Frontend' },
-        { id: 'step-8', name: 'Формування та надсилання оферу', responsibleId: 'user-3', order: 8, connections: [{ to: 'step-10' }], status: 'ok', notes: '', isDataSavePoint: true },
+        { id: 'step-8', name: 'Формування та надсилання оферу', responsibleId: 'user-3', order: 8, connections: [{ to: 'step-10' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'HRIS > Candidate Profile' },
         { id: 'step-10', name: 'Підписання документів', responsibleId: 'user-3', order: 10, connections: [{ to: 'step-11' }], status: 'ok', notes: 'Важливо перевірити всі підписи' },
         { id: 'step-13', name: 'Знайомство з командою та офісом', responsibleId: 'user-3', order: 13, connections: [{ to: 'step-14' }], status: 'ok', notes: '' },
         { id: 'step-16', name: 'Збір проміжного фідбеку', responsibleId: 'user-3', order: 16, connections: [{ to: 'step-17' }], status: 'ok', notes: '' },
@@ -68,7 +68,7 @@ const mockInitialProcess = {
         id: 'lane-4',
         role: 'Бухгалтерія',
         steps: [
-            { id: 'step-14', name: 'Внесення в payroll систему', responsibleId: 'user-4', order: 14, connections: [{ to: 'step-15' }], status: 'ok', notes: '', isDataSavePoint: true },
+            { id: 'step-14', name: 'Внесення в payroll систему', responsibleId: 'user-4', order: 14, connections: [{ to: 'step-15' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'Payroll System' },
         ],
     },
   ],
@@ -84,6 +84,7 @@ type Step = {
     status: StepStatus;
     notes: string;
     isDataSavePoint?: boolean;
+    dataSaveLocation?: string;
 };
 type Lane = {
     id: string;
@@ -195,19 +196,33 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
     setDraggedStep(null);
   };
 
+  const [isDataSavePointChecked, setIsDataSavePointChecked] = useState(editingStep?.isDataSavePoint || false);
+
+  useEffect(() => {
+    setIsDataSavePointChecked(editingStep?.isDataSavePoint || false);
+  }, [editingStep]);
+
 
   return (
     <div className="flex flex-col h-full bg-muted/40">
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between sticky top-0 z-20">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
           <Button variant="outline" size="icon" onClick={() => router.push('/processes')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Input 
-            value={process.name}
-            onChange={(e) => setProcess({ ...process, name: e.target.value })}
-            className="text-lg font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
-          />
+          <div className="flex-1">
+            <Input 
+              value={process.name}
+              onChange={(e) => setProcess({ ...process, name: e.target.value })}
+              className="text-lg font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
+            />
+             <Textarea
+                value={process.description}
+                onChange={(e) => setProcess({ ...process, description: e.target.value })}
+                placeholder="Короткий опис процесу..."
+                className="text-sm text-muted-foreground border-none shadow-none p-0 h-auto focus-visible:ring-0 resize-none mt-1"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => router.push('/processes')}>
@@ -274,6 +289,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                         status: formData.get('status') as StepStatus,
                         notes: formData.get('notes') as string,
                         isDataSavePoint: (formData.get('isDataSavePoint') as string) === 'on',
+                        dataSaveLocation: formData.get('dataSaveLocation') as string,
                     })
                 }}>
                     <div className="grid gap-4 py-4 text-sm">
@@ -307,9 +323,15 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                             <Textarea id="notes" name="notes" defaultValue={editingStep?.notes} />
                         </div>
                         <div className="flex items-center gap-2">
-                            <input type="checkbox" id="isDataSavePoint" name="isDataSavePoint" defaultChecked={editingStep?.isDataSavePoint} />
+                            <input type="checkbox" id="isDataSavePoint" name="isDataSavePoint" defaultChecked={editingStep?.isDataSavePoint} onChange={(e) => setIsDataSavePointChecked(e.target.checked)} />
                             <Label htmlFor="isDataSavePoint">Крок збереження даних</Label>
                         </div>
+                        {isDataSavePointChecked && (
+                            <div className="space-y-1 pl-6">
+                                <Label htmlFor="dataSaveLocation">Місце збереження даних</Label>
+                                <Input id="dataSaveLocation" name="dataSaveLocation" defaultValue={editingStep?.dataSaveLocation} placeholder="Наприклад, Google Sheet 'Leads'"/>
+                            </div>
+                        )}
                     </div>
                 </form>
                  <DialogFooter>
@@ -357,7 +379,17 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart, onUpdate }: {
                 <GripVertical className="h-4 w-4" />
             </div>
             <div className="absolute top-2 right-2 flex items-center gap-1">
-                {step.isDataSavePoint && <Database className="h-4 w-4 text-muted-foreground" title="Крок збереження даних" />}
+                {step.isDataSavePoint && (
+                    <Popover>
+                        <PopoverTrigger onClick={(e) => e.stopPropagation()}>
+                            <Database className="h-4 w-4 text-muted-foreground" />
+                        </PopoverTrigger>
+                        <PopoverContent className="text-xs max-w-sm">
+                            <p className="font-bold">Місце збереження:</p>
+                            <p>{step.dataSaveLocation || 'Не вказано'}</p>
+                        </PopoverContent>
+                    </Popover>
+                )}
                 {step.status !== 'ok' && (
                      <Popover>
                         <PopoverTrigger onClick={(e) => e.stopPropagation()}>
@@ -423,5 +455,7 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart, onUpdate }: {
 
     return CardContent;
 }
+
+    
 
     
