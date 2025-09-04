@@ -1,6 +1,6 @@
 
 'use client';
-import type { Result, SubResult } from '@/types/result';
+import type { Result, SubResult, User } from '@/types/result';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +30,7 @@ type ResultDetailsPanelProps = {
   onClose: () => void;
 };
 
-const mockUsers = [
+const mockUsers: User[] = [
   { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
   { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
   { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
@@ -77,12 +77,14 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
             id: `sub-${Date.now()}`,
             name: '',
             completed: false,
+            assignee: result.assignee, // Default to main result assignee
+            deadline: result.deadline, // Default to main result deadline
         };
         const updatedSubResults = [...subResults, newSubResult];
         onUpdate({ ...result, subResults: updatedSubResults });
     };
 
-    const handleSubResultChange = (id: string, field: 'name' | 'completed', value: string | boolean) => {
+    const handleSubResultChange = (id: string, field: keyof SubResult, value: any) => {
         const updatedSubResults = subResults.map(sr => 
             sr.id === id ? { ...sr, [field]: value } : sr
         );
@@ -103,6 +105,27 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
         }
     };
     
+    const handleCreateTask = () => {
+        // This is a placeholder. In a real app, this would trigger
+        // a global state change or an API call to create a task.
+        const newTask = {
+            id: `task-${Date.now()}`,
+            title: result.name,
+            status: 'todo' as 'todo' | 'done'
+        };
+        onUpdate({ ...result, tasks: [...result.tasks, newTask] });
+        alert(`Задача "${result.name}" створена на сьогодні!`);
+    }
+    
+     const handleCreateTemplate = () => {
+        const newTemplate = {
+            id: `tpl-${Date.now()}`,
+            name: result.name,
+            repeatability: 'Щоденно',
+        };
+        onUpdate({ ...result, templates: [...result.templates, newTemplate] });
+    }
+
     return (
         <div className="flex flex-col h-full bg-card text-sm">
             <header className="p-4 border-b flex items-center gap-2 sticky top-0 bg-card z-10">
@@ -114,7 +137,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                     onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                     placeholder="Назва результату"
                     className={cn(
-                        "text-lg font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto", 
+                        "text-base font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto", 
                         result.completed && "line-through text-muted-foreground"
                     )}
                 />
@@ -123,8 +146,8 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                         <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Створити задачу</DropdownMenuItem>
-                        <DropdownMenuItem>Створити шаблон</DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleCreateTask}>Створити задачу</DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleCreateTemplate}>Створити шаблон</DropdownMenuItem>
                         <DropdownMenuItem>Дублювати</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">Видалити</DropdownMenuItem>
                     </DropdownMenuContent>
@@ -143,9 +166,9 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                                 if (user) onUpdate({...result, assignee: user})
                             }}>
                             <SelectTrigger className="h-8 text-xs">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 truncate">
                                     <Avatar className="h-6 w-6"><AvatarImage src={result.assignee.avatar} /></Avatar>
-                                    <SelectValue />
+                                    <span className="truncate"><SelectValue /></span>
                                 </div>
                             </SelectTrigger>
                             <SelectContent>
@@ -205,7 +228,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                     </div>
                 </div>
                 <div>
-                    <Label htmlFor="description" className="text-xs text-muted-foreground">Очікуваний результат</Label>
+                    <Label htmlFor="description" className="text-xs text-muted-foreground">Опис результату</Label>
                     <p className="text-xs text-muted-foreground/70 mb-1">Той результат детально, який постановник хоче отримати</p>
                     <Textarea 
                         id="description" 
@@ -213,7 +236,18 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                         onChange={(e) => setDescription(e.target.value)}
                         onBlur={handleDescriptionBlur} 
                         className="mt-1 bg-transparent border-dashed text-xs min-h-[60px]"
+                        placeholder="Опишіть, що має бути зроблено..."
                     />
+                </div>
+
+                {/* File attachments */}
+                <div>
+                     <Label className="text-xs text-muted-foreground">Прикріплені файли</Label>
+                     <div className="mt-2">
+                         <Button variant="outline" size="sm" className="text-xs h-8 w-full">
+                            <Paperclip className="mr-2 h-3 w-3"/> Додати файл
+                         </Button>
+                     </div>
                 </div>
 
                 <Separator />
@@ -221,24 +255,66 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                 {/* Sub-results */}
                 <div>
                     <h3 className="font-semibold text-xs mb-2">Підрезультати</h3>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                         {subResults.map((sr, index) => (
-                            <div key={sr.id} className="flex items-center gap-2 group/sub-result">
-                                <Checkbox 
-                                    checked={sr.completed} 
-                                    onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
-                                />
-                                <Input 
-                                    value={sr.name}
-                                    onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
-                                    onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
-                                    placeholder="Новий підрезультат..."
-                                    className="h-7 text-xs border-none focus-visible:ring-1"
-                                    autoFocus={!sr.name && index === subResults.length - 1}
-                                />
-                                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleSubResultDelete(sr.id)}>
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
+                            <div key={sr.id} className="flex flex-col gap-2 p-2 border rounded-md group/sub-result">
+                                <div className="flex items-center gap-2">
+                                    <Checkbox 
+                                        checked={sr.completed} 
+                                        onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
+                                    />
+                                    <Input 
+                                        value={sr.name}
+                                        onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
+                                        onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
+                                        placeholder="Новий підрезультат..."
+                                        className="h-7 text-xs border-none focus-visible:ring-1 flex-1"
+                                        autoFocus={!sr.name && index === subResults.length - 1}
+                                    />
+                                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleSubResultDelete(sr.id)}>
+                                        <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 pl-6">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" size="sm" className="h-7 text-xs font-normal w-full justify-start">
+                                                <CalendarIcon className="mr-2 h-3 w-3"/>
+                                                {sr.deadline ? formatDate(sr.deadline) : 'Дедлайн'}
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                            <Calendar
+                                                mode="single"
+                                                selected={sr.deadline ? new Date(sr.deadline) : undefined}
+                                                onSelect={(date) => handleSubResultChange(sr.id, 'deadline', date?.toISOString().split('T')[0])}
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                     <Select 
+                                        value={sr.assignee?.id} 
+                                        onValueChange={(userId) => {
+                                            const user = mockUsers.find(u => u.id === userId);
+                                            if (user) handleSubResultChange(sr.id, 'assignee', user)
+                                        }}>
+                                        <SelectTrigger className="h-7 text-xs">
+                                             <div className="flex items-center gap-2 truncate">
+                                                {sr.assignee?.avatar && <Avatar className="h-5 w-5"><AvatarImage src={sr.assignee.avatar} /></Avatar>}
+                                                <span className="truncate"><SelectValue placeholder="Відповідальний..."/></span>
+                                            </div>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {mockUsers.map(user => (
+                                                <SelectItem key={user.id} value={user.id}>
+                                                     <div className="flex items-center gap-2">
+                                                        <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
+                                                        <span>{user.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         ))}
                         <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-7" onClick={handleAddSubResult}>
@@ -257,7 +333,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                                <p className="flex-1">{task.title}</p>
                             </div>
                         ))}
-                         <Button variant="outline" size="sm" className="w-full text-xs h-8"><PlusCircle className="mr-2 h-3 w-3"/> Створити задачу</Button>
+                         <Button onClick={handleCreateTask} variant="outline" size="sm" className="w-full text-xs h-8"><PlusCircle className="mr-2 h-3 w-3"/> Додати задачу на сьогодні</Button>
                     </div>
                 </div>
                 
@@ -266,13 +342,33 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                     <h3 className="font-semibold text-xs mb-2">Шаблони</h3>
                     <div className="space-y-2">
                          {result.templates.map(template => (
-                             <div key={template.id} className="flex items-center gap-2 p-1 rounded text-xs border">
-                               <p className="flex-1">{template.name}</p>
-                               <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-3 w-3"/></Button>
-                               <Button variant="ghost" size="icon" className="h-6 w-6"><Trash2 className="h-3 w-3"/></Button>
-                            </div>
+                             <Card key={template.id} className="text-xs p-2">
+                                <div className="flex items-center justify-between">
+                                    <p className="font-medium">{template.name}</p>
+                                     <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-3 w-3"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onUpdate({...result, templates: result.templates.filter(t => t.id !== template.id)})}>
+                                            <Trash2 className="h-3 w-3"/>
+                                        </Button>
+                                    </div>
+                                </div>
+                                 {template.repeatability && (
+                                     <div className="mt-2">
+                                        <Label className="text-muted-foreground">Повторюваність</Label>
+                                        <Input 
+                                            className="h-7 mt-1 text-xs" 
+                                            defaultValue={template.repeatability}
+                                            onChange={(e) => {
+                                                const updatedTemplates = result.templates.map(t => t.id === template.id ? {...t, repeatability: e.target.value} : t);
+                                                onUpdate({...result, templates: updatedTemplates});
+                                            }}
+                                        />
+                                     </div>
+                                 )}
+
+                            </Card>
                         ))}
-                         <Button variant="outline" size="sm" className="w-full text-xs h-8"><FilePlus className="mr-2 h-3 w-3"/> Створити шаблон</Button>
+                         <Button onClick={handleCreateTemplate} variant="outline" size="sm" className="w-full text-xs h-8"><FilePlus className="mr-2 h-3 w-3"/> Створити шаблон</Button>
                     </div>
                 </div>
 

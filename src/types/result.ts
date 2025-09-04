@@ -9,6 +9,8 @@ type SubResult = {
     id: string;
     name: string;
     completed: boolean;
+    assignee?: User;
+    deadline?: string;
 }
 
 type ResultTask = {
@@ -20,7 +22,10 @@ type ResultTask = {
 type ResultTemplate = {
     id: string;
     name: string;
+    repeatability?: string;
 }
+
+export type { SubResult, User };
 
 export interface Result {
   id: string;
