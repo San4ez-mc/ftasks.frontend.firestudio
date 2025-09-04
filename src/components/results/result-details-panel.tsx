@@ -1,6 +1,6 @@
 
 'use client';
-import type { Result } from '@/types/result';
+import type { Result, SubResult } from '@/types/result';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,11 +41,13 @@ const mockUsers = [
 export default function ResultDetailsPanel({ result, onUpdate, isCreating = false, onClose }: ResultDetailsPanelProps) {
     const [name, setName] = useState(result.name);
     const [description, setDescription] = useState(result.description);
+    const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setName(result.name)
-    }, [result.name])
+        setSubResults(result.subResults || []);
+    }, [result.name, result.subResults])
     
     useEffect(() => {
         if (isCreating && nameInputRef.current) {
@@ -63,6 +65,32 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
             onUpdate({...result, description: e.target.value});
         }
     }
+
+    const handleAddSubResult = () => {
+        const newSubResult: SubResult = {
+            id: `sub-${Date.now()}`,
+            name: '',
+            completed: false,
+        };
+        const updatedSubResults = [...subResults, newSubResult];
+        onUpdate({ ...result, subResults: updatedSubResults });
+    };
+
+    const handleSubResultChange = (id: string, field: 'name' | 'completed', value: string | boolean) => {
+        const updatedSubResults = subResults.map(sr => 
+            sr.id === id ? { ...sr, [field]: value } : sr
+        );
+        onUpdate({ ...result, subResults: updatedSubResults });
+    };
+     
+    const handleSubResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, id: string) => {
+        if (e.key === 'Enter') {
+            const currentSubResult = subResults.find(sr => sr.id === id);
+            if(currentSubResult?.name.trim() !== '') {
+                handleAddSubResult();
+            }
+        }
+    };
     
     return (
         <div className="flex flex-col h-full bg-card text-sm">
@@ -171,6 +199,32 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
 
                 <Separator />
 
+                {/* Sub-results */}
+                <div>
+                    <h3 className="font-semibold text-xs mb-2">Підрезультати</h3>
+                    <div className="space-y-1">
+                        {subResults.map((sr, index) => (
+                            <div key={sr.id} className="flex items-center gap-2">
+                                <Checkbox 
+                                    checked={sr.completed} 
+                                    onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
+                                />
+                                <Input 
+                                    value={sr.name}
+                                    onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
+                                    onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
+                                    placeholder="Новий підрезультат..."
+                                    className="h-7 text-xs border-none focus-visible:ring-1"
+                                    autoFocus={!sr.name && index === subResults.length - 1}
+                                />
+                            </div>
+                        ))}
+                        <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-7" onClick={handleAddSubResult}>
+                            <PlusCircle className="mr-2 h-3 w-3"/> Додати підрезультат
+                        </Button>
+                    </div>
+                </div>
+
                  {/* Tasks */}
                 <div>
                     <h3 className="font-semibold text-xs mb-2">Задачі</h3>
@@ -226,4 +280,5 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
             </footer>
         </div>
     );
-}
+
+    
