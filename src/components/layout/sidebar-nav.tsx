@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,12 +18,13 @@ import {
   Workflow,
   Settings,
   LogOut,
-  ChevronRight,
+  Target,
 } from 'lucide-react';
 
 const menuItems = [
   { href: '/', label: 'Задачі', icon: LayoutDashboard },
   { href: '/results', label: 'Результати', icon: Trophy },
+  { href: '/aims', label: 'Цілі', icon: Target },
   { href: '/org-structure', label: 'Оргструктура', icon: Users },
   { href: '/processes', label: 'Бізнес-процеси', icon: Workflow },
 ];
