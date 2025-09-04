@@ -3,28 +3,71 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Save } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockDivisions, mockPositions, mockEmployees } from '@/data/org-structure-mock';
-import type { Position, Employee, Division } from '@/types/org-structure';
-import OrgBoard from '@/components/org-structure/org-board';
+import { Plus, Download, Save, UserPlus } from 'lucide-react';
+import { mockDivisions, mockDepartments, mockEmployees } from '@/data/org-structure-mock';
+import type { Department, Employee, Division } from '@/types/org-structure';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+function DepartmentCard({ department, employees }: { department: Department; employees: Employee[] }) {
+    const manager = employees.find(e => e.id === department.managerId);
+    const departmentEmployees = employees.filter(e => department.employeeIds.includes(e.id) && e.id !== department.managerId);
+
+    return (
+        <Card className="bg-background">
+            <CardHeader className="p-3">
+                <CardTitle className="text-base">{department.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-0 text-sm space-y-3">
+                <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground mb-1">Керівник</h4>
+                    {manager ? (
+                        <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                                <AvatarImage src={manager.avatar} alt={manager.name} />
+                                <AvatarFallback>{manager.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span>{manager.name}</span>
+                        </div>
+                    ) : (
+                        <p className="text-xs text-muted-foreground">Не призначено</p>
+                    )}
+                </div>
+
+                {departmentEmployees.length > 0 && (
+                    <div>
+                        <h4 className="text-xs font-semibold text-muted-foreground mb-2">Співробітники</h4>
+                        <div className="space-y-2">
+                        {departmentEmployees.map(emp => (
+                             <div key={emp.id} className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={emp.avatar} alt={emp.name} />
+                                    <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span>{emp.name}</span>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                )}
+                
+                <Button variant="outline" size="sm" className="w-full">
+                    <UserPlus className="mr-2 h-4 w-4" /> Додати співробітника
+                </Button>
+            </CardContent>
+        </Card>
+    )
+}
+
 
 export default function OrgStructurePage() {
-  const [positions, setPositions] = useState<Position[]>(mockPositions);
+  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
   const [divisions, setDivisions] = useState<Division[]>(mockDivisions);
-  const [activeTab, setActiveTab] = useState('org-board');
-
-  const handlePositionUpdate = (updatedPosition: Position) => {
-    setPositions(prev => prev.map(p => p.id === updatedPosition.id ? updatedPosition : p));
-  };
-
-  const handleDragEnd = (positionId: string, newDivisionId: string) => {
-    setPositions(prev => prev.map(p => p.id === positionId ? { ...p, divisionId: newDivisionId } : p));
-  };
-
+  
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full bg-muted/40">
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex items-center gap-2">
@@ -34,35 +77,30 @@ export default function OrgStructurePage() {
         </div>
       </header>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <div className="px-4 pt-4">
-            <TabsList>
-                <TabsTrigger value="org-board">Org Board</TabsTrigger>
-                <TabsTrigger value="hierarchy">Ієрархія</TabsTrigger>
-                <TabsTrigger value="metrics">Показники</TabsTrigger>
-            </TabsList>
+      <ScrollArea className="flex-1">
+        <div className="p-4 grid grid-flow-col auto-cols-[320px] gap-4">
+            {divisions.map(division => {
+                const divisionDepartments = departments.filter(d => d.divisionId === division.id);
+                return (
+                    <div key={division.id} className="flex flex-col gap-4">
+                        <div className="p-3 bg-background rounded-lg border">
+                             <h3 className="font-bold">{division.name}</h3>
+                             <p className="text-xs text-muted-foreground">{division.description}</p>
+                        </div>
+                        <div className="flex flex-col gap-4">
+                            {divisionDepartments.map(dept => (
+                                <DepartmentCard key={dept.id} department={dept} employees={employees} />
+                            ))}
+                        </div>
+                         <Button variant="outline" className="mt-auto">
+                            <Plus className="mr-2 h-4 w-4" /> Додати відділ
+                        </Button>
+                    </div>
+                )
+            })}
         </div>
-
-        <TabsContent value="org-board" className="flex-1 overflow-hidden mt-0">
-          <OrgBoard 
-            divisions={divisions}
-            positions={positions}
-            employees={employees}
-            onPositionUpdate={handlePositionUpdate}
-            onDragEnd={handleDragEnd}
-          />
-        </TabsContent>
-        <TabsContent value="hierarchy" className="flex-1 p-4">
-            <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">Ієрархія (дерево) буде реалізована незабаром.</p>
-            </div>
-        </TabsContent>
-        <TabsContent value="metrics" className="flex-1 p-4">
-             <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">Показники будуть реалізовані незабаром.</p>
-            </div>
-        </TabsContent>
-      </Tabs>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
   );
 }

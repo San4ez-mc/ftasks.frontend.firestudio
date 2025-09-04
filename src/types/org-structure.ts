@@ -6,6 +6,21 @@ export interface Division {
   order: number;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+  divisionId: string;
+  managerId: string;
+  employeeIds: string[];
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+// Deprecated, replaced by Department
 export interface Position {
   id: string;
   name:string;
@@ -14,10 +29,4 @@ export interface Position {
   employeeIds: string[];
   linkedProcessIds: number;
   linkedKpiIds: number;
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  avatar?: string;
 }
