@@ -1,8 +1,10 @@
+
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -28,18 +30,21 @@ type Process = typeof initialProcesses[0];
 export default function ProcessesPage() {
   const [processes, setProcesses] = useState(initialProcesses);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingProcess, setEditingProcess] = useState<Process | null>(null);
 
   const handleCreateProcess = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsCreateDialogOpen(false);
+    const formData = new FormData(event.currentTarget);
+    const newProcess = {
+        id: `proc-${Date.now()}`,
+        name: formData.get('procName') as string,
+        description: formData.get('procDesc') as string,
+    }
+    if (newProcess.name) {
+        setProcesses(prev => [newProcess, ...prev]);
+        setIsCreateDialogOpen(false);
+    }
   };
   
-  const handleUpdateProcess = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setEditingProcess(null);
-  };
-
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -69,47 +74,29 @@ export default function ProcessesPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-        {processes.map(process => (
-          <Card key={process.id}>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-start">
-                <span className="flex-1">{process.name}</span>
-                <Button variant="ghost" size="icon" onClick={() => setEditingProcess(process)} className="shrink-0 ml-2">
-                    <Edit className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-              <CardDescription>{process.description}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">Переглянути деталі</Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      
-      {/* Edit Dialog */}
-      <Dialog open={!!editingProcess} onOpenChange={() => setEditingProcess(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Редагувати бізнес-процес</DialogTitle>
-            <DialogDescription>{editingProcess?.name}</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateProcess}>
-            <div className="grid gap-4 py-4">
-              <Label htmlFor="editProcName">Назва процесу</Label>
-              <Input id="editProcName" name="editProcName" defaultValue={editingProcess?.name} />
-              <Label htmlFor="editProcDesc">Опис</Label>
-              <Textarea id="editProcDesc" name="editProcDesc" defaultValue={editingProcess?.description} />
+        {processes.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {processes.map(process => (
+                    <Link href={`/processes/${process.id}`} key={process.id}>
+                        <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                            <CardHeader>
+                            <CardTitle>
+                                {process.name}
+                            </CardTitle>
+                            <CardDescription>{process.description}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Button variant="outline" className="w-full" asChild><span className="w-full">Переглянути деталі</span></Button>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ))}
             </div>
-            <DialogFooter>
-              <Button variant="secondary" onClick={() => setEditingProcess(null)}>Скасувати</Button>
-              <Button type="submit">Зберегти зміни</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
+        ) : (
+            <div className="flex items-center justify-center h-64 border-dashed border-2 rounded-lg">
+                <p className="text-muted-foreground">Бізнес-процесів поки нема.</p>
+            </div>
+        )}
     </div>
   );
 }
