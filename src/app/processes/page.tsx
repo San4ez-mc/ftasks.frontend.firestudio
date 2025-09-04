@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 const initialProcesses = [
   { id: '1', name: 'Onboarding нового співробітника', description: 'Процес адаптації та навчання нових членів команди.' },
@@ -30,6 +33,7 @@ type Process = typeof initialProcesses[0];
 export default function ProcessesPage() {
   const [processes, setProcesses] = useState(initialProcesses);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingProcess, setEditingProcess] = useState<Process | null>(null);
 
   const handleCreateProcess = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,6 +48,25 @@ export default function ProcessesPage() {
         setIsCreateDialogOpen(false);
     }
   };
+
+  const handleUpdateProcess = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingProcess) return;
+
+    const formData = new FormData(event.currentTarget);
+    const updatedProcess = {
+      ...editingProcess,
+      name: formData.get('procName') as string,
+      description: formData.get('procDesc') as string,
+    };
+
+    setProcesses(processes.map(p => p.id === updatedProcess.id ? updatedProcess : p));
+    setEditingProcess(null);
+  }
+
+  const handleDeleteProcess = (processId: string) => {
+    setProcesses(processes.filter(p => p.id !== processId));
+  }
   
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -77,19 +100,54 @@ export default function ProcessesPage() {
         {processes.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {processes.map(process => (
-                    <Link href={`/processes/${process.id}`} key={process.id}>
-                        <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                            <CardHeader>
-                            <CardTitle>
-                                {process.name}
-                            </CardTitle>
-                            <CardDescription>{process.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button variant="outline" className="w-full" asChild><span className="w-full">Переглянути деталі</span></Button>
-                            </CardContent>
-                        </Card>
-                    </Link>
+                    <Card key={process.id} className="h-full flex flex-col hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                    <CardTitle className="text-lg">
+                                        <Link href={`/processes/${process.id}`} className="hover:underline">
+                                            {process.name}
+                                        </Link>
+                                    </CardTitle>
+                                    <CardDescription>{process.description}</CardDescription>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="shrink-0"><MoreVertical className="h-5 w-5" /></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setEditingProcess(process)}>
+                                            <Edit className="mr-2 h-4 w-4"/> Редагувати
+                                        </DropdownMenuItem>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4"/> Видалити
+                                                </DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Цю дію неможливо скасувати. Це назавжди видалить бізнес-процес.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteProcess(process.id)}>Видалити</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="mt-auto">
+                            <Button variant="outline" className="w-full" asChild>
+                                <Link href={`/processes/${process.id}`} className="w-full">Переглянути деталі</Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
         ) : (
@@ -97,6 +155,27 @@ export default function ProcessesPage() {
                 <p className="text-muted-foreground">Бізнес-процесів поки нема.</p>
             </div>
         )}
+        
+        {/* Edit Dialog */}
+        <Dialog open={!!editingProcess} onOpenChange={(open) => !open && setEditingProcess(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Редагувати бізнес-процес</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleUpdateProcess}>
+                    <div className="grid gap-4 py-4">
+                        <Label htmlFor="procNameEdit">Назва процесу</Label>
+                        <Input id="procNameEdit" name="procName" defaultValue={editingProcess?.name} />
+                        <Label htmlFor="procDescEdit">Опис</Label>
+                        <Textarea id="procDescEdit" name="procDesc" defaultValue={editingProcess?.description} />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setEditingProcess(null)}>Скасувати</Button>
+                        <Button type="submit">Зберегти</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

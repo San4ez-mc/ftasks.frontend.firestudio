@@ -1,14 +1,21 @@
 
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, PlusCircle, Save, X } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, X, GripVertical, AlertTriangle, Lightbulb, CircleHelp, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
-// --- Mock Data for Swimlane ---
+
+// --- Mock Data ---
 
 const mockUsers = [
   { id: 'user-1', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
@@ -16,7 +23,7 @@ const mockUsers = [
   { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
 ];
 
-const mockProcess = {
+const mockInitialProcess = {
   id: '1',
   name: 'Onboarding нового співробітника',
   description: 'Процес адаптації та навчання нових членів команди.',
@@ -25,40 +32,140 @@ const mockProcess = {
       id: 'lane-1',
       role: 'HR Менеджер',
       steps: [
-        { id: 'step-1', name: 'Підписання документів', responsibleId: 'user-3', order: 1, connections: [{ to: 'step-2' }] },
-        { id: 'step-5', name: 'Фінальний фідбек', responsibleId: 'user-3', order: 4, connections: [] },
+        { id: 'step-1', name: 'Підписання документів', responsibleId: 'user-3', order: 1, connections: [{ to: 'step-2' }], status: 'new', notes: 'Важливо перевірити всі підписи' },
+        { id: 'step-5', name: 'Фінальний фідбек', responsibleId: 'user-3', order: 4, connections: [], status: 'ok', notes: '' },
       ],
     },
     {
       id: 'lane-2',
       role: 'IT Спеціаліст',
       steps: [
-        { id: 'step-2', name: 'Налаштування робочого місця', responsibleId: 'user-2', order: 2, connections: [{ to: 'step-3' }] },
+        { id: 'step-2', name: 'Налаштування робочого місця', responsibleId: 'user-2', order: 2, connections: [{ to: 'step-3' }], status: 'outdated', notes: 'Замовити новий монітор' },
       ],
     },
     {
       id: 'lane-3',
       role: 'Керівник команди',
       steps: [
-        { id: 'step-3', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 3, connections: [{ to: 'step-5' }] },
+        { id: 'step-3', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 3, connections: [{ to: 'step-5' }], status: 'problematic', notes: '' },
       ],
     },
   ],
 };
 
-type Step = typeof mockProcess.lanes[0]['steps'][0];
+type StepStatus = 'new' | 'outdated' | 'problematic' | 'ok';
+type Step = {
+    id: string;
+    name: string;
+    responsibleId: string;
+    order: number;
+    connections: { to: string }[];
+    status: StepStatus;
+    notes: string;
+};
+type Lane = {
+    id: string;
+    role: string;
+    steps: Step[];
+}
+type Process = typeof mockInitialProcess;
 
 // --- Main Page Component ---
 
 export default function EditProcessPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [process, setProcess] = useState(mockProcess);
-  const [selectedStep, setSelectedStep] = useState<Step | null>(null);
+  const [process, setProcess] = useState<Process>(mockInitialProcess);
+  const [editingStep, setEditingStep] = useState<Step | null>(null);
+  const [draggedStep, setDraggedStep] = useState<{ stepId: string; fromLaneId: string } | null>(null);
 
   const allSteps = process.lanes.flatMap(lane => lane.steps);
 
+  const addNewStep = (afterStep: Step) => {
+      const fromLane = process.lanes.find(l => l.steps.some(s => s.id === afterStep.id));
+      if (!fromLane) return;
+
+      const newStep: Step = {
+        id: `step-${Date.now()}`,
+        name: 'Новий крок',
+        responsibleId: mockUsers[0].id,
+        order: afterStep.order + 1,
+        connections: [],
+        status: 'new',
+        notes: ''
+      };
+
+      setProcess(prev => ({
+          ...prev,
+          lanes: prev.lanes.map(lane => {
+              if (lane.id !== fromLane.id) return lane;
+              return {
+                  ...lane,
+                  steps: lane.steps.map(s => s.order > afterStep.order ? { ...s, order: s.order + 1} : s)
+              }
+          })
+      }))
+      
+      const updatedLaneSteps = [...fromLane.steps, newStep].sort((a,b) => a.order - b.order);
+      const updatedLanes = process.lanes.map(l => l.id === fromLane.id ? { ...l, steps: updatedLaneSteps } : l);
+      setProcess(prev => ({ ...prev, lanes: updatedLanes }));
+  };
+
+  const handleStepUpdate = (updatedStep: Step) => {
+      setProcess(prev => ({
+          ...prev,
+          lanes: prev.lanes.map(lane => ({
+              ...lane,
+              steps: lane.steps.map(step => step.id === updatedStep.id ? updatedStep : step)
+          }))
+      }));
+      setEditingStep(null);
+  }
+  
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, step: Step, fromLaneId: string) => {
+    setDraggedStep({ stepId: step.id, fromLaneId });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, toLaneId: string) => {
+    e.preventDefault();
+    if (!draggedStep) return;
+    
+    const { stepId, fromLaneId } = draggedStep;
+
+    if (fromLaneId === toLaneId) {
+        setDraggedStep(null);
+        return;
+    }
+
+    let stepToMove: Step | undefined;
+    const updatedLanes = process.lanes.map(lane => {
+        if (lane.id === fromLaneId) {
+            stepToMove = lane.steps.find(s => s.id === stepId);
+            return { ...lane, steps: lane.steps.filter(s => s.id !== stepId) };
+        }
+        return lane;
+    });
+
+    if (stepToMove) {
+        const finalLanes = updatedLanes.map(lane => {
+            if (lane.id === toLaneId) {
+                return { ...lane, steps: [...lane.steps, stepToMove!] };
+            }
+            return lane;
+        });
+        setProcess({ ...process, lanes: finalLanes });
+    }
+
+    setDraggedStep(null);
+  };
+
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-muted/40">
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => router.push('/processes')}>
@@ -67,7 +174,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
           <Input 
             value={process.name}
             onChange={(e) => setProcess({ ...process, name: e.target.value })}
-            className="text-xl font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
+            className="text-lg font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -80,97 +187,156 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
         </div>
       </header>
 
-      <main className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-auto p-8 relative">
-          {/* Swimlane Background */}
-          <div className="absolute inset-0 top-16">
-              {process.lanes.map((lane, index) => (
-                  <div key={lane.id} className="h-40 border-b border-dashed"></div>
-              ))}
-          </div>
-          
-          {/* Content */}
-          <div className="relative z-10 space-y-4">
-            {process.lanes.map(lane => (
-              <div key={lane.id} className="flex items-start h-40">
-                <div className="sticky left-0 bg-background pr-4 w-40">
-                  <h3 className="font-semibold text-lg">{lane.role}</h3>
-                </div>
-                <div className="flex-1 grid grid-cols-6 gap-x-8 items-center h-full">
-                  {lane.steps.map(step => (
-                     <div key={step.id} className={`col-start-${step.order} col-span-1`}>
-                       <StepCard step={step} />
-                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Connectors (SVG) - a simplified visualization */}
-           <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none" >
-                {allSteps.map(step => (
-                    step.connections.map(conn => {
-                        const fromStep = allSteps.find(s => s.id === step.id);
-                        const toStep = allSteps.find(s => s.id === conn.to);
-                        if (!fromStep || !toStep) return null;
-                        
-                        const fromLaneIndex = process.lanes.findIndex(l => l.steps.some(s => s.id === fromStep.id));
-                        const toLaneIndex = process.lanes.findIndex(l => l.steps.some(s => s.id === toStep.id));
-                        
-                        // Approximate positions - in a real app, you'd use refs and calculate precisely
-                        const startX = 160 + (fromStep.order * 150);
-                        const startY = 110 + (fromLaneIndex * 176);
-                        const endX = 160 + (toStep.order * 150) - 100;
-                        const endY = 110 + (toLaneIndex * 176);
-
-                        return (
-                            <path 
-                                key={`${fromStep.id}-${toStep.id}`}
-                                d={`M ${startX} ${startY} C ${startX + 50} ${startY}, ${endX - 50} ${endY}, ${endX} ${endY}`}
-                                stroke="hsl(var(--primary))"
-                                strokeWidth="2"
-                                fill="none"
-                                markerEnd="url(#arrow)"
+      <main className="flex-1 overflow-x-auto p-4 md:p-8">
+        <div className="inline-block min-w-full">
+            <div className="space-y-1">
+                {process.lanes.map(lane => (
+                <div 
+                    key={lane.id} 
+                    className="flex items-start min-h-[10rem] bg-background rounded-lg"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, lane.id)}
+                >
+                    <div className="sticky left-0 bg-background p-4 w-48 border-r">
+                    <Input 
+                        defaultValue={lane.role}
+                        className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
+                    />
+                    </div>
+                    <div className="flex-1 grid grid-cols-8 gap-x-8 items-center p-4">
+                    {lane.steps.sort((a,b) => a.order - b.order).map(step => (
+                        <div key={step.id} className={`col-start-${step.order} col-span-1`}>
+                            <StepCard 
+                                step={step} 
+                                onDragStart={(e) => handleDragStart(e, step, lane.id)}
+                                onEditClick={() => setEditingStep(step)} 
+                                onAddClick={() => addNewStep(step)}
                             />
-                        )
-                    })
+                        </div>
+                    ))}
+                    </div>
+                </div>
                 ))}
-                <defs>
-                    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5"
-                        markerWidth="6" markerHeight="6"
-                        orient="auto-start-reverse">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--primary))" />
-                    </marker>
-                </defs>
-            </svg>
-
+            </div>
         </div>
       </main>
 
-       <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
-          <PlusCircle className="h-8 w-8" />
-          <span className="sr-only">Додати крок</span>
-        </Button>
+        <Dialog open={!!editingStep} onOpenChange={(open) => !open && setEditingStep(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Редагувати крок</DialogTitle>
+                </DialogHeader>
+                <form id="edit-step-form" onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    handleStepUpdate({
+                        ...editingStep!,
+                        name: formData.get('stepName') as string,
+                        responsibleId: formData.get('responsibleId') as string,
+                        status: formData.get('status') as StepStatus,
+                        notes: formData.get('notes') as string,
+                    })
+                }}>
+                    <div className="grid gap-4 py-4 text-sm">
+                        <div className="space-y-1">
+                            <Label htmlFor="stepName">Назва кроку</Label>
+                            <Input id="stepName" name="stepName" defaultValue={editingStep?.name} />
+                        </div>
+                         <div className="space-y-1">
+                            <Label htmlFor="responsibleId">Відповідальний</Label>
+                            <Select name="responsibleId" defaultValue={editingStep?.responsibleId}>
+                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    {mockUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-1">
+                            <Label htmlFor="status">Статус</Label>
+                            <Select name="status" defaultValue={editingStep?.status}>
+                                <SelectTrigger><SelectValue/></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="new">Новий</SelectItem>
+                                    <SelectItem value="ok">OK</SelectItem>
+                                    <SelectItem value="outdated">Застарілий</SelectItem>
+                                    <SelectItem value="problematic">Проблемний</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-1">
+                            <Label htmlFor="notes">Нотатки</Label>
+                            <Textarea id="notes" name="notes" defaultValue={editingStep?.notes} />
+                        </div>
+                    </div>
+                </form>
+                 <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setEditingStep(null)}>Скасувати</Button>
+                    <Button type="submit" form="edit-step-form">Зберегти</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
 
-
 // --- Step Card Component ---
-function StepCard({ step }: { step: Step }) {
+
+const statusConfig: Record<StepStatus, { icon: React.ElementType, color: string, label: string }> = {
+    new: { icon: Lightbulb, color: 'text-blue-500', label: 'Новий' },
+    ok: { icon: () => null, color: '', label: 'OK' },
+    outdated: { icon: CircleHelp, color: 'text-yellow-500', label: 'Застарілий' },
+    problematic: { icon: AlertTriangle, color: 'text-red-500', label: 'Проблемний' },
+}
+
+function StepCard({ step, onEditClick, onAddClick, onDragStart }: { 
+    step: Step; 
+    onEditClick: () => void;
+    onAddClick: () => void;
+    onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+}) {
     const responsible = mockUsers.find(u => u.id === step.responsibleId);
+    const StatusIcon = statusConfig[step.status].icon;
+    const statusColor = statusConfig[step.status].color;
+
     return (
-        <div className="bg-card border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer w-40">
-            <p className="font-medium text-sm mb-2">{step.name}</p>
+        <div 
+            className="group relative bg-card border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer w-48"
+            onClick={onEditClick}
+            draggable
+            onDragStart={onDragStart}
+        >
+            <div className="absolute top-2 left-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                <GripVertical className="h-4 w-4" />
+            </div>
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+                {step.status !== 'ok' && (
+                     <Popover>
+                        <PopoverTrigger onClick={(e) => e.stopPropagation()}>
+                            <StatusIcon className={cn("h-4 w-4", statusColor)} />
+                        </PopoverTrigger>
+                        <PopoverContent className="text-xs w-auto p-2">
+                            {statusConfig[step.status].label}
+                        </PopoverContent>
+                    </Popover>
+                )}
+            </div>
+            
+            <p className="font-medium text-sm mb-2 pr-4">{step.name}</p>
             <div className="flex items-center gap-2">
                 <Avatar className="h-6 w-6">
                     <AvatarImage src={responsible?.avatar} />
-                    <AvatarFallback>{responsible?.name[0]}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{responsible?.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <span className="text-xs text-muted-foreground">{responsible?.name}</span>
             </div>
+            
+             <button
+                onClick={(e) => { e.stopPropagation(); onAddClick(); }}
+                className="absolute right-[-1.1rem] top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex z-10"
+                title="Додати наступний крок"
+            >
+                <Plus className="h-4 w-4" />
+            </button>
         </div>
     )
 }
-
