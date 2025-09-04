@@ -73,7 +73,7 @@ export default function ResultsPage() {
       setSelectedResult(updatedResult);
     }
   };
-
+  
   const handleSelectResult = (result: Result | null) => {
     if (isCreating) {
       finalizeNewResult();
@@ -83,13 +83,11 @@ export default function ResultsPage() {
   }
 
   const finalizeNewResult = () => {
-    if (!isCreating || !selectedResult) {
-      return;
-    };
-
+    if (!isCreating || !selectedResult) return;
+    
     if (selectedResult.name.trim() === '') {
-      setResults(prev => prev.filter(r => r.id !== selectedResult.id));
-      setSelectedResult(null);
+        setResults(prev => prev.filter(r => r.id !== selectedResult.id));
+        setSelectedResult(null);
     }
     setIsCreating(false);
   }
@@ -98,7 +96,7 @@ export default function ResultsPage() {
     if (isCreating) {
       finalizeNewResult();
     }
-    
+
     const newResult: Result = {
       id: `new-${Date.now()}`,
       name: name,
@@ -110,19 +108,17 @@ export default function ResultsPage() {
       description: '',
       subResults: [],
       tasks: [],
-      templates: []
+      templates: [],
     };
+
+    const newResults = [...results];
+    const insertionIndex = index !== undefined ? index + 1 : results.length;
+    newResults.splice(insertionIndex, 0, newResult);
     
-    setResults(currentResults => {
-        const newResults = [...currentResults];
-        const insertionIndex = index !== undefined ? index + 1 : currentResults.length;
-        newResults.splice(insertionIndex, 0, newResult);
-        return newResults;
-    });
-    
+    setResults(newResults);
     setSelectedResult(newResult);
     setIsCreating(true);
-  }
+  };
     
   const handleClosePanel = () => {
     if (isCreating) {
@@ -397,7 +393,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-    
 
     
