@@ -10,9 +10,11 @@ import { Calendar } from "@/components/ui/calendar";
 type TasksHeaderProps = {
     currentDate: Date;
     onDateChange: (date: Date) => void;
+    activeTab: string;
+    onTabChange: (tab: string) => void;
 };
 
-export default function TasksHeader({ currentDate, onDateChange }: TasksHeaderProps) {
+export default function TasksHeader({ currentDate, onDateChange, activeTab, onTabChange }: TasksHeaderProps) {
     const changeDate = (days: number) => {
         const newDate = new Date(currentDate);
         newDate.setDate(currentDate.getDate() + days);
@@ -51,7 +53,7 @@ export default function TasksHeader({ currentDate, onDateChange }: TasksHeaderPr
                     <ChevronRight />
                 </Button>
             </div>
-            <Tabs defaultValue="mine">
+            <Tabs value={activeTab} onValueChange={onTabChange}>
                 <TabsList>
                     <TabsTrigger value="mine">Мої</TabsTrigger>
                     <TabsTrigger value="delegated">Делеговані</TabsTrigger>

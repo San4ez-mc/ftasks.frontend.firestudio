@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import TaskDetailsPanel from '@/components/tasks/task-details-panel';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const initialTasks: Task[] = [
@@ -23,8 +24,8 @@ const initialTasks: Task[] = [
         status: 'todo', 
         type: 'important-urgent', 
         expectedTime: 60,
-        assignee: { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
         resultName: 'Розробити новий модуль аналітики',
     },
     { 
@@ -34,8 +35,8 @@ const initialTasks: Task[] = [
         status: 'todo',
         type: 'important-not-urgent',
         expectedTime: 120,
-        assignee: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
     },
     { 
         id: '3', 
@@ -47,8 +48,8 @@ const initialTasks: Task[] = [
         actualTime: 50,
         expectedResult: 'Інтеграція має бути налаштована',
         actualResult: 'Інтеграція налаштована і протестована',
-        assignee: { name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        assignee: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
         resultName: 'Запустити рекламну кампанію в Google Ads'
     },
     { 
@@ -58,16 +59,18 @@ const initialTasks: Task[] = [
         status: 'todo',
         type: 'not-important-not-urgent',
         expectedTime: 30,
-        assignee: { name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+        assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
     },
 ];
 
+const currentUserId = 'user-2'; // Mock current user
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [activeTab, setActiveTab] = useState('mine');
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   const taskTitleInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,8 +105,8 @@ export default function TasksPage() {
       type: 'important-not-urgent', // Default type
       expectedTime: 30, // Default time
       expectedResult: 'Очікуваний результат генерується GPT',
-      assignee: { name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
-      reporter: { name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
+      assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
+      reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
       resultName: resultName,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
@@ -133,8 +136,24 @@ export default function TasksPage() {
     setSelectedTask(null);
   };
 
-  const { totalExpectedTime, totalActualTime } = useMemo(() => {
-    return tasks.reduce(
+  const { totalExpectedTime, totalActualTime, filteredTasks } = useMemo(() => {
+    let filtered = tasks;
+
+    switch(activeTab) {
+        case 'delegated':
+            filtered = tasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
+            break;
+        case 'subordinates':
+            // This is a simplified logic. A real app would have a proper user hierarchy.
+             filtered = tasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
+            break;
+        case 'mine':
+        default:
+            filtered = tasks.filter(t => t.assignee.id === currentUserId);
+            break;
+    }
+
+    const totals = filtered.reduce(
       (acc, task) => {
         acc.totalExpectedTime += task.expectedTime || 0;
         acc.totalActualTime += task.actualTime || 0;
@@ -142,8 +161,24 @@ export default function TasksPage() {
       },
       { totalExpectedTime: 0, totalActualTime: 0 }
     );
-  }, [tasks]);
+    return { ...totals, filteredTasks: filtered };
+  }, [tasks, activeTab]);
   
+  const groupedTasks = useMemo(() => {
+    if (activeTab === 'mine') {
+        return { [currentUserId]: { name: 'Мої задачі', results: filteredTasks } };
+    }
+    return filteredTasks.reduce((acc, task) => {
+        const key = task.assignee.id || 'unassigned';
+        if (!acc[key]) {
+            acc[key] = { ...task.assignee, results: [] };
+        }
+        acc[key].results.push(task);
+        return acc;
+    }, {} as Record<string, { id?: string, name: string; avatar?: string; results: Task[] }>);
+
+  }, [filteredTasks, activeTab]);
+
   const formatTime = (minutes: number): string => {
     if (!minutes && minutes !== 0) return '-';
     const h = Math.floor(minutes / 60);
@@ -164,40 +199,61 @@ export default function TasksPage() {
           <TasksHeader 
             currentDate={currentDate}
             onDateChange={handleDateChange}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-            <div className="border-y">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[50px]"></TableHead>
-                            <TableHead>Назва</TableHead>
-                            <TableHead className="hidden md:table-cell w-[180px]">Тип</TableHead>
-                            <TableHead className="hidden sm:table-cell w-[100px]">Очік. час</TableHead>
-                            <TableHead className="hidden sm:table-cell w-[100px]">Факт. час</TableHead>
-                            <TableHead className="w-[120px] text-right">Дії</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {tasks.map(task => (
-                            <TaskItem 
-                                key={task.id}
-                                task={task} 
-                                onSelect={() => handleTaskSelect(task)}
-                                onUpdate={handleTaskUpdate}
-                            />
-                        ))}
-                    </TableBody>
-                    <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={3} className="font-bold">Всього</TableCell>
-                            <TableCell className="hidden sm:table-cell font-bold text-xs">{formatTime(totalExpectedTime)}</TableCell>
-                            <TableCell className="hidden sm:table-cell font-bold text-xs">{formatTime(totalActualTime)}</TableCell>
-                            <TableCell></TableCell>
-                        </TableRow>
-                    </TableFooter>
-                </Table>
+            <div className="border-t">
+                 {Object.values(groupedTasks).map(group => (
+                    <div key={group.id || group.name}>
+                        {activeTab !== 'mine' && (
+                            <div className="flex items-center gap-3 p-2 border-b bg-muted/50">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={group.avatar} />
+                                    <AvatarFallback>{group.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <h3 className="font-semibold">{group.name}</h3>
+                            </div>
+                        )}
+                        <Table>
+                            {activeTab === 'mine' && (
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50px]"></TableHead>
+                                        <TableHead>Назва</TableHead>
+                                        <TableHead className="hidden md:table-cell w-[180px]">Тип</TableHead>
+                                        <TableHead className="hidden sm:table-cell w-[100px]">Очік. час</TableHead>
+                                        <TableHead className="hidden sm:table-cell w-[100px]">Факт. час</TableHead>
+                                        <TableHead className="w-[120px] text-right">Дії</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                            )}
+                            <TableBody>
+                                {group.results.map(task => (
+                                    <TaskItem 
+                                        key={task.id}
+                                        task={task} 
+                                        onSelect={() => handleTaskSelect(task)}
+                                        onUpdate={handleTaskUpdate}
+                                        showTypeColumn={activeTab === 'mine'}
+                                    />
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                ))}
             </div>
+            {activeTab === 'mine' && (
+                 <div className="border-t py-2 px-4">
+                    <div className="grid grid-cols-12 gap-x-2 md:gap-x-4">
+                         <div className="col-span-1"></div>
+                         <div className="col-span-11 md:col-span-5 font-bold">Всього</div>
+                         <div className="hidden md:table-cell md:col-span-2"></div>
+                         <div className="hidden sm:table-cell sm:col-span-1 font-bold text-xs">{formatTime(totalExpectedTime)}</div>
+                         <div className="hidden sm:table-cell sm:col-span-1 font-bold text-xs">{formatTime(totalActualTime)}</div>
+                    </div>
+                 </div>
+            )}
              <Input 
                 ref={newTaskInputRef}
                 placeholder="Нова задача..." 

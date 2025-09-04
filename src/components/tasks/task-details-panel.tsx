@@ -41,10 +41,10 @@ const typeOptions: { value: TaskType; label: string; color: string }[] = [
 ];
 
 const mockUsers = [
-  { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-  { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-  { name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-  { name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+  { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
+  { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+  { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+  { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
 ];
 
 const mockResults = [
@@ -122,16 +122,24 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
         <div className="grid grid-cols-2 gap-x-8 gap-y-4">
             <div>
                 <Label className="text-muted-foreground mb-2 block">Відповідальний</Label>
-                 <Select defaultValue={task.assignee.name}>
+                 <Select 
+                    value={task.assignee.id} 
+                    onValueChange={(userId) => {
+                        const user = mockUsers.find(u => u.id === userId);
+                        if (user) onUpdate({...task, assignee: user})
+                    }}
+                 >
                     <SelectTrigger>
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6"><AvatarImage src={task.assignee.avatar} /></Avatar>
-                            <SelectValue />
-                        </div>
+                        <SelectValue asChild>
+                             <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6"><AvatarImage src={task.assignee.avatar} /></Avatar>
+                                <span>{task.assignee.name}</span>
+                            </div>
+                        </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                         {mockUsers.map(user => (
-                            <SelectItem key={user.name} value={user.name}>
+                            <SelectItem key={user.id} value={user.id}>
                                  <div className="flex items-center gap-2">
                                     <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
                                     <span>{user.name}</span>
@@ -200,12 +208,17 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             <Label htmlFor="expectedResult" className="font-semibold">Очікуваний результат</Label>
             <Textarea id="expectedResult" defaultValue={task.expectedResult} onBlur={(e) => onUpdate({...task, expectedResult: e.target.value})} className="mt-2 bg-transparent border-dashed"/>
         </div>
-        {task.status === 'done' && (
-             <div>
-                <Label htmlFor="actualResult" className="font-semibold">Фактичний результат</Label>
-                <Textarea id="actualResult" value={task.actualResult} readOnly className="mt-2 bg-muted/50 border-solid"/>
-            </div>
-        )}
+        
+        <div>
+            <Label htmlFor="actualResult" className="font-semibold">Фактичний результат</Label>
+            <Textarea 
+                id="actualResult" 
+                defaultValue={task.actualResult} 
+                onBlur={(e) => onUpdate({...task, actualResult: e.target.value})} 
+                className="mt-2 bg-muted/50 border-solid"
+                readOnly={task.status !== 'done'}
+            />
+        </div>
 
         <Separator />
 

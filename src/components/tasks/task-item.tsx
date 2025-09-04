@@ -20,6 +20,7 @@ type TaskItemProps = {
     task: Task;
     onSelect: () => void;
     onUpdate: (task: Task) => void;
+    showTypeColumn: boolean;
 };
 
 const typeColors: Record<TaskType, string> = {
@@ -45,7 +46,7 @@ function formatTime(minutes: number): string {
     return `${hStr} ${mStr}`.trim() || '0m';
 }
 
-export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
+export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [actualTime, setActualTime] = useState(task.actualTime);
@@ -123,7 +124,7 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
                     )}
                 />
             </TableCell>
-            <TableCell className="hidden md:table-cell">
+            <TableCell className={cn(!showTypeColumn && "hidden", "md:table-cell")}>
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>

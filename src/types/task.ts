@@ -4,6 +4,7 @@ export type TaskStatus = 'todo' | 'in-progress' | 'done';
 export type TaskType = 'important-urgent' | 'important-not-urgent' | 'not-important-urgent' | 'not-important-not-urgent';
 
 type User = {
+    id?: string;
     name: string;
     avatar?: string;
 };
