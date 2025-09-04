@@ -19,6 +19,7 @@ import {
   Settings,
   LogOut,
   Target,
+  FileClock,
 } from 'lucide-react';
 
 const menuItems = [
@@ -27,6 +28,7 @@ const menuItems = [
   { href: '/aims', label: 'Цілі', icon: Target },
   { href: '/org-structure', label: 'Оргструктура', icon: Users },
   { href: '/processes', label: 'Бізнес-процеси', icon: Workflow },
+  { href: '/templates', label: 'Шаблони', icon: FileClock },
 ];
 
 export default function SidebarNav() {
