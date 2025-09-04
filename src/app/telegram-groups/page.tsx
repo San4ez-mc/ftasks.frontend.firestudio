@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus, PlusCircle, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -26,17 +26,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 
 // --- Mock Data ---
 
-const mockGroupStatus = {
-  linked: true,
-  group_id: '-1001234567890',
-  title: 'Fineko Development Team',
-  username: 'fineko_dev_chat',
-  linked_at: '2024-08-01T10:00:00Z',
-};
+const mockGroups = [
+    {
+        id: 'group-1',
+        linked: true,
+        group_id: '-1001234567890',
+        title: 'Fineko Development Team',
+        username: 'fineko_dev_chat',
+        linked_at: '2024-08-01T10:00:00Z',
+    },
+    {
+        id: 'group-2',
+        linked: false,
+        title: 'Marketing Department',
+    }
+];
+
 
 const mockTelegramMembers = [
   { tg_user_id: '12345', name: 'Іван Петренко', username: 'ivan_p', status: 'linked', employee_id: 'emp-1' },
@@ -56,9 +74,114 @@ const mockMessageLogs = [
   { id: 'log-3', timestamp: new Date(Date.now() - 7200000), content: 'Test message from admin panel.', status: 'Error', error: '403: Forbidden: bot was kicked from the group' },
 ];
 
-// --- Components ---
+type Group = typeof mockGroups[0];
 
-function GroupStatusCard({ status }: { status: typeof mockGroupStatus | null }) {
+// --- Main Page Component ---
+
+export default function TelegramGroupsPage() {
+  const [groups, setGroups] = useState(mockGroups);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(groups[0]);
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <div className={cn(
+        "flex flex-col transition-all duration-300 w-full",
+        selectedGroup ? "md:w-1/2" : "w-full"
+      )}>
+        <header className="p-4 md:p-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight font-headline">Телеграм групи</h1>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button><PlusCircle className="mr-2 h-4 w-4"/>Додати групу</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Прив'язка нової групи</DialogTitle>
+                        <DialogDescription>Введіть код, який бот надіслав у вашу Telegram-групу.</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-2">
+                        <Label htmlFor="link-code">Код прив'язки групи</Label>
+                        <Input id="link-code" placeholder="Введіть код..." />
+                    </div>
+                    <DialogFooter>
+                        <Button className="w-full">
+                            <LinkIcon className="mr-2 h-4 w-4" /> Прив'язати
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto px-4 md:px-6 space-y-4">
+           {groups.map(group => (
+             <Card 
+                key={group.id} 
+                onClick={() => setSelectedGroup(group)}
+                className={cn(
+                    "cursor-pointer hover:shadow-md transition-shadow",
+                    selectedGroup?.id === group.id && "ring-2 ring-primary"
+                )}
+             >
+                <CardContent className="p-4 flex items-center justify-between">
+                    <p className="font-semibold">{group.title}</p>
+                    <Badge variant={group.linked ? "secondary" : "outline"}>
+                        {group.linked ? "Прив'язано" : "Не прив'язано"}
+                    </Badge>
+                </CardContent>
+             </Card>
+           ))}
+        </main>
+      </div>
+      
+      <div className={cn(
+        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
+        selectedGroup ? "w-full md:w-1/2" : "w-0"
+      )}>
+        {selectedGroup && <TelegramGroupDetails key={selectedGroup.id} group={selectedGroup} onClose={() => setSelectedGroup(null)} />}
+      </div>
+    </div>
+  );
+}
+
+
+// --- Details Panel Component ---
+
+function TelegramGroupDetails({ group, onClose }: { group: Group, onClose: () => void }) {
+    return (
+        <div className="flex flex-col h-full">
+            <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
+                <h2 className="text-xl font-semibold font-headline">{group.title}</h2>
+                <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="grid gap-6 lg:grid-cols-5">
+                    <div className="lg:col-span-2 space-y-6">
+                        <GroupStatusCard status={group} />
+                        {group?.linked && <MessageLogCard logs={mockMessageLogs} />}
+                    </div>
+                    <div className="lg:col-span-3">
+                        {group?.linked ? (
+                            <MemberManagementCard members={mockTelegramMembers}/>
+                        ) : (
+                            <Card className="h-full flex items-center justify-center">
+                                <CardContent className="text-center text-muted-foreground p-6">
+                                    <LinkIcon className="mx-auto h-12 w-12 mb-4" />
+                                    <p>Прив'яжіть групу, щоб побачити список учасників.</p>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+
+// --- Sub-components for Details Panel ---
+
+function GroupStatusCard({ status }: { status: Group | null }) {
     if (!status?.linked) {
         return (
              <Card>
@@ -68,11 +191,11 @@ function GroupStatusCard({ status }: { status: typeof mockGroupStatus | null }) 
                 </CardHeader>
                 <CardContent className="space-y-4">
                      <div className="space-y-2">
-                        <Label htmlFor="link-code">Код прив'язки групи</Label>
-                        <Input id="link-code" placeholder="Введіть код..." />
+                        <Label htmlFor="link-code-panel">Код прив'язки групи</Label>
+                        <Input id="link-code-panel" placeholder="Введіть код..." />
                     </div>
                     <Button className="w-full">
-                        <LinkIcon className="mr-2" /> Прив'язати
+                        <LinkIcon className="mr-2 h-4 w-4" /> Прив'язати
                     </Button>
                 </CardContent>
             </Card>
@@ -196,37 +319,4 @@ function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
             </CardContent>
         </Card>
     )
-}
-
-
-export default function TelegramGroupsPage() {
-  const [groupStatus, setGroupStatus] = useState<typeof mockGroupStatus | null>(mockGroupStatus);
-
-  return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight font-headline">Телеграм групи</h1>
-      </div>
-      
-       <div className="grid gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-2 space-y-6">
-                <GroupStatusCard status={groupStatus} />
-                {groupStatus?.linked && <MessageLogCard logs={mockMessageLogs} />}
-            </div>
-            <div className="lg:col-span-3">
-                 {groupStatus?.linked ? (
-                    <MemberManagementCard members={mockTelegramMembers}/>
-                 ) : (
-                    <Card className="h-full flex items-center justify-center">
-                        <CardContent className="text-center text-muted-foreground p-6">
-                            <LinkIcon className="mx-auto h-12 w-12 mb-4" />
-                            <p>Прив'яжіть групу, щоб побачити список учасників.</p>
-                        </CardContent>
-                    </Card>
-                 )}
-            </div>
-       </div>
-
-    </div>
-  );
 }
