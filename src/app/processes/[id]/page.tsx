@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-
+import ProcessArrows from '@/components/processes/process-arrows';
 
 // --- Mock Data ---
 
@@ -98,6 +98,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
   const [process, setProcess] = useState<Process>(mockInitialProcess);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
   const [draggedStep, setDraggedStep] = useState<{ stepId: string; fromLaneId: string } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const allSteps = process.lanes.flatMap(lane => lane.steps);
 
@@ -208,8 +209,9 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
         </div>
       </header>
 
-      <main className="flex-1 overflow-x-auto p-4 md:p-8">
+      <main ref={containerRef} className="flex-1 overflow-x-auto p-4 md:p-8 relative">
         <div className="inline-block min-w-full">
+            <ProcessArrows allSteps={allSteps} containerRef={containerRef} />
             <div className="space-y-1">
                 {process.lanes.map(lane => (
                 <div 
@@ -224,9 +226,13 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                         className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
                     />
                     </div>
-                    <div className="flex-1 grid grid-cols-20 gap-x-24 items-center p-4">
+                    <div className="flex-1 flex items-center p-4 min-h-[10rem] relative">
                     {lane.steps.sort((a,b) => a.order - b.order).map(step => (
-                        <div key={step.id} className={`col-start-${step.order} col-span-1`}>
+                        <div 
+                            key={step.id} 
+                            id={`step-${step.id}`}
+                            style={{ position: 'absolute', left: `${(step.order - 1) * (192 + 24) + 16}px`}}
+                        >
                             <StepCard 
                                 step={step} 
                                 onDragStart={(e) => handleDragStart(e, step, lane.id)}
@@ -361,3 +367,5 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart }: {
         </div>
     )
 }
+
+    
