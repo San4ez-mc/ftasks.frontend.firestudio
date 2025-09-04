@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 
 const initialProcesses = [
@@ -70,6 +71,7 @@ export default function ProcessesPage() {
   
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <HelpAssistant pageName="processes" />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-xl font-bold tracking-tight font-headline">Бізнес-процеси</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

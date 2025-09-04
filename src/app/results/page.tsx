@@ -16,6 +16,7 @@ import { cn, formatDate } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 const initialResults: Result[] = [
   {
@@ -28,6 +29,7 @@ const initialResults: Result[] = [
     assignee: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
     reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     description: 'Основна мета - залучити 1000 нових користувачів через пошукову рекламу. Бюджет 500$.',
+    expectedResult: 'Залучено 1000 нових користувачів з конверсією не нижче 5%.',
     subResults: [
         { id: 'sub-1', name: 'Налаштувати аналітику', completed: true },
         { id: 'sub-2', name: 'Створити креативи', completed: false },
@@ -49,6 +51,7 @@ const initialResults: Result[] = [
     assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
     reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
     description: 'Інтегрувати нові дашборди для відстеження KPI в реальному часі.',
+    expectedResult: 'Новий модуль аналітики доступний всім користувачам з роллю "Менеджер".',
     subResults: [],
     tasks: [],
     templates: []
@@ -63,6 +66,7 @@ const initialResults: Result[] = [
     assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     description: 'Звіт має містити аналіз фінансових показників, досягнень та планів на наступний квартал.',
+    expectedResult: 'Фінальна версія звіту у форматі PDF надіслана усім інвесторам.',
     subResults: [
          { id: 'sub-3-1', name: 'Зібрати фінансові дані', completed: true },
          { id: 'sub-3-2', name: 'Проаналізувати маркетингові метрики', completed: true },
@@ -81,6 +85,7 @@ const initialResults: Result[] = [
     assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
     description: 'Переробити UI/UX для підвищення конверсії на 15%.',
+    expectedResult: 'Новий дизайн головної сторінки опубліковано.',
     subResults: [],
     tasks: [],
     templates: []
@@ -95,6 +100,7 @@ const initialResults: Result[] = [
     assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
     reporter: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
     description: 'Визначити оптимальну цінову стратегію для нового продукту.',
+    expectedResult: 'Звіт з результатами A/B тестування та рекомендаціями по ціноутворенню.',
     subResults: [],
     tasks: [],
     templates: []
@@ -134,6 +140,7 @@ export default function ResultsPage() {
       assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
       reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
       description: '',
+      expectedResult: '',
       subResults: [],
       tasks: [],
       templates: [],
@@ -248,6 +255,7 @@ export default function ResultsPage() {
 
   return (
     <div ref={containerRef} className="flex h-screen overflow-hidden">
+        <HelpAssistant pageName="results" />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
         selectedResult ? "md:w-1/2" : "w-full"
@@ -573,7 +581,3 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-    
-
-    

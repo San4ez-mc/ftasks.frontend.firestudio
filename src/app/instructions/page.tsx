@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Instruction } from '@/types/instruction';
 import Link from 'next/link';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 // --- Mock Data ---
 
@@ -70,6 +71,7 @@ export default function InstructionsPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+       <HelpAssistant pageName="instructions" />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-xl font-bold tracking-tight font-headline">Інструкції</h1>
         <div className="flex items-center gap-2">

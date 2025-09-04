@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ResultsList from '@/components/tasks/results-list';
 import type { Result as ResultType } from '@/components/tasks/results-list';
 import { formatTime } from '@/lib/timeUtils';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 
 const initialTasks: Task[] = [
@@ -203,6 +204,7 @@ export default function TasksPage() {
 
   return (
     <div className="flex h-screen">
+      <HelpAssistant pageName="tasks" />
       <main className={cn(
         "flex-1 flex transition-all duration-300",
          selectedTask ? "w-1/2" : "w-3/4"

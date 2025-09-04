@@ -2,14 +2,17 @@
 
 import type { Task, TaskPrioritizationInput, TaskPrioritizationOutput } from '@/ai/flows/ai-task-prioritization';
 import { suggestTaskPriorities } from '@/ai/flows/ai-task-prioritization';
+import type { HelpContentInput, HelpContentOutput } from '@/ai/flows/ai-help-assistant';
+import { getHelpContent as getHelpContentFromAI } from '@/ai/flows/ai-help-assistant';
 
-type ActionResult = {
+
+type ActionResult<T> = {
   success: boolean;
-  data?: TaskPrioritizationOutput;
+  data?: T;
   error?: string;
 };
 
-export async function getTaskPriorities(tasks: Task[], overallGoal: string): Promise<ActionResult> {
+export async function getTaskPriorities(tasks: Task[], overallGoal: string): Promise<ActionResult<TaskPrioritizationOutput>> {
   if (!tasks || tasks.length === 0 || !overallGoal) {
     return { success: false, error: 'Tasks and overall goal are required.' };
   }
@@ -26,4 +29,21 @@ export async function getTaskPriorities(tasks: Task[], overallGoal: string): Pro
     console.error('Error in task prioritization flow:', error);
     return { success: false, error: 'Failed to get task priorities from AI.' };
   }
+}
+
+
+export async function getHelpContent(pageName: string): Promise<ActionResult<HelpContentOutput>> {
+    if (!pageName) {
+        return { success: false, error: 'Page name is required.' };
+    }
+
+    const input: HelpContentInput = { pageName };
+
+    try {
+        const output = await getHelpContentFromAI(input);
+        return { success: true, data: output };
+    } catch (error) {
+        console.error(`Error in help assistant flow for page "${pageName}":`, error);
+        return { success: false, error: 'Failed to get help content from AI.' };
+    }
 }

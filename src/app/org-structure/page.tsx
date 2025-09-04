@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 
 function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent) => void; }) {
@@ -228,6 +229,7 @@ export default function OrgStructurePage() {
   
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/40">
+       <HelpAssistant pageName="org-structure" />
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex items-center gap-2">

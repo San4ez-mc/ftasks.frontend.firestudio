@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 type TaskGenerated = {
   id: string;
@@ -127,6 +128,7 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex h-screen overflow-hidden">
+        <HelpAssistant pageName="templates" />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
         selectedTemplate ? "md:w-1/2 lg:w-3/5" : "w-full"

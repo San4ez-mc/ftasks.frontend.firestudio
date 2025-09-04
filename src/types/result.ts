@@ -1,4 +1,5 @@
 
+
 type User = {
     id: string;
     name: string;
@@ -37,6 +38,7 @@ export interface Result {
   assignee: User;
   reporter: User;
   description: string;
+  expectedResult: string;
   subResults: SubResult[];
   tasks: ResultTask[];
   templates: ResultTemplate[];

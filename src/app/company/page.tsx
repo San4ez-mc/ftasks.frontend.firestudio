@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import HelpAssistant from '@/components/layout/help-assistant';
+
 
 // --- MOCK DATA ---
 
@@ -122,6 +124,7 @@ export default function CompanyPage() {
 
     return (
         <div className="flex h-screen overflow-hidden">
+            <HelpAssistant pageName="company" />
             {/* Employee List */}
             <div className={cn(
                 "flex flex-col w-full transition-all duration-300",

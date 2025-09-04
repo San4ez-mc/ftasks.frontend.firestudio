@@ -39,6 +39,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
+import HelpAssistant from '@/components/layout/help-assistant';
 
 
 // --- Mock Data ---
@@ -107,6 +108,7 @@ export default function TelegramGroupsPage() {
 
   return (
     <div ref={containerRef} className="flex h-screen overflow-hidden">
+        <HelpAssistant pageName="telegram-groups" />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
         selectedGroup ? "md:w-1/2 lg:w-2/5" : "w-full"
