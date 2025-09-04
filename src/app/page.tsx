@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
 import { Input } from '@/components/ui/input';
-import ResultsList from '@/components/tasks/results-list';
+import ResultsList, { type Result } from '@/components/tasks/results-list';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 
@@ -76,6 +76,22 @@ export default function TasksPage() {
     setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
   }
 
+  const handleResultClick = (result: Result) => {
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      title: result.name,
+      dueDate: currentDate.toISOString().split('T')[0],
+      status: 'todo',
+      type: 'important-not-urgent', // Default type
+      expectedTime: 30, // Default time
+      assignee: { name: ' поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
+      reporter: { name: ' поточний користувач' }, // Placeholder for current user
+      resultId: result.id,
+    };
+    setTasks(prevTasks => [newTask, ...prevTasks]);
+    setSelectedTask(newTask);
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-6">
@@ -106,7 +122,7 @@ export default function TasksPage() {
 
         {/* Right Column */}
         <div className="md:col-span-12 lg:col-span-4 xl:col-span-3">
-          <ResultsList />
+          <ResultsList onResultClick={handleResultClick} />
         </div>
       </main>
 
