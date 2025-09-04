@@ -33,7 +33,7 @@ export default function ResultsList({ onResultClick }: ResultsListProps) {
                         onClick={() => onResultClick(result)}
                         className="p-2 rounded-md border hover:bg-accent cursor-pointer"
                     >
-                        <p className="font-medium text-sm">{result.name}</p>
+                        <p className="font-medium text-xs">{result.name}</p>
                         <p className="text-xs text-muted-foreground">{result.value}</p>
                     </div>
                 ))}
