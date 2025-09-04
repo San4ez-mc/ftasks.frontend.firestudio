@@ -22,14 +22,21 @@ type InteractiveTourProps = {
 export default function InteractiveTour({ pageKey, steps }: InteractiveTourProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [isClient, setIsClient] = useState(false);
   const storageKey = `interactive-tour-completed-${pageKey}`;
 
   useEffect(() => {
+    setIsClient(true);
     const hasCompletedTour = localStorage.getItem(storageKey);
     if (!hasCompletedTour) {
-      setIsOpen(true);
+      // Use a timeout to ensure the page has rendered before starting the tour
+      setTimeout(() => setIsOpen(true), 500);
     }
   }, [storageKey]);
+  
+  if (!isClient) {
+    return null; // Don't render anything on the server
+  }
 
   const activeStep = steps[currentStep];
   const targetElement = activeStep ? document.getElementById(activeStep.elementId) : null;
@@ -64,7 +71,7 @@ export default function InteractiveTour({ pageKey, steps }: InteractiveTourProps
 
     const rect = targetElement.getBoundingClientRect();
     const style: React.CSSProperties = {
-      position: 'absolute',
+      position: 'fixed',
       left: `${rect.left - 4}px`,
       top: `${rect.top - 4}px`,
       width: `${rect.width + 8}px`,

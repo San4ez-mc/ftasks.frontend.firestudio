@@ -15,7 +15,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 
 function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent) => void; }) {
@@ -44,6 +45,7 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
 
     return (
         <Card 
+            id={`department-card-${department.id}`}
             className="bg-background cursor-grab"
             draggable
             onDragStart={onDragStart}
@@ -162,13 +164,38 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
                     </div>
                 </div>
                 
-                <Button variant="outline" size="sm" className="w-full" onClick={handleAddEmployee}>
+                <Button id={`add-employee-button-${department.id}`} variant="outline" size="sm" className="w-full" onClick={handleAddEmployee}>
                     <UserPlus className="mr-2 h-4 w-4" /> Додати співробітника
                 </Button>
             </CardContent>
         </Card>
     )
 }
+
+// --- TOUR STEPS ---
+
+const orgStructureTourSteps: TourStep[] = [
+    {
+        elementId: 'division-column-div-1',
+        title: 'Відділення (Колонки)',
+        content: 'Це основні підрозділи вашої компанії. Ви можете бачити, які відділи належать до кожного відділення.',
+    },
+    {
+        elementId: 'department-card-dept-1',
+        title: 'Картка Відділу',
+        content: 'Кожна картка представляє відділ. Тут ви можете редагувати назву, ЦКП, призначати керівника та співробітників. Перетягуйте картки між відділеннями, щоб змінити структуру.',
+    },
+    {
+        elementId: 'add-department-button-div-1',
+        title: 'Додавання нового відділу',
+        content: 'Натисніть цю кнопку, щоб додати новий відділ до відповідного відділення.',
+    },
+    {
+        elementId: 'add-employee-button-dept-1',
+        title: 'Керування складом',
+        content: 'Додавайте або видаляйте співробітників з відділу за допомогою цих елементів керування.',
+    },
+];
 
 
 export default function OrgStructurePage() {
@@ -229,7 +256,7 @@ export default function OrgStructurePage() {
   
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/40">
-       <HelpAssistant pageName="org-structure" />
+       <InteractiveTour pageKey="org-structure" steps={orgStructureTourSteps} />
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex items-center gap-2">
@@ -246,6 +273,7 @@ export default function OrgStructurePage() {
                 return (
                     <div 
                         key={division.id} 
+                        id={`division-column-${division.id}`}
                         className="flex flex-col gap-4 p-2 rounded-lg"
                         onDragOver={(e) => handleDragOver(e, division.id)}
                         onDragLeave={handleDragLeave}
@@ -272,7 +300,7 @@ export default function OrgStructurePage() {
                                 style={{ height: `${draggedItemHeight}px` }}
                              ></div>
                         )}
-                         <Button variant="outline" className="mt-auto" onClick={() => handleAddDepartment(division.id)}>
+                         <Button id={`add-department-button-${division.id}`} variant="outline" className="mt-auto" onClick={() => handleAddDepartment(division.id)}>
                             <Plus className="mr-2 h-4 w-4" /> Додати відділ
                         </Button>
                     </div>

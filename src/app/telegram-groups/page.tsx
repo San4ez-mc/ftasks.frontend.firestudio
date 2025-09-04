@@ -39,7 +39,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
 
 
 // --- Mock Data ---
@@ -82,11 +82,36 @@ const mockMessageLogs = [
 
 type Group = typeof mockGroups[0];
 
+// --- TOUR STEPS ---
+const telegramTourSteps: TourStep[] = [
+    {
+        elementId: 'group-list',
+        title: 'Список груп',
+        content: 'Тут відображаються всі ваші Telegram-групи. Натисніть на будь-яку, щоб переглянути деталі та керувати нею.',
+    },
+    {
+        elementId: 'add-group-button',
+        title: 'Додавання нової групи',
+        content: 'Натисніть тут, щоб прив\'язати нову Telegram-групу. Вам знадобиться код, який бот надішле у вашу групу.',
+    },
+    {
+        elementId: 'group-details-panel',
+        title: 'Панель деталей групи',
+        content: 'Після вибору групи тут з\'явиться детальна інформація: статус підключення, список учасників та журнал повідомлень.',
+    },
+    {
+        elementId: 'member-management-card',
+        title: 'Керування учасниками',
+        content: 'У цьому блоці ви можете бачити учасників Telegram-групи та прив\'язувати їх до профілів співробітників у системі.',
+    },
+];
+
+
 // --- Main Page Component ---
 
 export default function TelegramGroupsPage() {
   const [groups, setGroups] = useState(mockGroups);
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(groups[0]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClosePanel = () => {
@@ -108,7 +133,7 @@ export default function TelegramGroupsPage() {
 
   return (
     <div ref={containerRef} className="flex h-screen overflow-hidden">
-        <HelpAssistant pageName="telegram-groups" />
+        <InteractiveTour pageKey="telegram-groups" steps={telegramTourSteps} />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
         selectedGroup ? "md:w-1/2 lg:w-2/5" : "w-full"
@@ -118,7 +143,7 @@ export default function TelegramGroupsPage() {
             <h1 className="text-xl font-bold tracking-tight font-headline">Телеграм групи</h1>
             <Dialog>
                 <DialogTrigger asChild>
-                    <Button><PlusCircle className="mr-2 h-4 w-4"/>Додати групу</Button>
+                    <Button id="add-group-button"><PlusCircle className="mr-2 h-4 w-4"/>Додати групу</Button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -138,7 +163,7 @@ export default function TelegramGroupsPage() {
             </Dialog>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto px-4 md:px-6 space-y-4">
+        <main id="group-list" className="flex-1 overflow-y-auto px-4 md:px-6 space-y-4">
            {groups.map(group => (
              <Card 
                 key={group.id} 
@@ -159,7 +184,7 @@ export default function TelegramGroupsPage() {
         </main>
       </div>
       
-      <div className={cn(
+      <div id="group-details-panel" className={cn(
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
         selectedGroup ? "w-full md:w-1/2 lg:w-3/5" : "w-0"
       )}>
@@ -301,7 +326,7 @@ function EmployeeCombobox({ selectedEmployeeId, onSelect }: { selectedEmployeeId
 
 function MemberManagementCard({ members }: { members: typeof mockTelegramMembers }) {
     return (
-         <Card>
+         <Card id="member-management-card">
             <CardHeader>
                 <CardTitle>Склад Telegram-групи</CardTitle>
                 <CardDescription>Учасники групи та їх статус у компанії.</CardDescription>

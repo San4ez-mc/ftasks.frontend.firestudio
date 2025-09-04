@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 
 // --- MOCK DATA ---
@@ -105,11 +106,37 @@ const mockEmployeesData = [
 
 type Employee = typeof mockEmployeesData[0];
 
+// --- TOUR STEPS ---
+
+const companyTourSteps: TourStep[] = [
+    {
+        elementId: 'employee-list-table',
+        title: 'Список співробітників',
+        content: 'Тут ви бачите повний список всіх співробітників компанії. Ви можете шукати, сортувати та переглядати основну інформацію.',
+    },
+    {
+        elementId: 'invite-employee-button',
+        title: 'Запрошення нових співробітників',
+        content: 'Натисніть цю кнопку, щоб надіслати запрошення новому члену команди приєднатися до вашого робочого простору.',
+    },
+    {
+        elementId: 'employee-details-panel',
+        title: 'Панель деталей',
+        content: 'Після вибору співробітника тут з\'являється детальна інформація: посади, контакти, нотатки. Ви можете редагувати ці дані.',
+    },
+     {
+        elementId: 'save-employee-button',
+        title: 'Збереження змін',
+        content: 'Не забувайте зберігати будь-які зміни, внесені в профіль співробітника, натиснувши цю кнопку.',
+    },
+];
+
+
 // --- MAIN COMPONENT ---
 
 export default function CompanyPage() {
     const [employees, setEmployees] = useState(mockEmployeesData);
-    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(mockEmployeesData[0]);
     
     const handleEmployeeUpdate = (updatedEmployee: Employee) => {
         setEmployees(employees.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
@@ -124,7 +151,7 @@ export default function CompanyPage() {
 
     return (
         <div className="flex h-screen overflow-hidden">
-            <HelpAssistant pageName="company" />
+            <InteractiveTour pageKey="company" steps={companyTourSteps} />
             {/* Employee List */}
             <div className={cn(
                 "flex flex-col w-full transition-all duration-300",
@@ -133,7 +160,7 @@ export default function CompanyPage() {
                 <header className="p-4 border-b">
                     <div className="flex items-center justify-between">
                          <h1 className="text-xl font-bold tracking-tight font-headline">Співробітники</h1>
-                         <Button>
+                         <Button id="invite-employee-button">
                             <PlusCircle className="mr-2 h-4 w-4" /> Запросити
                         </Button>
                     </div>
@@ -142,7 +169,7 @@ export default function CompanyPage() {
                         <Input placeholder="Пошук співробітників..." className="pl-8" />
                     </div>
                 </header>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto" id="employee-list-table">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -195,7 +222,7 @@ export default function CompanyPage() {
             </div>
 
             {/* Employee Details Panel */}
-             <div className={cn(
+             <div id="employee-details-panel" className={cn(
                 "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
                  selectedEmployee ? "w-full md:w-1/2" : "w-0"
             )}>
@@ -265,7 +292,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                     </div>
                 </div>
                  <div className="flex items-center gap-2">
-                    <Button onClick={handleSaveChanges}>Зберегти</Button>
+                    <Button id="save-employee-button" onClick={handleSaveChanges}>Зберегти</Button>
                     <Button variant="ghost" onClick={onClose}>Скасувати</Button>
                 </div>
             </header>
@@ -341,5 +368,3 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
         </div>
     )
 }
-
-    

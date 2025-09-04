@@ -16,7 +16,8 @@ import { cn, formatDate } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 const initialResults: Result[] = [
   {
@@ -111,9 +112,41 @@ const initialResults: Result[] = [
 const currentUserId = 'user-4';
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
+
+// --- TOUR STEPS ---
+
+const resultsTourSteps: TourStep[] = [
+    {
+        elementId: 'results-tabs',
+        title: 'Фільтрація результатів',
+        content: 'Використовуйте ці вкладки, щоб переглядати результати, за які ви відповідальні (Мої), які ви доручили іншим (Делеговані), результати ваших підлеглих, або відкладені.',
+    },
+    {
+        elementId: 'results-view-toggle',
+        title: 'Режими перегляду',
+        content: 'Перемикайтеся між режимом таблиці для детального огляду та режимом карток для візуального представлення.',
+    },
+    {
+        elementId: 'results-table',
+        title: 'Список результатів',
+        content: 'Це ваш основний робочий простір. Тут ви можете створювати нові результати, відзначати їх виконання та бачити ключову інформацію.',
+    },
+     {
+        elementId: 'result-details-panel',
+        title: 'Панель деталей',
+        content: 'Натисніть на будь-який результат, щоб відкрити цю панель. Тут можна редагувати опис, дедлайн, додавати підрезультати, задачі та коментарі.',
+    },
+     {
+        elementId: 'create-result-fab',
+        title: 'Створити новий результат',
+        content: 'Натисніть цю кнопку, щоб швидко додати новий результат до вашого списку.',
+    },
+];
+
+
 export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [selectedResult, setSelectedResult] = useState<Result | null>(null);
+  const [selectedResult, setSelectedResult] = useState<Result | null>(initialResults[0]);
   const [results, setResults] = useState(initialResults);
   const [activeTab, setActiveTab] = useState('mine');
   const [statusFilter, setStatusFilter] = useState<string[]>(allStatuses);
@@ -255,7 +288,7 @@ export default function ResultsPage() {
 
   return (
     <div ref={containerRef} className="flex h-screen overflow-hidden">
-        <HelpAssistant pageName="results" />
+        <InteractiveTour pageKey="results" steps={resultsTourSteps} />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
         selectedResult ? "md:w-1/2" : "w-full"
@@ -263,7 +296,7 @@ export default function ResultsPage() {
         <header className="p-4 md:p-6 space-y-4">
           <div className="flex items-center justify-center relative">
             <h1 className="text-xl font-bold tracking-tight font-headline text-center">Результати</h1>
-            <div className="absolute right-0 flex items-center gap-2">
+            <div id="results-view-toggle" className="absolute right-0 flex items-center gap-2">
               <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('table')}>
                 <List className="h-5 w-5" />
               </Button>
@@ -273,7 +306,7 @@ export default function ResultsPage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <Tabs id="results-tabs" value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
                       <TabsTrigger value="mine">Мої</TabsTrigger>
                       <TabsTrigger value="delegated">Делеговані</TabsTrigger>
@@ -312,7 +345,7 @@ export default function ResultsPage() {
           </div>
         </header>
         
-        <main className="flex-1 overflow-y-auto px-4 md:px-6">
+        <main id="results-table" className="flex-1 overflow-y-auto px-4 md:px-6">
           {viewMode === 'table' ? (
             <ResultsTable 
               groupedResults={groupedResults}
@@ -334,13 +367,13 @@ export default function ResultsPage() {
         </main>
       </div>
 
-      <div className={cn(
+      <div id="result-details-panel" className={cn(
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
         selectedResult ? "w-full md:w-1/2 lg:min-w-[520px]" : "w-0"
       )}>
         {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} />}
       </div>
-       <Button onClick={() => handleCreateNewResult()} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
+       <Button id="create-result-fab" onClick={() => handleCreateNewResult()} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
           <Plus className="h-8 w-8" />
           <span className="sr-only">Створити результат</span>
         </Button>

@@ -11,7 +11,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Instruction } from '@/types/instruction';
 import Link from 'next/link';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 // --- Mock Data ---
 
@@ -47,6 +48,27 @@ const mockInstructions: Instruction[] = [
   },
 ];
 
+
+// --- TOUR STEPS ---
+
+const instructionsTourSteps: TourStep[] = [
+    {
+        elementId: 'create-instruction-button',
+        title: 'Створення нової інструкції',
+        content: 'Натисніть тут, щоб створити нову інструкцію з нуля. Ви перейдете на сторінку редактора.',
+    },
+    {
+        elementId: 'search-instructions-input',
+        title: 'Пошук інструкцій',
+        content: 'Використовуйте це поле для швидкого пошуку інструкцій за назвою або відділом.',
+    },
+    {
+        elementId: 'instruction-card-list',
+        title: 'Список інструкцій',
+        content: 'Тут відображаються всі існуючі інструкції, згруповані за відділами. Натисніть на будь-яку, щоб перейти до редагування.',
+    },
+];
+
 // --- Main Page Component ---
 
 export default function InstructionsPage() {
@@ -71,20 +93,21 @@ export default function InstructionsPage() {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-       <HelpAssistant pageName="instructions" />
+       <InteractiveTour pageKey="instructions" steps={instructionsTourSteps} />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-xl font-bold tracking-tight font-headline">Інструкції</h1>
         <div className="flex items-center gap-2">
              <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
+                    id="search-instructions-input"
                     placeholder="Пошук..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-8 sm:w-[200px] md:w-[300px]"
                 />
             </div>
-            <Button asChild>
+            <Button asChild id="create-instruction-button">
                 <Link href="/instructions/new">
                     <PlusCircle className="mr-2 h-4 w-4" /> Створити інструкцію
                 </Link>
@@ -93,7 +116,7 @@ export default function InstructionsPage() {
       </div>
 
       {Object.keys(groupedInstructions).length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-6" id="instruction-card-list">
           {Object.entries(groupedInstructions).map(([department, instructions]) => (
             <div key={department}>
                 <h2 className="text-lg font-semibold mb-3">{department}</h2>

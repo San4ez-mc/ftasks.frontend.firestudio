@@ -22,7 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 type TaskGenerated = {
   id: string;
@@ -82,11 +83,37 @@ const initialResults = [
     { id: '3', name: 'Середній час відповіді', value: '2.5 год' },
 ];
 
+
+// --- TOUR STEPS ---
+
+const templatesTourSteps: TourStep[] = [
+    {
+        elementId: 'active-templates-list',
+        title: 'Список активних шаблонів',
+        content: 'Тут знаходяться всі ваші активні шаблони. Натисніть на будь-який, щоб переглянути та відредагувати його деталі в панелі праворуч.',
+    },
+    {
+        elementId: 'create-from-result-list',
+        title: 'Створити з результату',
+        content: 'Використовуйте цей блок, щоб швидко створити новий шаблон на основі існуючого результату. Це зручно для автоматизації звітів.',
+    },
+    {
+        elementId: 'create-template-fab',
+        title: 'Створити новий шаблон',
+        content: 'Натисніть цю кнопку, щоб створити новий шаблон з нуля, вказавши його назву, періодичність та очікуваний результат.',
+    },
+    {
+        elementId: 'template-details-panel',
+        title: 'Деталі шаблону',
+        content: 'Після вибору шаблону тут з\'являється панель з детальною інформацією. Ви можете редагувати налаштування та переглядати історію згенерованих задач.',
+    },
+];
+
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState(initialTemplates);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(initialTemplates[0]);
 
   const handleCreateTemplate = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -128,7 +155,7 @@ export default function TemplatesPage() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-        <HelpAssistant pageName="templates" />
+        <InteractiveTour pageKey="templates" steps={templatesTourSteps} />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
         selectedTemplate ? "md:w-1/2 lg:w-3/5" : "w-full"
@@ -165,7 +192,7 @@ export default function TemplatesPage() {
             </header>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
+                <Card id="active-templates-list">
                     <CardHeader>
                         <CardTitle>Активні шаблони</CardTitle>
                     </CardHeader>
@@ -187,7 +214,7 @@ export default function TemplatesPage() {
                         ))}
                     </CardContent>
                 </Card>
-                <Card>
+                <Card id="create-from-result-list">
                     <CardHeader>
                         <CardTitle>Створити з результату</CardTitle>
                         <CardDescription>Клікніть щоб створити шаблон</CardDescription>
@@ -205,7 +232,7 @@ export default function TemplatesPage() {
         </main>
       </div>
       
-      <div className={cn(
+      <div id="template-details-panel" className={cn(
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
         selectedTemplate ? "w-full md:w-1/2 lg:w-2/5" : "w-0"
       )}>
@@ -216,7 +243,7 @@ export default function TemplatesPage() {
       {/* FAB and Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-                <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
+                <Button id="create-template-fab" className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
                     <PlusCircle className="h-8 w-8" />
                     <span className="sr-only">Створити шаблон</span>
                 </Button>

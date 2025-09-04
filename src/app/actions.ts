@@ -30,20 +30,3 @@ export async function getTaskPriorities(tasks: Task[], overallGoal: string): Pro
     return { success: false, error: 'Failed to get task priorities from AI.' };
   }
 }
-
-
-export async function getHelpContent(pageName: string): Promise<ActionResult<HelpContentOutput>> {
-    if (!pageName) {
-        return { success: false, error: 'Page name is required.' };
-    }
-
-    const input: HelpContentInput = { pageName };
-
-    try {
-        const output = await getHelpContentFromAI(input);
-        return { success: true, data: output };
-    } catch (error) {
-        console.error(`Error in help assistant flow for page "${pageName}":`, error);
-        return { success: false, error: 'Failed to get help content from AI.' };
-    }
-}

@@ -17,7 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ResultsList from '@/components/tasks/results-list';
 import type { Result as ResultType } from '@/components/tasks/results-list';
 import { formatTime } from '@/lib/timeUtils';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 
 const initialTasks: Task[] = [
@@ -82,10 +83,41 @@ const initialTasks: Task[] = [
 
 const currentUserId = 'user-2'; // Mock current user
 
+// --- TOUR STEPS ---
+
+const tasksTourSteps: TourStep[] = [
+  {
+    elementId: 'tasks-header',
+    title: 'Навігація по датах та задачах',
+    content: 'Перемикайтеся між датами, щоб переглянути задачі на конкретний день. Використовуйте вкладки для фільтрації задач (ваші, делеговані, підлеглих).',
+  },
+  {
+    elementId: 'tasks-table',
+    title: 'Список щоденних задач',
+    content: 'Тут відображаються ваші задачі на обраний день. Ви можете відзначати їх виконання, редагувати назву та бачити основну інформацію.',
+  },
+  {
+    elementId: 'new-task-input',
+    title: 'Швидке створення задачі',
+    content: 'Введіть назву нової задачі тут і натисніть Enter, щоб миттєво додати її до списку на сьогодні.',
+  },
+  {
+    elementId: 'results-panel',
+    title: 'Створення задач з результатів',
+    content: 'Ця панель показує ключові результати. Натисніть на будь-який результат, щоб швидко створити пов\'язану з ним задачу.',
+  },
+  {
+    elementId: 'task-details-panel',
+    title: 'Панель деталей задачі',
+    content: 'Клікніть на будь-яку задачу, щоб відкрити цю панель. Тут ви можете додати опис, встановити час, змінити відповідального та переглянути коментарі.',
+  },
+];
+
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(initialTasks[0]);
   const [activeTab, setActiveTab] = useState('mine');
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   const taskTitleInputRef = useRef<HTMLInputElement>(null);
@@ -204,7 +236,7 @@ export default function TasksPage() {
 
   return (
     <div className="flex h-screen">
-      <HelpAssistant pageName="tasks" />
+      <InteractiveTour pageKey="tasks" steps={tasksTourSteps} />
       <main className={cn(
         "flex-1 flex transition-all duration-300",
          selectedTask ? "w-1/2" : "w-3/4"
@@ -212,13 +244,14 @@ export default function TasksPage() {
         {/* Main Content */}
         <div className="flex flex-col gap-6 p-4 md:p-6 w-full">
           <TasksHeader 
+            id="tasks-header"
             currentDate={currentDate}
             onDateChange={handleDateChange}
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-            <div className="border-t">
+            <div className="border-t" id="tasks-table">
                  {Object.values(groupedTasks).map(group => (
                     <div key={group.id || group.name}>
                         {activeTab !== 'mine' && (
@@ -269,6 +302,7 @@ export default function TasksPage() {
                 ))}
             </div>
              <Input 
+                id="new-task-input"
                 ref={newTaskInputRef}
                 placeholder="Нова задача..." 
                 className="bg-card mt-2"
@@ -278,7 +312,7 @@ export default function TasksPage() {
         </div>
         
         {/* Results Panel */}
-        <aside className={cn(
+        <aside id="results-panel" className={cn(
             "w-1/4 p-4 border-l transition-all duration-300",
             selectedTask ? 'hidden' : 'block'
         )}>
@@ -287,7 +321,7 @@ export default function TasksPage() {
       </main>
 
        {/* Details Panel */}
-      <div className={cn(
+      <div id="task-details-panel" className={cn(
           "transition-all duration-300",
           selectedTask ? "w-1/2" : "w-0 hidden"
       )}>

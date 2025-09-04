@@ -12,9 +12,10 @@ type TasksHeaderProps = {
     onDateChange: (date: Date) => void;
     activeTab: string;
     onTabChange: (tab: string) => void;
+    id?: string;
 };
 
-export default function TasksHeader({ currentDate, onDateChange, activeTab, onTabChange }: TasksHeaderProps) {
+export default function TasksHeader({ currentDate, onDateChange, activeTab, onTabChange, id }: TasksHeaderProps) {
     const changeDate = (days: number) => {
         const newDate = new Date(currentDate);
         newDate.setDate(currentDate.getDate() + days);
@@ -28,7 +29,7 @@ export default function TasksHeader({ currentDate, onDateChange, activeTab, onTa
     }
 
     return (
-        <div className="flex flex-col items-center gap-4">
+        <div id={id} className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
                 <Button variant="ghost" size="icon" onClick={() => changeDate(-1)}>
                     <ChevronLeft />
@@ -63,5 +64,3 @@ export default function TasksHeader({ currentDate, onDateChange, activeTab, onTa
         </div>
     )
 }
-
-    

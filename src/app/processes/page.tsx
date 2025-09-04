@@ -20,7 +20,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import HelpAssistant from '@/components/layout/help-assistant';
+import InteractiveTour from '@/components/layout/interactive-tour';
+import type { TourStep } from '@/components/layout/interactive-tour';
 
 
 const initialProcesses = [
@@ -30,6 +31,26 @@ const initialProcesses = [
 ];
 
 type Process = typeof initialProcesses[0];
+
+// --- TOUR STEPS ---
+
+const processesTourSteps: TourStep[] = [
+    {
+        elementId: 'create-process-button',
+        title: 'Створення нового процесу',
+        content: 'Натисніть цю кнопку, щоб створити новий бізнес-процес. Ви зможете дати йому назву та опис.',
+    },
+    {
+        elementId: 'process-card-1',
+        title: 'Картка процесу',
+        content: 'Кожен процес відображається у вигляді такої картки. Натисніть на неї, щоб перейти до візуального редактора та налаштувати кроки.',
+    },
+     {
+        elementId: 'process-actions-menu',
+        title: 'Дії з процесом',
+        content: 'Відкрийте це меню, щоб редагувати назву та опис існуючого процесу або видалити його.',
+    },
+];
 
 export default function ProcessesPage() {
   const [processes, setProcesses] = useState(initialProcesses);
@@ -71,12 +92,12 @@ export default function ProcessesPage() {
   
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <HelpAssistant pageName="processes" />
+      <InteractiveTour pageKey="processes" steps={processesTourSteps} />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-xl font-bold tracking-tight font-headline">Бізнес-процеси</h1>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button id="create-process-button">
                     <PlusCircle className="mr-2 h-4 w-4" /> Створити бізнес-процес
                 </Button>
             </DialogTrigger>
@@ -101,8 +122,8 @@ export default function ProcessesPage() {
 
         {processes.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {processes.map(process => (
-                    <Card key={process.id} className="h-full flex flex-col hover:shadow-lg transition-shadow">
+                {processes.map((process, index) => (
+                    <Card key={process.id} id={`process-card-${process.id}`} className="h-full flex flex-col hover:shadow-lg transition-shadow">
                         <CardHeader>
                             <div className="flex justify-between items-start">
                                 <div className="flex-1">
@@ -115,7 +136,7 @@ export default function ProcessesPage() {
                                 </div>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="shrink-0"><MoreVertical className="h-5 w-5" /></Button>
+                                        <Button id={index === 0 ? "process-actions-menu" : undefined} variant="ghost" size="icon" className="shrink-0"><MoreVertical className="h-5 w-5" /></Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => setEditingProcess(process)}>
