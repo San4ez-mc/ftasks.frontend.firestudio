@@ -64,7 +64,7 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
                 </div>
                 <div>
                     <h4 className="text-xs font-semibold text-muted-foreground mb-1">Керівник</h4>
-                    <Select value={department.managerId} onValueChange={(value) => handleFieldChange('managerId', value)}>
+                    <Select value={department.managerId} onValueChange={(value) => handleFieldChange('managerId', value === 'unassigned' ? '' : value)}>
                         <SelectTrigger className="h-9">
                             <SelectValue placeholder="Не призначено">
                                 {manager ? (
@@ -81,7 +81,7 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                             <SelectItem value="">
+                             <SelectItem value="unassigned">
                                 <span className="text-muted-foreground">Не призначено</span>
                             </SelectItem>
                             {employees.map(emp => (
