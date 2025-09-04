@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, PlusCircle, Save, X, GripVertical, AlertTriangle, Lightbulb, CircleHelp, Plus } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, X, GripVertical, AlertTriangle, Lightbulb, CircleHelp, Plus, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -33,13 +33,13 @@ const mockInitialProcess = {
       id: 'lane-1',
       role: 'Керівник відділу',
       steps: [
-        { id: 'step-1', name: 'Створення заявки на вакансію', responsibleId: 'user-1', order: 1, connections: [{ to: 'step-2' }], status: 'ok', notes: '' },
+        { id: 'step-1', name: 'Створення заявки на вакансію', responsibleId: 'user-1', order: 1, connections: [{ to: 'step-2' }], status: 'ok', notes: '', isDataSavePoint: true },
         { id: 'step-6', name: 'Технічна співбесіда', responsibleId: 'user-2', order: 6, connections: [{ to: 'step-7' }], status: 'ok', notes: '' },
         { id: 'step-7', name: 'Фінальна співбесіда', responsibleId: 'user-1', order: 7, connections: [{ to: 'step-8' }], status: 'ok', notes: '' },
         { id: 'step-9', name: 'Підготовка плану на випробувальний термін', responsibleId: 'user-1', order: 9, connections: [{ to: 'step-12' }], status: 'new', notes: 'Важливо чітко визначити цілі' },
         { id: 'step-12', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 12, connections: [{ to: 'step-15' }], status: 'ok', notes: '' },
         { id: 'step-15', name: 'Щотижневі one-to-one', responsibleId: 'user-1', order: 15, connections: [{ to: 'step-18' }], status: 'ok', notes: '' },
-        { id: 'step-18', name: 'Оцінка за результатами випробувального терміну', responsibleId: 'user-1', order: 18, connections: [], status: 'ok', notes: '' },
+        { id: 'step-18', name: 'Оцінка за результатами випробувального терміну', responsibleId: 'user-1', order: 18, connections: [], status: 'ok', notes: '', isDataSavePoint: true },
       ],
     },
     {
@@ -47,10 +47,10 @@ const mockInitialProcess = {
       role: 'HR Менеджер',
       steps: [
         { id: 'step-2', name: 'Публікація вакансії', responsibleId: 'user-3', order: 2, connections: [{ to: 'step-3' }], status: 'ok', notes: '' },
-        { id: 'step-3', name: 'Скринінг резюме', responsibleId: 'user-3', order: 3, connections: [{ to: 'step-4' }], status: 'ok', notes: '' },
+        { id: 'step-3', name: 'Скринінг резюме', responsibleId: 'user-3', order: 3, connections: [{ to: 'step-4' }], status: 'ok', notes: '', isDataSavePoint: true },
         { id: 'step-4', name: 'Первинна співбесіда з HR', responsibleId: 'user-3', order: 4, connections: [{ to: 'step-5' }], status: 'ok', notes: '' },
         { id: 'step-5', name: 'Надсилання тестового завдання', responsibleId: 'user-3', order: 5, connections: [{ to: 'step-6' }], status: 'outdated', notes: 'Оновити тестове для Frontend' },
-        { id: 'step-8', name: 'Формування та надсилання оферу', responsibleId: 'user-3', order: 8, connections: [{ to: 'step-10' }], status: 'ok', notes: '' },
+        { id: 'step-8', name: 'Формування та надсилання оферу', responsibleId: 'user-3', order: 8, connections: [{ to: 'step-10' }], status: 'ok', notes: '', isDataSavePoint: true },
         { id: 'step-10', name: 'Підписання документів', responsibleId: 'user-3', order: 10, connections: [{ to: 'step-11' }], status: 'ok', notes: 'Важливо перевірити всі підписи' },
         { id: 'step-13', name: 'Знайомство з командою та офісом', responsibleId: 'user-3', order: 13, connections: [{ to: 'step-14' }], status: 'ok', notes: '' },
         { id: 'step-16', name: 'Збір проміжного фідбеку', responsibleId: 'user-3', order: 16, connections: [{ to: 'step-17' }], status: 'ok', notes: '' },
@@ -68,7 +68,7 @@ const mockInitialProcess = {
         id: 'lane-4',
         role: 'Бухгалтерія',
         steps: [
-            { id: 'step-14', name: 'Внесення в payroll систему', responsibleId: 'user-4', order: 14, connections: [{ to: 'step-15' }], status: 'ok', notes: '' },
+            { id: 'step-14', name: 'Внесення в payroll систему', responsibleId: 'user-4', order: 14, connections: [{ to: 'step-15' }], status: 'ok', notes: '', isDataSavePoint: true },
         ],
     },
   ],
@@ -83,6 +83,7 @@ type Step = {
     connections: { to: string }[];
     status: StepStatus;
     notes: string;
+    isDataSavePoint?: boolean;
 };
 type Lane = {
     id: string;
@@ -247,6 +248,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                                 onDragStart={(e) => handleDragStart(e, step, lane.id)}
                                 onEditClick={() => setEditingStep(step)} 
                                 onAddClick={() => addNewStep(step)}
+                                onUpdate={handleStepUpdate}
                             />
                         </div>
                     ))}
@@ -271,6 +273,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                         responsibleId: formData.get('responsibleId') as string,
                         status: formData.get('status') as StepStatus,
                         notes: formData.get('notes') as string,
+                        isDataSavePoint: (formData.get('isDataSavePoint') as string) === 'on',
                     })
                 }}>
                     <div className="grid gap-4 py-4 text-sm">
@@ -303,6 +306,10 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                             <Label htmlFor="notes">Нотатки</Label>
                             <Textarea id="notes" name="notes" defaultValue={editingStep?.notes} />
                         </div>
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" id="isDataSavePoint" name="isDataSavePoint" defaultChecked={editingStep?.isDataSavePoint} />
+                            <Label htmlFor="isDataSavePoint">Крок збереження даних</Label>
+                        </div>
                     </div>
                 </form>
                  <DialogFooter>
@@ -324,17 +331,22 @@ const statusConfig: Record<StepStatus, { icon: React.ElementType, color: string,
     problematic: { icon: AlertTriangle, color: 'text-red-500', label: 'Проблемний' },
 }
 
-function StepCard({ step, onEditClick, onAddClick, onDragStart }: { 
+function StepCard({ step, onEditClick, onAddClick, onDragStart, onUpdate }: { 
     step: Step; 
     onEditClick: () => void;
     onAddClick: () => void;
     onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+    onUpdate: (step: Step) => void;
 }) {
     const responsible = mockUsers.find(u => u.id === step.responsibleId);
     const StatusIcon = statusConfig[step.status].icon;
     const statusColor = statusConfig[step.status].color;
 
-    return (
+    const handleResponsibleChange = (newResponsibleId: string) => {
+        onUpdate({ ...step, responsibleId: newResponsibleId });
+    }
+
+    const CardContent = (
         <div 
             className="group relative bg-card border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer w-48"
             onClick={onEditClick}
@@ -345,6 +357,7 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart }: {
                 <GripVertical className="h-4 w-4" />
             </div>
             <div className="absolute top-2 right-2 flex items-center gap-1">
+                {step.isDataSavePoint && <Database className="h-4 w-4 text-muted-foreground" title="Крок збереження даних" />}
                 {step.status !== 'ok' && (
                      <Popover>
                         <PopoverTrigger onClick={(e) => e.stopPropagation()}>
@@ -358,12 +371,30 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart }: {
             </div>
             
             <p className="font-medium text-sm mb-2 pr-4">{step.name}</p>
-            <div className="flex items-center gap-2">
-                <Avatar className="h-6 w-6">
-                    <AvatarImage src={responsible?.avatar} />
-                    <AvatarFallback className="text-xs">{responsible?.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <span className="text-xs text-muted-foreground">{responsible?.name}</span>
+            <div onClick={e => e.stopPropagation()}>
+                <Select value={step.responsibleId} onValueChange={handleResponsibleChange}>
+                    <SelectTrigger className="h-8 border-none p-0 focus:ring-0">
+                        <SelectValue asChild>
+                           <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                    <AvatarImage src={responsible?.avatar} />
+                                    <AvatarFallback className="text-xs">{responsible?.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground">{responsible?.name}</span>
+                            </div>
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                         {mockUsers.map(u => 
+                            <SelectItem key={u.id} value={u.id}>
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6"><AvatarImage src={u.avatar} /></Avatar>
+                                    <span>{u.name}</span>
+                                </div>
+                            </SelectItem>
+                        )}
+                    </SelectContent>
+                </Select>
             </div>
             
              <button
@@ -375,4 +406,22 @@ function StepCard({ step, onEditClick, onAddClick, onDragStart }: {
             </button>
         </div>
     )
+
+    if (step.notes) {
+        return (
+            <Popover>
+                <PopoverTrigger asChild>
+                    {CardContent}
+                </PopoverTrigger>
+                <PopoverContent className="text-xs max-w-sm">
+                    <p className="font-bold">Нотатки:</p>
+                    <p>{step.notes}</p>
+                </PopoverContent>
+            </Popover>
+        )
+    }
+
+    return CardContent;
 }
+
+    

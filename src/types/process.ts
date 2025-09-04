@@ -9,6 +9,7 @@ export type Step = {
     connections: { to: string }[];
     status: StepStatus;
     notes: string;
+    isDataSavePoint?: boolean;
 };
 
 export type Lane = {
@@ -23,5 +24,7 @@ export type Process = {
   description: string;
   lanes: Lane[];
 };
+
+    
 
     
