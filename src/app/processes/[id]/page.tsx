@@ -197,7 +197,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="flex flex-col h-full bg-muted/40">
-      <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
+      <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between sticky top-0 z-20">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => router.push('/processes')}>
             <ArrowLeft className="h-4 w-4" />
@@ -218,7 +218,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
         </div>
       </header>
 
-      <main ref={containerRef} className="flex-1 overflow-x-auto p-4 md:p-8 relative">
+      <main ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 relative">
         <div className="inline-block min-w-full" style={{ width: `${maxOrder * (192 + 24) + 240}px` }}>
             <ProcessArrows allSteps={allSteps} containerRef={containerRef} />
             <div className="space-y-1">
