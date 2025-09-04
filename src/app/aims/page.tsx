@@ -101,7 +101,7 @@ export default function AimsPage() {
                   <TableRow>
                       <TableHead>Назва показника</TableHead>
                       <TableHead>Значення</TableHead>
-                      <TableHead>Дата</TableHead>
+                      <TableHead className="hidden sm:table-cell">Дата</TableHead>
                   </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -109,7 +109,7 @@ export default function AimsPage() {
                       <TableRow key={result.id}>
                       <TableCell className="font-medium">{result.name}</TableCell>
                       <TableCell>{result.value}</TableCell>
-                      <TableCell>{formatDate(result.date)}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{formatDate(result.date)}</TableCell>
                       </TableRow>
                   ))}
                   </TableBody>

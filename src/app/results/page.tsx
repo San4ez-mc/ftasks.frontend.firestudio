@@ -146,12 +146,18 @@ const resultsTourSteps: TourStep[] = [
 
 export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-  const [selectedResult, setSelectedResult] = useState<Result | null>(initialResults[0]);
+  const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [results, setResults] = useState(initialResults);
   const [activeTab, setActiveTab] = useState('mine');
   const [statusFilter, setStatusFilter] = useState<string[]>(allStatuses);
   const newResultInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (initialResults.length > 0 && !selectedResult) {
+        //   setSelectedResult(initialResults[0]);
+      }
+    }, [selectedResult, results]);
 
   const handleResultUpdate = (updatedResult: Result) => {
     setResults(currentResults =>
@@ -287,7 +293,7 @@ export default function ResultsPage() {
       }, {} as Record<string, { id: string; name: string; avatar?: string; results: Result[] }>);
 
   return (
-    <div ref={containerRef} className="flex h-screen overflow-hidden">
+    <div ref={containerRef} className="flex flex-col md:flex-row h-screen overflow-hidden">
         <InteractiveTour pageKey="results" steps={resultsTourSteps} />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
@@ -368,8 +374,8 @@ export default function ResultsPage() {
       </div>
 
       <div id="result-details-panel" className={cn(
-        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
-        selectedResult ? "w-full md:w-1/2 lg:min-w-[520px]" : "w-0"
+        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden w-full md:w-0",
+        selectedResult ? "md:w-1/2 lg:min-w-[520px]" : "hidden"
       )}>
         {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} />}
       </div>
@@ -487,11 +493,11 @@ function ResultsTable({
                         <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDeleteResult(result.id)} title="Видалити"><Trash2 className="h-3 w-3"/></Button>
                     </div>
                 </div>
-                <div className={cn("col-span-3 md:col-span-2 text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen && "hidden xl:block")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden md:col-span-2 text-xs text-muted-foreground cursor-pointer transition-all duration-300 xl:block", panelOpen && "hidden xl:block")} onClick={() => onResultSelect(result)}>
                     <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
                     {formatDate(result.deadline)}
                 </div>
-                <div className={cn("col-span-3 md:col-span-2 flex items-center gap-2 cursor-pointer transition-all duration-300", panelOpen && "hidden lg:flex")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden lg:flex col-span-3 md:col-span-2 items-center gap-2 cursor-pointer transition-all duration-300", panelOpen && "hidden lg:flex")} onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' ? 'Постановник' : 'Відповідальний'}</p>
                         <div className="flex items-center gap-2">

@@ -117,7 +117,7 @@ const tasksTourSteps: TourStep[] = [
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(initialTasks[0]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState('mine');
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   const taskTitleInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +132,12 @@ export default function TasksPage() {
         taskTitleInputRef.current.focus();
     }
   }, [selectedTask]);
+
+  useEffect(() => {
+      if (initialTasks.length > 0 && !selectedTask) {
+        //   setSelectedTask(initialTasks[0]);
+      }
+  }, [selectedTask, tasks]);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
@@ -246,11 +252,11 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex flex-col md:flex-row h-screen">
       <InteractiveTour pageKey="tasks" steps={tasksTourSteps} />
       <main className={cn(
-        "flex-1 flex transition-all duration-300",
-         selectedTask ? "w-1/2" : "w-3/4"
+        "flex-1 flex transition-all duration-300 w-full",
+        selectedTask ? "md:w-1/2" : "md:w-3/4"
       )}>
         {/* Main Content */}
         <div className="flex flex-col gap-6 p-4 md:p-6 w-full">
@@ -324,8 +330,8 @@ export default function TasksPage() {
         
         {/* Results Panel */}
         <aside id="results-panel" className={cn(
-            "w-1/4 p-4 border-l transition-all duration-300",
-            selectedTask ? 'hidden' : 'block'
+            "w-full md:w-1/4 p-4 border-l transition-all duration-300",
+            selectedTask ? 'hidden' : 'hidden md:block'
         )}>
             <ResultsList onResultClick={handleResultClick} />
         </aside>
@@ -333,8 +339,8 @@ export default function TasksPage() {
 
        {/* Details Panel */}
       <div id="task-details-panel" className={cn(
-          "transition-all duration-300",
-          selectedTask ? "w-1/2" : "w-0 hidden"
+          "transition-all duration-300 w-full md:w-0",
+          selectedTask ? "md:w-1/2" : "hidden"
       )}>
             {selectedTask && (
               <TaskDetailsPanel 

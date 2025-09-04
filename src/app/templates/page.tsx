@@ -113,7 +113,14 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState(initialTemplates);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(initialTemplates[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+
+  useEffect(() => {
+    if (initialTemplates.length > 0 && !selectedTemplate) {
+        // setSelectedTemplate(initialTemplates[0]);
+    }
+  }, [selectedTemplate, templates]);
+
 
   const handleCreateTemplate = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -154,7 +161,7 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden">
         <InteractiveTour pageKey="templates" steps={templatesTourSteps} />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
@@ -233,8 +240,8 @@ export default function TemplatesPage() {
       </div>
       
       <div id="template-details-panel" className={cn(
-        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
-        selectedTemplate ? "w-full md:w-1/2 lg:w-2/5" : "w-0"
+        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden w-full md:w-0",
+        selectedTemplate ? "md:w-1/2 lg:w-2/5" : "hidden"
       )}>
         {selectedTemplate && <TemplateDetailsPanel key={selectedTemplate.id} template={selectedTemplate} onUpdate={handleUpdateTemplate} onClose={handleClosePanel} />}
       </div>
