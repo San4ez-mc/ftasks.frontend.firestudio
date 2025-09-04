@@ -229,7 +229,7 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, lane.id)}
                 >
-                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-20 h-full">
+                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-10 h-full">
                     <Input 
                         defaultValue={lane.role}
                         className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
