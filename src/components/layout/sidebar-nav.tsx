@@ -22,6 +22,7 @@ import {
   FileClock,
   Building,
   Send,
+  BookText,
 } from 'lucide-react';
 
 const menuItems = [
@@ -32,6 +33,7 @@ const menuItems = [
   { href: '/processes', label: 'Бізнес процеси', icon: Workflow },
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
+  { href: '/instructions', label: 'Інструкції', icon: BookText },
 ];
 
 export default function SidebarNav() {
@@ -56,8 +58,9 @@ export default function SidebarNav() {
                 asChild
                 isActive={pathname === item.href}
                 tooltip={{ children: item.label }}
+                onClick={() => setOpenMobile(false)}
               >
-                <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                <Link href={item.href}>
                   <item.icon />
                   <span>{item.label}</span>
                 </Link>
