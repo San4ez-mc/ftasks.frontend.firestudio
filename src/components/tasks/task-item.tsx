@@ -49,11 +49,11 @@ function formatTime(minutes: number): string {
 export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
     const [title, setTitle] = useState(task.title);
-    const [actualTime, setActualTime] = useState(task.actualTime);
+    const [actualTime, setActualTime] = useState(task.actualTime?.toString() ?? '');
     
     useEffect(() => {
         setTitle(task.title);
-        setActualTime(task.actualTime);
+        setActualTime(task.actualTime?.toString() ?? '');
     }, [task]);
 
     const handleCheckedChange = (checked: boolean | 'indeterminate') => {
@@ -94,7 +94,7 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
     };
 
     const handleActualTimeBlur = () => {
-        const newTime = actualTime === undefined ? undefined : Number(actualTime);
+        const newTime = actualTime === '' ? undefined : Number(actualTime);
         if (newTime !== task.actualTime) {
             onUpdate({ ...task, actualTime: newTime });
         }
@@ -103,7 +103,7 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
     return (
         <>
         <TableRow className="group">
-            <TableCell>
+            <TableCell className="w-[50px]">
                  <Checkbox 
                     id={`task-${task.id}`} 
                     checked={task.status === 'done'}
@@ -124,7 +124,7 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
                     )}
                 />
             </TableCell>
-            <TableCell className={cn(!showTypeColumn && "hidden", "md:table-cell")}>
+            <TableCell className={cn("hidden md:table-cell w-[180px]", !showTypeColumn && "hidden")}>
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -136,18 +136,18 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
                     </Tooltip>
                 </TooltipProvider>
             </TableCell>
-            <TableCell className="hidden sm:table-cell text-xs">{formatTime(task.expectedTime)}</TableCell>
-            <TableCell className="hidden sm:table-cell text-xs">
+            <TableCell className="hidden sm:table-cell text-xs w-[100px]">{formatTime(task.expectedTime)}</TableCell>
+            <TableCell className="hidden sm:table-cell text-xs w-[100px]">
                 <Input
-                    type="number"
-                    value={actualTime ?? ''}
-                    onChange={(e) => setActualTime(e.target.value ? Number(e.target.value) : undefined)}
+                    type="text"
+                    value={actualTime}
+                    onChange={(e) => setActualTime(e.target.value)}
                     onBlur={handleActualTimeBlur}
                     placeholder="-"
                     className="h-7 w-20 text-xs border-none focus-visible:ring-1 bg-transparent"
                 />
             </TableCell>
-             <TableCell className="text-right">
+             <TableCell className="text-right w-[120px]">
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end">
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onSelect} title="Редагувати"><Edit className="h-3 w-3"/></Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6" title="Відкласти"><Clock className="h-3 w-3"/></Button>
@@ -203,3 +203,5 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
         </>
     )
 }
+
+    

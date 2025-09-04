@@ -246,6 +246,16 @@ export default function TasksPage() {
                                     />
                                 ))}
                             </TableBody>
+                             {activeTab === 'mine' && (
+                                <TableFooter>
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="font-bold">Всього</TableCell>
+                                        <TableCell className="font-bold text-xs">{formatTime(totalExpectedTime)}</TableCell>
+                                        <TableCell className="font-bold text-xs">{formatTime(totalActualTime)}</TableCell>
+                                        <TableCell></TableCell>
+                                    </TableRow>
+                                </TableFooter>
+                            )}
                         </Table>
                     </div>
                 ))}
@@ -300,3 +310,5 @@ export default function TasksPage() {
     </div>
   );
 }
+
+    
