@@ -93,6 +93,7 @@ export default function ResultsPage() {
   }
   
   const createNewResult = (name = '', index?: number) => {
+    // Finalize any result that is currently being created
     if (isCreating) {
       finalizeNewResult();
     }
@@ -110,14 +111,12 @@ export default function ResultsPage() {
       tasks: [],
       templates: [],
     };
-
-    setResults(currentResults => {
-        const newResults = [...currentResults];
-        const insertionIndex = index !== undefined ? index + 1 : currentResults.length;
-        newResults.splice(insertionIndex, 0, newResult);
-        return newResults;
-    });
     
+    const insertionIndex = index !== undefined ? index + 1 : results.length;
+    const newResults = [...results];
+    newResults.splice(insertionIndex, 0, newResult);
+    
+    setResults(newResults);
     setSelectedResult(newResult);
     setIsCreating(true);
   };

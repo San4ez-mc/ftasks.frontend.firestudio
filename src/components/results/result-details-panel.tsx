@@ -46,8 +46,9 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
 
     useEffect(() => {
         setName(result.name)
+        setDescription(result.description);
         setSubResults(result.subResults || []);
-    }, [result.name, result.subResults])
+    }, [result])
     
     useEffect(() => {
         if (isCreating && nameInputRef.current) {
@@ -57,7 +58,12 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setName(e.target.value);
-        onUpdate({...result, name: e.target.value});
+    }
+    
+    const handleNameBlur = () => {
+        if(name !== result.name){
+            onUpdate({...result, name: name});
+        }
     }
 
     const handleDescriptionBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
@@ -99,7 +105,7 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                     ref={nameInputRef}
                     value={name}
                     onChange={handleNameChange}
-                    onBlur={() => onUpdate({...result, name})}
+                    onBlur={handleNameBlur}
                     onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                     autoFocus={isCreating}
                     placeholder="Назва результату"
@@ -280,5 +286,6 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
             </footer>
         </div>
     );
+}
 
     
