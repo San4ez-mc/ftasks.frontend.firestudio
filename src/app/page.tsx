@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
 import { Input } from '@/components/ui/input';
-import ResultsList, { type Result } from '@/components/tasks/results-list';
 import TaskDetailsPanel from '@/components/tasks/task-details-panel';
 import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 const initialTasks: Task[] = [
@@ -24,7 +24,8 @@ const initialTasks: Task[] = [
         type: 'important-urgent', 
         expectedTime: 60,
         assignee: { name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        resultName: 'Розробити новий модуль аналітики',
     },
     { 
         id: '2', 
@@ -47,7 +48,8 @@ const initialTasks: Task[] = [
         expectedResult: 'Інтеграція має бути налаштована',
         actualResult: 'Інтеграція налаштована і протестована',
         assignee: { name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+        reporter: { name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        resultName: 'Запустити рекламну кампанію в Google Ads'
     },
     { 
         id: '4', 
@@ -91,7 +93,7 @@ export default function TasksPage() {
     }
   }
 
-  const createNewTask = (title: string, resultId?: string): Task => {
+  const createNewTask = (title: string, resultName?: string): Task => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
       title: title,
@@ -102,15 +104,10 @@ export default function TasksPage() {
       expectedResult: 'Очікуваний результат генерується GPT',
       assignee: { name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
       reporter: { name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
-      resultId: resultId,
+      resultName: resultName,
     };
     setTasks(prevTasks => [newTask, ...prevTasks]);
     return newTask;
-  };
-
-  const handleResultClick = (result: Result) => {
-    const newTask = createNewTask(result.name, result.id);
-    setSelectedTask(newTask);
   };
 
   const handleNewTaskKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -119,7 +116,8 @@ export default function TasksPage() {
       const inputElement = event.currentTarget;
       const title = inputElement.value.trim();
       if (title) {
-        createNewTask(title);
+        const newTask = createNewTask(title);
+        setSelectedTask(newTask);
         inputElement.value = '';
       }
     }
@@ -148,19 +146,29 @@ export default function TasksPage() {
             onDateChange={handleDateChange}
           />
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
-            <div className="space-y-0.5">
-              {tasks.map(task => (
-                <div key={task.id} className="group relative">
-                  <TaskItem 
-                    task={task} 
-                    onSelect={() => handleTaskSelect(task)}
-                    onUpdate={handleTaskUpdate}
-                  />
-                   <button onClick={handleFabClick} className="absolute -left-7 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
-                      <Plus className="h-4 w-4" />
-                    </button>
-                </div>
-              ))}
+            <div className="border rounded-md">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px]"></TableHead>
+                            <TableHead>Назва</TableHead>
+                            <TableHead className="hidden md:table-cell w-[180px]">Тип</TableHead>
+                            <TableHead className="hidden sm:table-cell w-[100px]">Очік. час</TableHead>
+                            <TableHead className="hidden sm:table-cell w-[100px]">Факт. час</TableHead>
+                            <TableHead className="w-[120px] text-right">Дії</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {tasks.map(task => (
+                            <TaskItem 
+                                key={task.id}
+                                task={task} 
+                                onSelect={() => handleTaskSelect(task)}
+                                onUpdate={handleTaskUpdate}
+                            />
+                        ))}
+                    </TableBody>
+                </Table>
             </div>
              <Input 
                 ref={newTaskInputRef}

@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Clock, Edit, MoreVertical, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { TableRow, TableCell } from "@/components/ui/table";
 
 type TaskItemProps = {
     task: Task;
@@ -37,9 +38,12 @@ const typeLabels: Record<TaskType, string> = {
 };
 
 function formatTime(minutes: number): string {
+    if (!minutes) return '-';
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return `${h}:${m.toString().padStart(2, '0')}`;
+    const hStr = h > 0 ? `${h}h` : '';
+    const mStr = m > 0 ? `${m}m` : '';
+    return `${hStr} ${mStr}`.trim() || '0m';
 }
 
 export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
@@ -75,90 +79,91 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
     };
 
     return (
-        <div 
-            className={cn(
-                "flex items-center gap-3 p-1 rounded-md transition-colors",
-                task.status === 'done' ? 'bg-muted/50' : 'hover:bg-accent'
-            )}
-        >
-            <Checkbox 
-                id={`task-${task.id}`} 
-                checked={task.status === 'done'}
-                onCheckedChange={handleCheckedChange}
-                className="mt-1"
-            />
-            <div className="flex-1 cursor-pointer text-sm" onClick={onSelect}>
+        <>
+        <TableRow className="group">
+            <TableCell>
+                 <Checkbox 
+                    id={`task-${task.id}`} 
+                    checked={task.status === 'done'}
+                    onCheckedChange={handleCheckedChange}
+                    className="mt-1"
+                />
+            </TableCell>
+             <TableCell className="font-medium cursor-pointer" onClick={onSelect}>
+                {task.resultName && <p className="text-xs text-muted-foreground">{task.resultName}</p>}
                 <p className={cn(
-                    "truncate",
                     task.status === 'done' && "line-through text-muted-foreground"
                 )}>
                     {task.title}
                 </p>
-            </div>
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Badge className={cn("hidden sm:inline-flex text-xs", typeColors[task.type])}>{typeLabels[task.type]}</Badge>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>{typeLabels[task.type]}</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-            
-            <span className="text-xs text-muted-foreground hidden md:inline">{formatTime(task.expectedTime)}</span>
-            
-            <Avatar className="h-6 w-6 hidden sm:flex">
-                <AvatarImage src={task.assignee.avatar} alt={task.assignee.name} data-ai-hint="person" />
-                <AvatarFallback>{task.assignee.name.charAt(0)}</AvatarFallback>
-            </Avatar>
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Badge className={cn("text-xs", typeColors[task.type])}>{typeLabels[task.type]}</Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{typeLabels[task.type]}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </TableCell>
+            <TableCell className="hidden sm:table-cell text-xs">{formatTime(task.expectedTime)}</TableCell>
+            <TableCell className="hidden sm:table-cell text-xs">{formatTime(task.actualTime ?? 0)}</TableCell>
+             <TableCell className="text-right">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onSelect} title="Редагувати"><Edit className="h-3 w-3"/></Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" title="Відкласти"><Clock className="h-3 w-3"/></Button>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <CalendarIcon className="h-3 w-3" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={new Date(task.dueDate)}
+                                onSelect={handleDateChange}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-3 w-3"/></Button>
+                </div>
+            </TableCell>
+        </TableRow>
 
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 hidden sm:flex">
-                        <CalendarIcon className="h-4 w-4" />
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <Calendar
-                        mode="single"
-                        selected={new Date(task.dueDate)}
-                        onSelect={handleDateChange}
-                        initialFocus
-                    />
-                </PopoverContent>
-            </Popover>
-
-
-            <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Завершення задачі: {task.title}</DialogTitle>
-                         <DialogDescription>
-                            Заповніть фактичні результати для завершення задачі.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCompleteTask}>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="actualResult">Фактичний результат</Label>
-                                <Textarea id="actualResult" name="actualResult" defaultValue={task.expectedResult} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="actualTime">Фактичний час (хв)</Label>
-                                <Input id="actualTime" name="actualTime" type="number" defaultValue={task.expectedTime} />
-                            </div>
+        <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Завершення задачі: {task.title}</DialogTitle>
+                     <DialogDescription>
+                        Заповніть фактичні результати для завершення задачі.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCompleteTask}>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="actualResult">Фактичний результат</Label>
+                            <Textarea id="actualResult" name="actualResult" defaultValue={task.expectedResult} />
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => {
-                                setIsCompleteDialogOpen(false);
-                                onUpdate({ ...task, status: 'todo' }); // Revert checkbox state
-                            }}>Скасувати</Button>
-                            <Button type="submit">OK</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="actualTime">Фактичний час (хв)</Label>
+                            <Input id="actualTime" name="actualTime" type="number" defaultValue={task.expectedTime} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => {
+                            setIsCompleteDialogOpen(false);
+                            onUpdate({ ...task, status: 'todo' }); // Revert checkbox state
+                        }}>Скасувати</Button>
+                        <Button type="submit">OK</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+        </>
     )
 }

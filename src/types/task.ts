@@ -21,4 +21,5 @@ export interface Task {
   assignee: User;
   reporter: User;
   resultId?: string;
+  resultName?: string;
 }
