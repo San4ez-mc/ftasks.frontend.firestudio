@@ -69,7 +69,7 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
     return (
         <div 
             className={cn(
-                "flex items-center gap-3 p-2 rounded-md transition-colors",
+                "flex items-center gap-3 p-1 rounded-md transition-colors",
                 task.status === 'done' ? 'bg-muted/50' : 'hover:bg-accent'
             )}
         >
@@ -79,7 +79,7 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
                 onCheckedChange={handleCheckedChange}
                 className="mt-1"
             />
-            <div className="flex-1 cursor-pointer" onClick={onSelect}>
+            <div className="flex-1 cursor-pointer text-sm" onClick={onSelect}>
                 <p className={cn(
                     "truncate",
                     task.status === 'done' && "line-through text-muted-foreground"
@@ -90,7 +90,7 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Badge className={cn("hidden sm:inline-flex", typeColors[task.type])}>{typeLabels[task.type]}</Badge>
+                        <Badge className={cn("hidden sm:inline-flex text-xs", typeColors[task.type])}>{typeLabels[task.type]}</Badge>
                     </TooltipTrigger>
                     <TooltipContent>
                         <p>{typeLabels[task.type]}</p>
@@ -98,7 +98,7 @@ export default function TaskItem({ task, onSelect, onUpdate }: TaskItemProps) {
                 </Tooltip>
             </TooltipProvider>
             
-            <span className="text-sm text-muted-foreground hidden md:inline">{formatTime(task.expectedTime)}</span>
+            <span className="text-xs text-muted-foreground hidden md:inline">{formatTime(task.expectedTime)}</span>
             
             <Avatar className="h-6 w-6 hidden sm:flex">
                 <AvatarImage src={task.assignee.avatar} alt={task.assignee.name} data-ai-hint="person" />

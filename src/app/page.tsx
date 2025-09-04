@@ -86,17 +86,21 @@ export default function TasksPage() {
             onDateChange={handleDateChange}
           />
           <div className="flex-1 flex flex-col gap-4">
-            <Input placeholder="Нова задача..." className="bg-card"/>
-            <div className="space-y-2">
+            <div className="space-y-0">
               {tasks.map(task => (
-                <TaskItem 
-                  key={task.id} 
-                  task={task} 
-                  onSelect={() => handleTaskSelect(task)}
-                  onUpdate={handleTaskUpdate}
-                />
+                <div key={task.id} className="group relative">
+                  <TaskItem 
+                    task={task} 
+                    onSelect={() => handleTaskSelect(task)}
+                    onUpdate={handleTaskUpdate}
+                  />
+                   <button className="absolute -top-3 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                </div>
               ))}
             </div>
+             <Input placeholder="Нова задача..." className="bg-card mt-2"/>
           </div>
         </div>
 
