@@ -37,7 +37,7 @@ export default function TasksHeader({ currentDate, onDateChange, activeTab, onTa
                     <PopoverTrigger asChild>
                          <Button variant="ghost" className="text-xl font-semibold text-center whitespace-nowrap">
                             <CalendarIcon className="mr-2 h-5 w-5" />
-                            Мої задачі на {formatDate(currentDate)}
+                            Задачі на {formatDate(currentDate)}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">

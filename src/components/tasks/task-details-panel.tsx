@@ -270,7 +270,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Завершення задачі: {task.title}</DialogTitle>
-                    <DialogDescription>
+                     <DialogDescription>
                         Заповніть фактичні результати для завершення задачі.
                     </DialogDescription>
                 </DialogHeader>

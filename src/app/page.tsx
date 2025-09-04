@@ -14,6 +14,8 @@ import TaskDetailsPanel from '@/components/tasks/task-details-panel';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import ResultsList from '@/components/tasks/results-list';
+import type { Result as ResultType } from '@/components/tasks/results-list';
 
 
 const initialTasks: Task[] = [
@@ -113,6 +115,11 @@ export default function TasksPage() {
     return newTask;
   };
 
+  const handleResultClick = (result: ResultType) => {
+    const newTask = createNewTask(result.name, result.name);
+    setSelectedTask(newTask);
+  };
+
   const handleNewTaskKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -194,7 +201,7 @@ export default function TasksPage() {
         {/* Main Content */}
         <div className={cn(
           "flex flex-col gap-6 p-4 md:p-6 transition-all duration-300",
-          selectedTask ? "col-span-12 md:col-span-6 lg:col-span-7" : "col-span-12"
+          selectedTask ? "col-span-12 md:col-span-7" : "col-span-12 lg:col-span-8 xl:col-span-9"
         )}>
           <TasksHeader 
             currentDate={currentDate}
@@ -262,19 +269,31 @@ export default function TasksPage() {
              />
           </div>
         </div>
-
-        {/* Right Column / Details Panel */}
-        <div className={cn(
-            "transition-all duration-300",
-            selectedTask ? "col-span-12 md:col-span-6 lg:col-span-5" : "hidden"
-        )}>
-             {selectedTask && (
-                <TaskDetailsPanel 
-                    task={selectedTask}
-                    onUpdate={handleTaskUpdate}
-                    onClose={handleClosePanel}
-                />
-            )}
+        
+        {/* Right Columns */}
+        <div className={cn("col-span-5 transition-all duration-300", selectedTask ? "block" : "hidden lg:block")}>
+             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
+                <div className={cn(
+                    "lg:col-span-4 xl:col-span-3 h-full transition-all duration-300",
+                    selectedTask ? "hidden lg:block" : "block"
+                )}>
+                    <div className="p-6 h-full overflow-y-auto">
+                        <ResultsList onResultClick={handleResultClick} />
+                    </div>
+                </div>
+                <div className={cn(
+                    "transition-all duration-300",
+                    selectedTask ? "col-span-5" : "hidden"
+                )}>
+                     {selectedTask && (
+                        <TaskDetailsPanel 
+                            task={selectedTask}
+                            onUpdate={handleTaskUpdate}
+                            onClose={handleClosePanel}
+                        />
+                    )}
+                </div>
+            </div>
         </div>
       </main>
 
