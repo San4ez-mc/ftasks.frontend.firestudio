@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, X, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,17 +17,34 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
-const initialTemplates = [
+type TaskGenerated = {
+  id: string;
+  date: string;
+  status: 'done' | 'todo';
+};
+
+type Template = {
+  id: string;
+  name: string;
+  repeatability: string;
+  startDate: string;
+  tasksGenerated: TaskGenerated[];
+  expectedResult?: string;
+};
+
+const initialTemplates: Template[] = [
   { 
     id: '1', 
     name: 'Щоденний звіт', 
-    repeatability: 'Щоденно', 
+    repeatability: 'Щоденно о 9:00', 
     startDate: '2024-08-01',
+    expectedResult: 'Звіт про виконані задачі за день',
     tasksGenerated: [
         { id: 't1-1', date: '2024-08-01', status: 'done'},
         { id: 't1-2', date: '2024-08-02', status: 'done'},
@@ -39,6 +56,7 @@ const initialTemplates = [
     name: 'Щотижнева аналітика', 
     repeatability: 'Щотижня (Пн)', 
     startDate: '2024-07-29',
+    expectedResult: 'Аналітичний звіт по ключових метриках за тиждень',
     tasksGenerated: [
         { id: 't2-1', date: '2024-07-29', status: 'done'},
         { id: 't2-2', date: '2024-08-05', status: 'todo'},
@@ -49,6 +67,7 @@ const initialTemplates = [
     name: 'Підготовка до щомісячної зустрічі', 
     repeatability: 'Щомісяця (25 число)', 
     startDate: '2024-06-25',
+    expectedResult: 'Презентація з результатами місяця',
     tasksGenerated: [
         { id: 't3-1', date: '2024-06-25', status: 'done'},
         { id: 't3-2', date: '2024-07-25', status: 'done'},
@@ -64,28 +83,55 @@ const initialResults = [
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState(initialTemplates);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedResult, setSelectedResult] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
   const handleCreateTemplate = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Logic to create a new template
-    setIsDialogOpen(false);
+    const formData = new FormData(event.currentTarget);
+    const name = formData.get('templateName') as string;
+    if (name) {
+        const newTemplate: Template = {
+            id: `template-${Date.now()}`,
+            name,
+            repeatability: formData.get('repeatability') as string,
+            startDate: new Date().toISOString().split('T')[0],
+            tasksGenerated: [],
+            expectedResult: formData.get('expectedResult') as string
+        };
+        setTemplates(prev => [newTemplate, ...prev]);
+        setIsCreateDialogOpen(false);
+        setNewTemplateName('');
+    }
   };
+  
+  const handleUpdateTemplate = (updatedTemplate: Template) => {
+    setTemplates(templates.map(t => t.id === updatedTemplate.id ? updatedTemplate : t));
+    if (selectedTemplate?.id === updatedTemplate.id) {
+        setSelectedTemplate(updatedTemplate);
+    }
+  }
 
   const handleCreateFromRes = (resultId: string) => {
       const result = initialResults.find(r => r.id === resultId);
       if(result) {
-        setSelectedResult(result.name);
-        setIsDialogOpen(true);
+        setNewTemplateName(result.name);
+        setIsCreateDialogOpen(true);
       }
+  }
+  
+  const handleClosePanel = () => {
+    setSelectedTemplate(null);
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-6">
-        {/* Main Content */}
-        <div className="md:col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
+    <div className="flex h-screen overflow-hidden">
+      <div className={cn(
+        "flex flex-col transition-all duration-300 w-full",
+        selectedTemplate ? "md:w-1/2 lg:w-3/5" : "w-full"
+      )}>
+        <main className="flex-1 flex flex-col gap-6 p-4 md:p-6 overflow-y-auto">
             <header>
                 <h1 className="text-xl font-bold tracking-tight font-headline text-center mb-4">Шаблони</h1>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -115,60 +161,58 @@ export default function TemplatesPage() {
                      </div>
                 </div>
             </header>
-            <Accordion type="single" collapsible className="w-full">
-                {templates.map(template => (
-                    <AccordionItem value={template.id} key={template.id}>
-                        <AccordionTrigger>
-                            <div className="flex justify-between w-full pr-4">
-                                <span className="font-medium text-left">{template.name}</span>
-                                <Badge variant="outline" className="text-right whitespace-nowrap ml-2">{template.repeatability}</Badge>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Активні шаблони</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {templates.map(template => (
+                             <Card 
+                                key={template.id} 
+                                className={cn(
+                                    "cursor-pointer hover:shadow-md transition-shadow",
+                                    selectedTemplate?.id === template.id && "ring-2 ring-primary"
+                                )}
+                                onClick={() => setSelectedTemplate(template)}
+                            >
+                                <CardContent className="p-3 flex justify-between items-center">
+                                    <span className="font-medium text-sm">{template.name}</span>
+                                    <Badge variant="outline" className="text-xs">{template.repeatability}</Badge>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Створити з результату</CardTitle>
+                        <CardDescription>Клікніть щоб створити шаблон</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {initialResults.map(result => (
+                            <div key={result.id} onClick={() => handleCreateFromRes(result.id)} className="p-3 rounded-md border hover:bg-accent cursor-pointer">
+                                <p className="font-medium text-sm">{result.name}</p>
+                                <p className="text-xs text-muted-foreground">{result.value}</p>
                             </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-4 bg-muted/50 rounded-md">
-                            <p className="text-sm text-muted-foreground mb-2">Дата початку: {formatDate(template.startDate)}</p>
-                             <h4 className="font-semibold mb-2">Згенеровані задачі:</h4>
-                             <div className="space-y-1">
-                                {template.tasksGenerated.map(task => (
-                                    <div key={task.id} className="flex justify-between items-center text-sm p-1">
-                                        <span>Задача від {formatDate(task.date)}</span>
-                                        <Badge variant={task.status === 'done' ? 'secondary' : 'default'}>
-                                            {task.status === 'done' ? 'Виконано' : 'В роботі'}
-                                        </Badge>
-                                    </div>
-                                ))}
-                             </div>
-                             <div className="mt-4 flex gap-2 flex-wrap">
-                                <Button size="sm">Редагувати</Button>
-                                <Button size="sm" variant="outline">Вимкнути</Button>
-                                <Button size="sm" variant="destructive">Видалити</Button>
-                             </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                ))}
-            </Accordion>
-        </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
+        </main>
+      </div>
+      
+      <div className={cn(
+        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
+        selectedTemplate ? "w-full md:w-1/2 lg:w-2/5" : "w-0"
+      )}>
+        {selectedTemplate && <TemplateDetailsPanel key={selectedTemplate.id} template={selectedTemplate} onUpdate={handleUpdateTemplate} onClose={handleClosePanel} />}
+      </div>
 
-        {/* Right Column */}
-        <div className="md:col-span-12 lg:col-span-4 xl:col-span-3">
-             <Card className="h-full">
-                <CardHeader>
-                    <CardTitle>Результати</CardTitle>
-                    <CardDescription>Клікніть щоб створити шаблон</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    {initialResults.map(result => (
-                        <div key={result.id} onClick={() => handleCreateFromRes(result.id)} className="p-3 rounded-md border hover:bg-accent cursor-pointer">
-                            <p className="font-medium">{result.name}</p>
-                            <p className="text-sm text-muted-foreground">{result.value}</p>
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
-        </div>
-      </main>
 
-      {/* FAB */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* FAB and Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
                 <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
                     <PlusCircle className="h-8 w-8" />
@@ -186,7 +230,7 @@ export default function TemplatesPage() {
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="templateName" className="text-right">Назва</Label>
-                            <Input id="templateName" name="templateName" className="col-span-3" defaultValue={selectedResult || ''}/>
+                            <Input id="templateName" name="templateName" className="col-span-3" defaultValue={newTemplateName || ''}/>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="repeatability" className="text-right">Повторюваність</Label>
@@ -205,4 +249,66 @@ export default function TemplatesPage() {
         </Dialog>
     </div>
   );
+}
+
+// --- Details Panel ---
+
+function TemplateDetailsPanel({ template, onUpdate, onClose }: { template: Template, onUpdate: (template: Template) => void, onClose: () => void }) {
+    
+    const handleFieldChange = (field: keyof Template, value: string) => {
+        onUpdate({ ...template, [field]: value });
+    }
+    
+    return (
+        <div className="flex flex-col h-full">
+             <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
+                <h2 className="text-lg font-semibold font-headline">{template.name}</h2>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
+                </div>
+            </header>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Основна інформація</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 text-sm">
+                        <div>
+                            <Label htmlFor="template-name">Назва шаблону</Label>
+                            <Input id="template-name" value={template.name} onChange={e => handleFieldChange('name', e.target.value)} />
+                        </div>
+                        <div>
+                            <Label htmlFor="template-repeatability">Повторюваність</Label>
+                            <Input id="template-repeatability" value={template.repeatability} onChange={e => handleFieldChange('repeatability', e.target.value)} />
+                        </div>
+                        <div>
+                            <Label htmlFor="template-expected-result">Очікуваний результат</Label>
+                            <Textarea id="template-expected-result" value={template.expectedResult} onChange={e => handleFieldChange('expectedResult', e.target.value)} />
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Історія</CardTitle>
+                        <CardDescription>Автоматично згенеровані задачі</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {template.tasksGenerated.map(task => (
+                            <div key={task.id} className="flex justify-between items-center text-sm p-2 border rounded-md">
+                                <span>Задача від {formatDate(task.date)}</span>
+                                <Badge variant={task.status === 'done' ? 'secondary' : 'default'}>
+                                    {task.status === 'done' ? 'Виконано' : 'В роботі'}
+                                </Badge>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+                 <Separator />
+                <div className="flex gap-2">
+                    <Button variant="outline" size="sm"><Clock className="mr-2 h-4 w-4" /> Призупинити</Button>
+                    <Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4"/> Видалити</Button>
+                </div>
+            </div>
+        </div>
+    )
 }
