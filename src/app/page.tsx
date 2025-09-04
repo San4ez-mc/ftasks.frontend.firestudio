@@ -260,17 +260,6 @@ export default function TasksPage() {
                     </div>
                 ))}
             </div>
-            {activeTab === 'mine' && (
-                 <div className="border-t py-2 px-4">
-                    <div className="grid grid-cols-12 gap-x-2 md:gap-x-4">
-                         <div className="col-span-1"></div>
-                         <div className="col-span-11 md:col-span-5 font-bold">Всього</div>
-                         <div className="hidden md:table-cell md:col-span-2"></div>
-                         <div className="hidden sm:table-cell sm:col-span-1 font-bold text-xs">{formatTime(totalExpectedTime)}</div>
-                         <div className="hidden sm:table-cell sm:col-span-1 font-bold text-xs">{formatTime(totalActualTime)}</div>
-                    </div>
-                 </div>
-            )}
              <Input 
                 ref={newTaskInputRef}
                 placeholder="Нова задача..." 
@@ -310,5 +299,3 @@ export default function TasksPage() {
     </div>
   );
 }
-
-    
