@@ -199,7 +199,7 @@ export default function TasksPage() {
     <div className="flex h-screen">
       <main className={cn(
         "flex-1 flex transition-all duration-300",
-         selectedTask ? "w-1/2" : "w-full"
+         selectedTask ? "w-1/2" : "w-3/4"
       )}>
         {/* Main Content */}
         <div className="flex flex-col gap-6 p-4 md:p-6 w-full">
@@ -267,11 +267,15 @@ export default function TasksPage() {
                 onKeyDown={handleNewTaskKeyDown}
              />
           </div>
-          <div className="mt-auto pt-4">
-            <ResultsList onResultClick={handleResultClick} />
-          </div>
         </div>
         
+        {/* Results Panel */}
+        <aside className={cn(
+            "w-1/4 p-4 border-l transition-all duration-300",
+            selectedTask ? 'hidden' : 'block'
+        )}>
+            <ResultsList onResultClick={handleResultClick} />
+        </aside>
       </main>
 
        {/* Details Panel */}
