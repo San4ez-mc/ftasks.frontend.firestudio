@@ -148,7 +148,7 @@ export default function CompanyPage() {
             {/* Employee Details Panel */}
              <div className={cn(
                 "flex-shrink-0 bg-card transition-all duration-300 ease-in-out overflow-y-auto w-full md:w-2/3 lg:w-3/4",
-                 selectedEmployee ? "block" : "hidden md:hidden"
+                 selectedEmployee ? "block" : "hidden md:block"
             )}>
                 {selectedEmployee ? (
                     <EmployeeDetails employee={selectedEmployee} onUpdate={handleEmployeeUpdate} />
@@ -166,7 +166,6 @@ export default function CompanyPage() {
 function EmployeeDetails({ employee, onUpdate }: { employee: Employee; onUpdate: (employee: Employee) => void; }) {
     const [isEditing, setIsEditing] = useState(false);
     
-    // In a real app, this would be derived state or part of the employee object
     const employeePositions = employee.positions.map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
     const employeeGroups = employee.groups.map(gId => mockGroups.find(g => g.id === gId)?.name).filter(Boolean);
 
@@ -228,7 +227,7 @@ function EmployeeDetails({ employee, onUpdate }: { employee: Employee; onUpdate:
                             Оновіть інформацію для {employee.firstName} {employee.lastName}.
                         </DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={(e) => {
+                    <form id="edit-employee-form" onSubmit={(e) => {
                         e.preventDefault();
                         const formData = new FormData(e.currentTarget);
                         const updatedEmployee: Employee = {
@@ -270,11 +269,11 @@ function EmployeeDetails({ employee, onUpdate }: { employee: Employee; onUpdate:
                                 <Textarea id="notes" name="notes" defaultValue={employee.notes} />
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsEditing(false)}>Скасувати</Button>
-                            <Button type="submit">Зберегти</Button>
-                        </DialogFooter>
                     </form>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsEditing(false)}>Скасувати</Button>
+                        <Button type="submit" form="edit-employee-form">Зберегти</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
@@ -285,9 +284,9 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
     return (
          <Card>
             <CardHeader className="p-4">
-                <CardTitle className="text-base">{title}</CardTitle>
+                <CardTitle className="text-sm font-semibold">{title}</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-3 text-sm">
+            <CardContent className="p-4 pt-0 space-y-3 text-xs">
                 {children}
             </CardContent>
         </Card>
