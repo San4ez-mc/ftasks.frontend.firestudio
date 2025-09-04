@@ -60,38 +60,41 @@ export default function ResultsPage() {
   const newResultInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isCreating && selectedResult && newResultInputRef.current) {
+    if (isCreating && newResultInputRef.current) {
         newResultInputRef.current.focus();
     }
   }, [isCreating, selectedResult]);
 
   const handleResultUpdate = (updatedResult: Result) => {
-    setResults(results.map(r => r.id === updatedResult.id ? updatedResult : r));
+    setResults(currentResults =>
+      currentResults.map(r => r.id === updatedResult.id ? updatedResult : r)
+    );
     if (selectedResult && selectedResult.id === updatedResult.id) {
       setSelectedResult(updatedResult);
     }
   };
 
   const handleSelectResult = (result: Result | null) => {
-    if (isCreating && selectedResult && selectedResult.name.trim() === '') {
-        setResults(prev => prev.filter(r => r.id !== selectedResult.id));
-    }
-    setIsCreating(false);
+    finalizeNewResult(true); // Finalize any existing new result before selecting another
     setSelectedResult(result);
+    setIsCreating(false);
   }
 
-  const finalizeNewResult = () => {
-    if (isCreating && selectedResult) {
-       if (selectedResult.name.trim() === '') {
-        setResults(prev => prev.filter(r => r.id !== selectedResult.id));
-        setSelectedResult(null);
-      }
+  const finalizeNewResult = (forceClose: boolean = false) => {
+    if (!isCreating || !selectedResult) {
+      setIsCreating(false);
+      return;
+    };
+
+    if (selectedResult.name.trim() === '') {
+      setResults(prev => prev.filter(r => r.id !== selectedResult.id));
+      if(!forceClose) setSelectedResult(null);
     }
     setIsCreating(false);
   }
   
   const createNewResult = (name = '', index?: number) => {
-    finalizeNewResult();
+    finalizeNewResult(true);
     
     const newResult: Result = {
       id: `new-${Date.now()}`,
@@ -107,33 +110,17 @@ export default function ResultsPage() {
       templates: []
     };
     
-    const insertionIndex = index !== undefined ? index + 1 : results.length;
-    const newResults = [...results];
-    newResults.splice(insertionIndex, 0, newResult);
-    setResults(newResults);
+    setResults(currentResults => {
+        const newResults = [...currentResults];
+        const insertionIndex = index !== undefined ? index + 1 : currentResults.length;
+        newResults.splice(insertionIndex, 0, newResult);
+        return newResults;
+    });
     
     setSelectedResult(newResult);
     setIsCreating(true);
   }
-
-  const handleAddNewClick = () => {
-    createNewResult('', results.length - 1);
-  }
   
-  const handleAddInBetween = (index: number) => {
-    createNewResult('', index);
-  };
-
-
-  const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
-    if(selectedResult && isCreating){
-      const updatedResult = {...selectedResult, name};
-      setSelectedResult(updatedResult);
-      handleResultUpdate(updatedResult);
-    }
-  }
-
   const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if(e.key === 'Enter'){
       finalizeNewResult();
@@ -141,12 +128,9 @@ export default function ResultsPage() {
     }
   }
   
-  const handleBlur = () => {
-    finalizeNewResult();
-  }
-  
   const handleClosePanel = () => {
-    handleSelectResult(null);
+    finalizeNewResult(true);
+    setSelectedResult(null);
   }
 
   return (
@@ -184,12 +168,9 @@ export default function ResultsPage() {
               results={results} 
               onResultSelect={handleSelectResult} 
               onResultUpdate={handleResultUpdate}
-              onAddNewInBetween={handleAddInBetween}
+              createNewResult={createNewResult}
               isCreating={isCreating}
               selectedResult={selectedResult}
-              onNewResultNameChange={handleNewResultNameChange}
-              onNewResultKeyDown={handleNewResultKeyDown}
-              onBlur={handleBlur}
               newResultInputRef={newResultInputRef}
             />
           ) : (
@@ -204,7 +185,7 @@ export default function ResultsPage() {
       )}>
         {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} isCreating={isCreating} onClose={handleClosePanel} />}
       </div>
-       <Button onClick={handleAddNewClick} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
+       <Button onClick={() => createNewResult('', results.length -1)} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
           <Plus className="h-8 w-8" />
           <span className="sr-only">Створити результат</span>
         </Button>
@@ -216,12 +197,9 @@ type ResultsTableProps = {
   results: Result[];
   onResultSelect: (result: Result | null) => void;
   onResultUpdate: (result: Result) => void;
-  onAddNewInBetween: (index: number) => void;
+  createNewResult: (name?: string, index?: number) => void;
   isCreating: boolean;
   selectedResult: Result | null;
-  onNewResultNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onNewResultKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onBlur: () => void;
   newResultInputRef: React.RefObject<HTMLInputElement>;
 };
 
@@ -230,17 +208,34 @@ function ResultsTable({
   results,
   onResultSelect,
   onResultUpdate,
-  onAddNewInBetween,
+  createNewResult,
   isCreating,
   selectedResult,
-  onNewResultNameChange,
-  onNewResultKeyDown,
-  onBlur,
   newResultInputRef
 }: ResultsTableProps) {
+  
+  const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if(selectedResult && isCreating){
+      const updatedResult = {...selectedResult, name: e.target.value};
+      onResultUpdate(updatedResult);
+    }
+  }
+
+  const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if(e.key === 'Enter'){
+      (e.target as HTMLInputElement).blur();
+    }
+  }
+  
+  const handleBlur = () => {
+     if (isCreating && selectedResult && selectedResult.name.trim() === '') {
+        onResultUpdate({...selectedResult, id: 'delete-me' }); // a bit of a hack to trigger deletion
+        onResultSelect(null);
+     }
+     // Finalize is now handled by selecting another element or closing
+  }
 
   const renderRow = (result: Result, index: number) => {
-    // This condition checks if the current row is the one being created.
     if (isCreating && selectedResult?.id === result.id) {
       return (
         <div key={`creating-${result.id}`} className="relative group">
@@ -252,21 +247,14 @@ function ResultsTable({
               <Input
                 ref={newResultInputRef}
                 placeholder="Назва нового результату..."
-                value={selectedResult?.name || ''}
-                onChange={onNewResultNameChange}
-                onKeyDown={onNewResultKeyDown}
-                onBlur={onBlur}
+                value={result.name}
+                onChange={handleNewResultNameChange}
+                onKeyDown={handleNewResultKeyDown}
+                onBlur={handleBlur}
                 className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
               />
             </div>
           </div>
-          {/* Always show the plus button for the next row, even for the new input */}
-          <button
-            onClick={() => onAddNewInBetween(index)}
-            className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
-            >
-            <Plus className="h-4 w-4" />
-          </button>
         </div>
       );
     }
@@ -274,7 +262,7 @@ function ResultsTable({
     return (
       <div key={result.id} className="relative group">
         <button
-          onClick={() => onAddNewInBetween(index)}
+          onClick={() => createNewResult('', index)}
           className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
         >
           <Plus className="h-4 w-4" />
@@ -337,7 +325,7 @@ function ResultsTable({
             </div>
             {results.map(renderRow)}
              <div className="p-2 border-t">
-                  <button onClick={() => onAddNewInBetween(results.length -1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+                  <button onClick={() => createNewResult('', results.length -1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
                       <Plus className="h-3 w-3" /> Створити результат
                   </button>
               </div>
@@ -379,7 +367,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-    
 
     
