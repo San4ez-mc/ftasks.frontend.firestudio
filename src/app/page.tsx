@@ -113,7 +113,7 @@ export default function TasksPage() {
   const handleFabClick = () => {
     const newTask = createNewTask('');
     setSelectedTask(newTask);
-    newTaskInputRef.current?.focus();
+    setTimeout(() => newTaskInputRef.current?.focus(), 0);
   };
 
   return (
@@ -125,8 +125,8 @@ export default function TasksPage() {
             currentDate={currentDate}
             onDateChange={handleDateChange}
           />
-          <div className="flex-1 flex flex-col gap-4">
-            <div className="space-y-0">
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="space-y-0.5">
               {tasks.map(task => (
                 <div key={task.id} className="group relative">
                   <TaskItem 
@@ -134,7 +134,7 @@ export default function TasksPage() {
                     onSelect={() => handleTaskSelect(task)}
                     onUpdate={handleTaskUpdate}
                   />
-                   <button className="absolute -top-3 left-1/2 -translate-x-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
+                   <button className="absolute -left-7 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
                       <Plus className="h-4 w-4" />
                     </button>
                 </div>
