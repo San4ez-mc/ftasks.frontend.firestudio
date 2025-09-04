@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Save, UserPlus, Info } from 'lucide-react';
+import { Plus, Download, Save, UserPlus, Info, Trash2 } from 'lucide-react';
 import { mockDivisions, mockDepartments, mockEmployees } from '@/data/org-structure-mock';
 import type { Department, Employee, Division } from '@/types/org-structure';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -19,11 +19,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent, deptId: string) => void; }) {
     const manager = employees.find(e => e.id === department.managerId);
-    const departmentEmployees = employees.filter(e => department.employeeIds.includes(e.id) && e.id !== department.managerId);
-
-    const handleFieldChange = (field: keyof Department, value: string) => {
+    
+    const handleFieldChange = (field: keyof Department, value: string | string[]) => {
         onUpdate({ ...department, [field]: value });
-    }
+    };
+    
+    const handleEmployeeChange = (index: number, newEmployeeId: string) => {
+        const newEmployeeIds = [...department.employeeIds];
+        newEmployeeIds[index] = newEmployeeId;
+        handleFieldChange('employeeIds', newEmployeeIds);
+    };
+    
+    const handleAddEmployee = () => {
+        const availableEmployee = employees.find(emp => !department.employeeIds.includes(emp.id) && emp.id !== department.managerId);
+        const newEmployeeIds = [...department.employeeIds, availableEmployee ? availableEmployee.id : ''];
+        handleFieldChange('employeeIds', newEmployeeIds);
+    };
+    
+    const handleRemoveEmployee = (index: number) => {
+        const newEmployeeIds = department.employeeIds.filter((_, i) => i !== index);
+        handleFieldChange('employeeIds', newEmployeeIds);
+    };
 
     return (
         <Card 
@@ -99,24 +115,53 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
                     </Select>
                 </div>
 
-                {departmentEmployees.length > 0 && (
-                    <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground mb-2">Співробітники</h4>
-                        <div className="space-y-2">
-                        {departmentEmployees.map(emp => (
-                             <div key={emp.id} className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={emp.avatar} alt={emp.name} />
-                                    <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span>{emp.name}</span>
-                            </div>
-                        ))}
-                        </div>
+                 <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground mb-2">Співробітники</h4>
+                    <div className="space-y-2">
+                        {department.employeeIds.map((empId, index) => {
+                             const employee = employees.find(e => e.id === empId);
+                             return (
+                                <div key={index} className="flex items-center gap-2">
+                                    <Select value={empId} onValueChange={(value) => handleEmployeeChange(index, value)}>
+                                        <SelectTrigger className="h-9 flex-1">
+                                            <SelectValue placeholder="Обрати співробітника">
+                                                {employee ? (
+                                                     <div className="flex items-center gap-2">
+                                                        <Avatar className="h-6 w-6">
+                                                            <AvatarImage src={employee.avatar} alt={employee.name} />
+                                                            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span>{employee.name}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted-foreground">Обрати співробітника</span>
+                                                )}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {employees.filter(e => e.id !== department.managerId).map(emp => (
+                                                <SelectItem key={emp.id} value={emp.id} disabled={department.employeeIds.includes(emp.id) && emp.id !== empId}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Avatar className="h-6 w-6">
+                                                            <AvatarImage src={emp.avatar} alt={emp.name} />
+                                                            <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
+                                                        </Avatar>
+                                                        <span>{emp.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => handleRemoveEmployee(index)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                             )
+                        })}
                     </div>
-                )}
+                </div>
                 
-                <Button variant="outline" size="sm" className="w-full">
+                <Button variant="outline" size="sm" className="w-full" onClick={handleAddEmployee}>
                     <UserPlus className="mr-2 h-4 w-4" /> Додати співробітника
                 </Button>
             </CardContent>
