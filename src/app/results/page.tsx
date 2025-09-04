@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Clock, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -72,10 +72,10 @@ export default function ResultsPage() {
     setSelectedResult(result);
   }
 
-  const handleAddNewClick = () => {
-    const newResult: Result = {
+  const createNewResult = (name = ''): Result => {
+     const newResult: Result = {
       id: `new-${Date.now()}`,
-      name: '',
+      name: name,
       status: 'Заплановано',
       completed: false,
       deadline: new Date().toISOString().split('T')[0],
@@ -89,6 +89,11 @@ export default function ResultsPage() {
     setResults(prev => [newResult, ...prev]);
     setSelectedResult(newResult);
     setIsCreating(true);
+    return newResult;
+  }
+
+  const handleAddNewClick = () => {
+    createNewResult();
   }
 
   const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -140,12 +145,12 @@ export default function ResultsPage() {
         </header>
         
         <main className="flex-1 overflow-y-auto px-4 md:px-6">
-           {isCreating && (
-                <div className="grid grid-cols-12 p-2 border-b items-center gap-2 bg-muted/50">
-                    <div className="col-span-1">
+           {isCreating && viewMode === 'table' && (
+                <div className="grid grid-cols-12 p-2 border-b items-center gap-2 bg-muted/50 text-sm">
+                    <div className="col-span-1 flex justify-center">
                         <Checkbox disabled />
                     </div>
-                    <div className="col-span-11">
+                    <div className="col-span-11 -ml-2">
                         <Input 
                             autoFocus
                             placeholder="Назва нового результату..."
@@ -168,7 +173,12 @@ export default function ResultsPage() {
                 </div>
             )}
           {viewMode === 'table' ? (
-            <ResultsTable results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={handleSelectResult} onResultUpdate={handleResultUpdate} />
+            <ResultsTable 
+              results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} 
+              onResultSelect={handleSelectResult} 
+              onResultUpdate={handleResultUpdate}
+              onAddNew={createNewResult}
+            />
           ) : (
             <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={handleSelectResult} onResultUpdate={handleResultUpdate} />
           )}
@@ -190,42 +200,49 @@ export default function ResultsPage() {
   );
 }
 
-function ResultsTable({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result) => void, onResultUpdate: (result: Result) => void }) {
+function ResultsTable({ results, onResultSelect, onResultUpdate, onAddNew }: { results: Result[], onResultSelect: (result: Result) => void, onResultUpdate: (result: Result) => void, onAddNew: (name?: string) => void }) {
     return (
         <div className="border rounded-lg text-sm">
-             <div className="grid grid-cols-12 p-2 bg-muted text-muted-foreground font-medium text-xs">
-                <div className="col-span-5">Назва</div>
+             <div className="grid grid-cols-12 p-2 bg-muted text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                <div className="col-span-5 col-start-2">Назва</div>
                 <div className="col-span-2">Дедлайн</div>
                 <div className="col-span-3">Відповідальний</div>
                 <div className="col-span-2">Статус</div>
             </div>
             {results.map(result => (
-                <div key={result.id} className="grid grid-cols-12 p-2 border-t items-center group">
-                    <div className="col-span-5 font-medium flex items-center gap-2">
-                        <Checkbox
-                            checked={result.completed}
-                            onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
-                        />
-                         <span onClick={() => onResultSelect(result)} className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}>
-                            {result.name}
-                         </span>
-                    </div>
-                    <div onClick={() => onResultSelect(result)} className="col-span-2 text-xs text-muted-foreground cursor-pointer">{formatDate(result.deadline)}</div>
-                    <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
-                        <Avatar className="h-6 w-6">
-                            <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
-                            <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
-                    </div>
-                    <div className="col-span-2 flex justify-between items-center">
-                      <Badge variant={result.completed ? 'secondary' : 'outline'} className="cursor-pointer" onClick={() => onResultSelect(result)}>{result.completed ? 'Виконано' : result.status}</Badge>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
-                          <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-3 w-3"/></Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6"><FilePlus className="h-3 w-3"/></Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6"><Trash2 className="h-3 w-3"/></Button>
+                <div key={result.id} className="relative group">
+                  <button onClick={() => onAddNew()} className="absolute -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex">
+                      <Plus className="h-4 w-4" />
+                  </button>
+                  <div className="grid grid-cols-12 p-2 border-t items-center">
+                      <div className="col-span-1 flex justify-center">
+                          <Checkbox
+                              checked={result.completed}
+                              onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+                          />
                       </div>
-                    </div>
+                      <div className="col-span-4 font-medium flex items-center gap-2">
+                           <span onClick={() => onResultSelect(result)} className={cn("cursor-pointer flex-1", result.completed && "line-through text-muted-foreground")}>
+                              {result.name || <span className="text-muted-foreground">Без назви</span>}
+                           </span>
+                      </div>
+                      <div onClick={() => onResultSelect(result)} className="col-span-2 text-xs text-muted-foreground cursor-pointer">{formatDate(result.deadline)}</div>
+                      <div onClick={() => onResultSelect(result)} className="col-span-3 flex items-center gap-2 cursor-pointer">
+                          <Avatar className="h-6 w-6">
+                              <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
+                              <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
+                      </div>
+                      <div className="col-span-2 flex justify-between items-center">
+                        <Badge variant={result.completed ? 'secondary' : 'outline'} className="cursor-pointer" onClick={() => onResultSelect(result)}>{result.completed ? 'Виконано' : result.status}</Badge>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center">
+                            <Button variant="ghost" size="icon" className="h-6 w-6"><Edit className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6"><FilePlus className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6"><Trash2 className="h-3 w-3"/></Button>
+                        </div>
+                      </div>
+                  </div>
                 </div>
             ))}
         </div>
@@ -245,7 +262,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
                                 checked={result.completed}
                                 onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
                             />
-                            <label htmlFor={`card-check-${result.id}`} onClick={() => onResultSelect(result)} className={cn("cursor-pointer", result.completed && "line-through text-muted-foreground")}>{result.name}</label>
+                            <label htmlFor={`card-check-${result.id}`} onClick={() => onResultSelect(result)} className={cn("cursor-pointer", result.completed && "line-through text-muted-foreground")}>{result.name || <span className="text-muted-foreground">Без назви</span>}</label>
                          </CardTitle>
                         <CardDescription onClick={() => onResultSelect(result)} className="cursor-pointer">Дедлайн: {formatDate(result.deadline)}</CardDescription>
                     </CardHeader>
