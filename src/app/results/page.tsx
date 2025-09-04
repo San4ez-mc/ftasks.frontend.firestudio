@@ -5,7 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2 } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -73,7 +73,7 @@ export default function ResultsPage() {
     }
   };
 
-  const handleSelectResult = (result: Result) => {
+  const handleSelectResult = (result: Result | null) => {
     if (isCreating && selectedResult?.name.trim() === '') {
         setResults(results.filter(r => r.id !== selectedResult.id));
     }
@@ -128,7 +128,7 @@ export default function ResultsPage() {
   }
 
   const handleAddNewClick = () => {
-    createNewResult();
+    createNewResult(undefined, results.length -1);
   }
   
   const handleAddInBetween = (index: number) => {
@@ -140,24 +140,31 @@ export default function ResultsPage() {
     const name = e.target.value;
     if(selectedResult && isCreating){
       const updatedResult = {...selectedResult, name};
-      setSelectedResult(updatedResult);
-      setResults(prevResults => prevResults.map(r => r.id === updatedResult.id ? updatedResult : r));
+      handleResultUpdate(updatedResult);
     }
   }
 
   const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if(e.key === 'Enter'){
       finalizeNewResult();
+      e.currentTarget.blur();
     }
   }
   
   const handleBlur = () => {
     finalizeNewResult();
   }
+  
+  const handleClosePanel = () => {
+    handleSelectResult(null);
+  }
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col">
+    <div className="flex h-screen overflow-hidden">
+      <div className={cn(
+        "flex flex-col transition-all duration-300",
+        selectedResult ? "w-full md:w-1/2" : "w-full"
+      )}>
         <header className="p-4 md:p-6">
           <div className="flex items-center justify-center relative mb-4">
             <h1 className="text-3xl font-bold tracking-tight font-headline text-center">Результати</h1>
@@ -197,29 +204,28 @@ export default function ResultsPage() {
               newResultInputRef={newResultInputRef}
             />
           ) : (
-            <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={handleSelectResult} onResultUpdate={handleResultUpdate} />
+            <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={(r) => handleSelectResult(r)} onResultUpdate={handleResultUpdate} />
           )}
         </main>
-
-        <Button onClick={handleAddNewClick} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
-          <Plus className="h-8 w-8" />
-          <span className="sr-only">Створити результат</span>
-        </Button>
       </div>
 
       <div className={cn(
-        "transition-all duration-300 ease-in-out",
-        selectedResult ? "w-[500px]" : "w-0"
+        "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden",
+        selectedResult ? "w-full md:w-1/2 lg:min-w-[520px]" : "w-0"
       )}>
-        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} isCreating={isCreating} />}
+        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} isCreating={isCreating} onClose={handleClosePanel} />}
       </div>
+       <Button onClick={handleAddNewClick} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
+          <Plus className="h-8 w-8" />
+          <span className="sr-only">Створити результат</span>
+        </Button>
     </div>
   );
 }
 
 type ResultsTableProps = {
   results: Result[];
-  onResultSelect: (result: Result) => void;
+  onResultSelect: (result: Result | null) => void;
   onResultUpdate: (result: Result) => void;
   onAddNewInBetween: (index: number) => void;
   isCreating: boolean;
@@ -246,6 +252,7 @@ function ResultsTable({
   newResultInputRef
 }: ResultsTableProps) {
     const renderRow = (result: Result, index: number) => {
+    
     if (isCreating && creatingAtIndex === index) {
       return (
         <div key={`creating-${result.id}`} className="grid grid-cols-12 p-2 border-b border-t items-center gap-2 bg-muted/50 text-sm">
@@ -275,7 +282,10 @@ function ResultsTable({
         >
           <Plus className="h-4 w-4" />
         </button>
-        <div className="grid grid-cols-12 p-2 border-t items-center">
+        <div className={cn(
+            "grid grid-cols-12 p-2 border-t items-center",
+            selectedResult?.id === result.id && "bg-accent"
+            )}>
           <div className="col-span-1 flex justify-center">
             <Checkbox
               checked={result.completed}
@@ -329,11 +339,18 @@ function ResultsTable({
                 <div className="col-span-2">Статус</div>
             </div>
             {results.map(renderRow)}
+            {(!isCreating || creatingAtIndex === null || creatingAtIndex > results.length - 2) && (
+              <div className="p-2 border-t">
+                  <button onClick={() => createNewResult('', results.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+                      <Plus className="h-3 w-3" /> Створити результат
+                  </button>
+              </div>
+            )}
         </div>
     )
 }
 
-function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result) => void, onResultUpdate: (result: Result) => void }) {
+function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result | null) => void, onResultUpdate: (result: Result) => void }) {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-sm">
             {results.map(result => (

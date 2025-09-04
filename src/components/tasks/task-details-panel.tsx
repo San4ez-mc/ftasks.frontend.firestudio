@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Edit, Calendar as CalendarIcon, Trash2, Send, Paperclip } from 'lucide-react';
+import { Edit, Calendar as CalendarIcon, Trash2, Send, Paperclip, MoreVertical, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,6 +20,12 @@ import {
 } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { formatDate } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type TaskDetailsPanelProps = {
   task: Task;
@@ -83,9 +89,8 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
 
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="p-4 border-b">
-        <div className="flex items-start gap-4">
+    <div className="flex flex-col h-full bg-card border-l">
+      <header className="p-4 border-b flex items-center gap-2 sticky top-0 bg-card z-10">
           <Checkbox
             id={`details-check-${task.id}`}
             checked={task.status === 'done'}
@@ -100,12 +105,17 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             className="text-xl font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto"
             placeholder="Назва задачі"
           />
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon"><CalendarIcon className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4" /></Button>
-          </div>
-        </div>
+         <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem>Перенести</DropdownMenuItem>
+                <DropdownMenuItem>Дублювати</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive">Видалити</DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+        <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
       </header>
       <div className="flex-1 p-6 space-y-6 overflow-y-auto text-sm">
         {/* Details Section */}
@@ -233,7 +243,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
           </div>
         </div>
       </div>
-      <footer className="p-4 border-t bg-background">
+      <footer className="p-4 border-t bg-background mt-auto">
         <div className="relative">
           <Textarea placeholder="Додати коментар..." className="pr-24"/>
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

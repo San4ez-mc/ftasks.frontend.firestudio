@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FilePlus, Clock, MoreVertical, Paperclip, Send, Calendar as CalendarIcon, Edit, PlusCircle, Trash2 } from 'lucide-react';
+import { MoreVertical, Paperclip, Send, Calendar as CalendarIcon, Edit, PlusCircle, Trash2, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,10 +15,17 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, formatDate } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type ResultDetailsPanelProps = {
   result: Result;
   onUpdate: (result: Result) => void;
+  onClose: () => void;
   isCreating?: boolean;
 };
 
@@ -30,34 +37,60 @@ const mockUsers = [
 ];
 
 
-export default function ResultDetailsPanel({ result, onUpdate, isCreating = false }: ResultDetailsPanelProps) {
+export default function ResultDetailsPanel({ result, onUpdate, isCreating = false, onClose }: ResultDetailsPanelProps) {
     const [name, setName] = useState(result.name);
+    const [description, setDescription] = useState(result.description);
+    const nameInputRef = React.useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setName(result.name)
     }, [result.name])
+    
+    useEffect(() => {
+        if (isCreating && nameInputRef.current) {
+            nameInputRef.current.focus();
+        }
+    }, [isCreating]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setName(e.target.value);
         onUpdate({...result, name: e.target.value});
     }
+
+    const handleDescriptionBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+        if(e.target.value !== result.description) {
+            onUpdate({...result, description: e.target.value});
+        }
+    }
     
     return (
-        <div className="flex flex-col h-full bg-card border-l text-sm">
-            <header className="p-4 border-b">
-                <div className="flex items-start gap-3">
-                    <Checkbox id={`res-check-${result.id}`} className="mt-1" checked={result.completed} onCheckedChange={(checked) => onUpdate({...result, completed: !!checked})} />
-                     <Input 
-                        value={name}
-                        onChange={handleNameChange}
-                        autoFocus={isCreating}
-                        placeholder="Назва результату"
-                        className={cn("text-lg font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto", result.completed && "line-through text-muted-foreground")}
-                    />
-                    <Button variant="ghost" size="icon"><FilePlus className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon"><Clock className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
-                </div>
+        <div className="flex flex-col h-full bg-card text-sm">
+            <header className="p-4 border-b flex items-center gap-2 sticky top-0 bg-card z-10">
+                <Input 
+                    ref={nameInputRef}
+                    value={name}
+                    onChange={handleNameChange}
+                    onBlur={() => onUpdate({...result, name})}
+                    onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                    autoFocus={isCreating}
+                    placeholder="Назва результату"
+                    className={cn(
+                        "text-lg font-semibold flex-1 p-0 border-none focus-visible:ring-0 shadow-none h-auto", 
+                        result.completed && "line-through text-muted-foreground"
+                    )}
+                />
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Створити задачу</DropdownMenuItem>
+                        <DropdownMenuItem>Створити шаблон</DropdownMenuItem>
+                        <DropdownMenuItem>Дублювати</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">Видалити</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
             </header>
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                 {/* Details Section */}
@@ -111,13 +144,28 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                     </div>
                      <div>
                         <p className="text-muted-foreground mb-1">Статус</p>
-                        <Badge variant={result.completed ? 'secondary' : 'default'} className="h-8 flex items-center">{result.completed ? 'Виконано' : result.status}</Badge>
+                         <Select defaultValue={result.status} onValueChange={(status) => onUpdate({...result, status})}>
+                            <SelectTrigger className="h-8 text-xs">
+                                 <SelectValue />
+                            </SelectTrigger>
+                             <SelectContent>
+                                 <SelectItem value="В роботі">В роботі</SelectItem>
+                                 <SelectItem value="Заплановано">Заплановано</SelectItem>
+                                 <SelectItem value="Виконано">Виконано</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
                 <div>
                     <Label htmlFor="description" className="text-xs text-muted-foreground">Очікуваний результат</Label>
                     <p className="text-xs text-muted-foreground/70 mb-1">Той результат детально, який постановник хоче отримати</p>
-                    <Textarea id="description" defaultValue={result.description} onBlur={(e) => onUpdate({...result, description: e.target.value})} className="mt-1 bg-transparent border-dashed text-xs"/>
+                    <Textarea 
+                        id="description" 
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        onBlur={handleDescriptionBlur} 
+                        className="mt-1 bg-transparent border-dashed text-xs min-h-[60px]"
+                    />
                 </div>
 
                 <Separator />
@@ -128,10 +176,8 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                     <div className="space-y-2">
                          {result.tasks.map(task => (
                              <div key={task.id} className="flex items-center gap-2 p-1 rounded text-xs border">
+                               <Checkbox checked={task.status === 'done'}/>
                                <p className="flex-1">{task.title}</p>
-                               <Badge variant={task.status === 'done' ? 'secondary' : 'default'}>
-                                   {task.status === 'done' ? 'Виконано' : 'В роботі'}
-                                </Badge>
                             </div>
                         ))}
                          <Button variant="outline" size="sm" className="w-full text-xs h-8"><PlusCircle className="mr-2 h-3 w-3"/> Створити задачу</Button>
@@ -168,7 +214,7 @@ export default function ResultDetailsPanel({ result, onUpdate, isCreating = fals
                  </div>
 
             </div>
-            <footer className="p-4 border-t bg-background">
+            <footer className="p-4 border-t bg-background mt-auto">
                 <div className="relative">
                     <Textarea placeholder="Додати коментар..." className="pr-20 text-xs"/>
                     <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">

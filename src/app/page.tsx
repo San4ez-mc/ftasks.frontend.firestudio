@@ -11,8 +11,8 @@ import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
 import { Input } from '@/components/ui/input';
 import ResultsList, { type Result } from '@/components/tasks/results-list';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 import TaskDetailsPanel from '@/components/tasks/task-details-panel';
+import { cn } from '@/lib/utils';
 
 
 const initialTasks: Task[] = [
@@ -130,17 +130,24 @@ export default function TasksPage() {
     setSelectedTask(newTask);
     setTimeout(() => newTaskInputRef.current?.focus(), 0);
   };
+  
+  const handleClosePanel = () => {
+    setSelectedTask(null);
+  };
 
   return (
-    <div className="flex flex-col h-screen">
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-6 p-4 md:p-6">
+    <div className="flex h-screen">
+      <main className="flex-1 grid grid-cols-12 overflow-hidden">
         {/* Main Content */}
-        <div className="md:col-span-12 lg:col-span-8 xl:col-span-9 flex flex-col gap-6">
+        <div className={cn(
+          "flex flex-col gap-6 p-4 md:p-6 transition-all duration-300",
+          selectedTask ? "col-span-12 md:col-span-6 lg:col-span-7" : "col-span-12"
+        )}>
           <TasksHeader 
             currentDate={currentDate}
             onDateChange={handleDateChange}
           />
-          <div className="flex-1 flex flex-col gap-2">
+          <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
             <div className="space-y-0.5">
               {tasks.map(task => (
                 <div key={task.id} className="group relative">
@@ -164,25 +171,20 @@ export default function TasksPage() {
           </div>
         </div>
 
-        {/* Right Column */}
-        <div className="md:col-span-12 lg:col-span-4 xl:col-span-3">
-          <ResultsList onResultClick={handleResultClick} />
+        {/* Right Column / Details Panel */}
+        <div className={cn(
+            "transition-all duration-300",
+            selectedTask ? "col-span-12 md:col-span-6 lg:col-span-5" : "hidden"
+        )}>
+             {selectedTask && (
+                <TaskDetailsPanel 
+                    task={selectedTask}
+                    onUpdate={handleTaskUpdate}
+                    onClose={handleClosePanel}
+                />
+            )}
         </div>
       </main>
-
-       {/* Task Details Panel */}
-      <Sheet open={!!selectedTask} onOpenChange={(isOpen) => !isOpen && setSelectedTask(null)}>
-        <SheetContent className="w-full sm:max-w-2xl p-0 overflow-y-auto">
-          {selectedTask && (
-            <TaskDetailsPanel 
-                task={selectedTask}
-                onUpdate={handleTaskUpdate}
-                onClose={() => setSelectedTask(null)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
-
 
       {/* FAB */}
       <Button 
