@@ -13,14 +13,16 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent, deptId: string) => void; }) {
     const manager = employees.find(e => e.id === department.managerId);
     const departmentEmployees = employees.filter(e => department.employeeIds.includes(e.id) && e.id !== department.managerId);
 
-    const handleCkpChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        onUpdate({ ...department, ckp: e.target.value });
+    const handleFieldChange = (field: keyof Department, value: string) => {
+        onUpdate({ ...department, [field]: value });
     }
 
     return (
@@ -30,7 +32,11 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
             onDragStart={onDragStart}
         >
             <CardHeader className="p-3">
-                <CardTitle className="text-base">{department.name}</CardTitle>
+                <Input 
+                    value={department.name}
+                    onChange={(e) => handleFieldChange('name', e.target.value)}
+                    className="text-base font-bold border-none shadow-none p-0 h-auto focus-visible:ring-0"
+                />
             </CardHeader>
             <CardContent className="p-3 pt-0 text-sm space-y-3">
                  <div>
@@ -52,23 +58,45 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
                         id={`ckp-${department.id}`}
                         placeholder="Опишіть ЦКП відділу..."
                         value={department.ckp}
-                        onChange={handleCkpChange}
+                        onChange={(e) => handleFieldChange('ckp', e.target.value)}
                         className="text-xs h-auto min-h-[40px] border-dashed"
                     />
                 </div>
                 <div>
                     <h4 className="text-xs font-semibold text-muted-foreground mb-1">Керівник</h4>
-                    {manager ? (
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                                <AvatarImage src={manager.avatar} alt={manager.name} />
-                                <AvatarFallback>{manager.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span>{manager.name}</span>
-                        </div>
-                    ) : (
-                        <p className="text-xs text-muted-foreground">Не призначено</p>
-                    )}
+                    <Select value={department.managerId} onValueChange={(value) => handleFieldChange('managerId', value)}>
+                        <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Не призначено">
+                                {manager ? (
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-6 w-6">
+                                            <AvatarImage src={manager.avatar} alt={manager.name} />
+                                            <AvatarFallback>{manager.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <span>{manager.name}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-muted-foreground">Не призначено</span>
+                                )}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                             <SelectItem value="">
+                                <span className="text-muted-foreground">Не призначено</span>
+                            </SelectItem>
+                            {employees.map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-6 w-6">
+                                            <AvatarImage src={emp.avatar} alt={emp.name} />
+                                            <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <span>{emp.name}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 {departmentEmployees.length > 0 && (
