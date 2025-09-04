@@ -5,187 +5,172 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ArrowLeft, PlusCircle, Save, X } from 'lucide-react';
 
-// Mock data, replace with API calls
+// --- Mock Data for Swimlane ---
+
+const mockUsers = [
+  { id: 'user-1', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+  { id: 'user-2', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
+  { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+];
+
 const mockProcess = {
   id: '1',
   name: 'Onboarding нового співробітника',
   description: 'Процес адаптації та навчання нових членів команди.',
-  responsible: 'Марія Сидоренко',
-  steps: [
-    { id: 'step-1', name: 'Підписання документів', description: 'HR відділ готує договір та NDA.', responsible: 'Олена Ковальчук' },
-    { id: 'step-2', name: 'Налаштування робочого місця', description: 'IT відділ видає ноутбук та доступи.', responsible: 'Іван Петренко' },
+  lanes: [
+    {
+      id: 'lane-1',
+      role: 'HR Менеджер',
+      steps: [
+        { id: 'step-1', name: 'Підписання документів', responsibleId: 'user-3', order: 1, connections: [{ to: 'step-2' }] },
+        { id: 'step-5', name: 'Фінальний фідбек', responsibleId: 'user-3', order: 4, connections: [] },
+      ],
+    },
+    {
+      id: 'lane-2',
+      role: 'IT Спеціаліст',
+      steps: [
+        { id: 'step-2', name: 'Налаштування робочого місця', responsibleId: 'user-2', order: 2, connections: [{ to: 'step-3' }] },
+      ],
+    },
+    {
+      id: 'lane-3',
+      role: 'Керівник команди',
+      steps: [
+        { id: 'step-3', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 3, connections: [{ to: 'step-5' }] },
+      ],
+    },
   ],
 };
 
-const mockUsers = [
-  { id: '1', name: 'Іван Петренко' },
-  { id: '2', name: 'Марія Сидоренко' },
-  { id: '3', name: 'Олена Ковальчук' },
-];
+type Step = typeof mockProcess.lanes[0]['steps'][0];
 
-type ProcessStep = {
-  id: string;
-  name: string;
-  description: string;
-  responsible: string;
-};
+// --- Main Page Component ---
 
 export default function EditProcessPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [process, setProcess] = useState(mockProcess); // Fetch process by params.id
-  const [steps, setSteps] = useState<ProcessStep[]>(mockProcess.steps);
+  const [process, setProcess] = useState(mockProcess);
+  const [selectedStep, setSelectedStep] = useState<Step | null>(null);
 
-  const handleAddStep = () => {
-    const newStep: ProcessStep = {
-      id: `step-${Date.now()}`,
-      name: '',
-      description: '',
-      responsible: '',
-    };
-    setSteps([...steps, newStep]);
-  };
-
-  const handleRemoveStep = (id: string) => {
-    setSteps(steps.filter(step => step.id !== id));
-  };
-
-  const handleStepChange = (id: string, field: keyof Omit<ProcessStep, 'id'>, value: string) => {
-    setSteps(steps.map(step => step.id === id ? { ...step, [field]: value } : step));
-  };
-  
-  const handleSaveChanges = () => {
-    // API call to PATCH /business-processes/{id}
-    console.log('Saving changes:', process, steps);
-    router.push('/processes');
-  };
-
+  const allSteps = process.lanes.flatMap(lane => lane.steps);
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-       <header className="flex items-center gap-4">
-        <Button variant="outline" size="icon" onClick={() => router.push('/processes')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-            <Input 
-                value={process.name}
-                onChange={(e) => setProcess({...process, name: e.target.value})}
-                className="text-2xl font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
-            />
-            <Textarea 
-                 value={process.description}
-                 onChange={(e) => setProcess({...process, description: e.target.value})}
-                 placeholder="Короткий опис процесу..."
-                 className="border-none shadow-none p-0 mt-1 text-muted-foreground focus-visible:ring-0 resize-none"
-            />
+    <div className="flex flex-col h-full">
+      <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.push('/processes')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Input 
+            value={process.name}
+            onChange={(e) => setProcess({ ...process, name: e.target.value })}
+            className="text-xl font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => router.push('/processes')}>
+            <X className="mr-2 h-4 w-4" /> Скасувати
+          </Button>
+          <Button>
+            <Save className="mr-2 h-4 w-4" /> Зберегти
+          </Button>
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-           <Card>
-                <CardHeader>
-                    <CardTitle>Кроки процесу</CardTitle>
-                    <CardDescription>Опишіть послідовність дій для виконання цього бізнес-процесу.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {steps.map((step, index) => (
-                        <div key={step.id} className="p-4 border rounded-lg space-y-3 relative">
-                           <div className="flex justify-between items-center">
-                             <h4 className="font-semibold">Крок {index + 1}</h4>
-                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveStep(step.id)}>
-                                <Trash2 className="h-4 w-4" />
-                             </Button>
-                           </div>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor={`step-name-${step.id}`}>Назва кроку</Label>
-                                    <Input 
-                                      id={`step-name-${step.id}`} 
-                                      value={step.name} 
-                                      onChange={(e) => handleStepChange(step.id, 'name', e.target.value)}
-                                      placeholder="Наприклад, Підписання документів"
-                                    />
-                                </div>
-                                 <div className="space-y-1.5">
-                                    <Label htmlFor={`step-resp-${step.id}`}>Відповідальний за крок</Label>
-                                     <Select value={step.responsible} onValueChange={(value) => handleStepChange(step.id, 'responsible', value)}>
-                                        <SelectTrigger id={`step-resp-${step.id}`}>
-                                            <SelectValue placeholder="Обрати..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {mockUsers.map(user => <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor={`step-desc-${step.id}`}>Опис кроку</Label>
-                                <Textarea 
-                                  id={`step-desc-${step.id}`} 
-                                  value={step.description}
-                                  onChange={(e) => handleStepChange(step.id, 'description', e.target.value)}
-                                  placeholder="Детальний опис того, що потрібно зробити на цьому етапі."
-                                />
-                            </div>
-                        </div>
-                    ))}
-                    <Button variant="outline" onClick={handleAddStep} className="w-full">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Додати крок
-                    </Button>
-                </CardContent>
-           </Card>
+      <main className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-auto p-8 relative">
+          {/* Swimlane Background */}
+          <div className="absolute inset-0 top-16">
+              {process.lanes.map((lane, index) => (
+                  <div key={lane.id} className="h-40 border-b border-dashed"></div>
+              ))}
+          </div>
+          
+          {/* Content */}
+          <div className="relative z-10 space-y-4">
+            {process.lanes.map(lane => (
+              <div key={lane.id} className="flex items-start h-40">
+                <div className="sticky left-0 bg-background pr-4 w-40">
+                  <h3 className="font-semibold text-lg">{lane.role}</h3>
+                </div>
+                <div className="flex-1 grid grid-cols-6 gap-x-8 items-center h-full">
+                  {lane.steps.map(step => (
+                     <div key={step.id} className={`col-start-${step.order} col-span-1`}>
+                       <StepCard step={step} />
+                     </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Connectors (SVG) - a simplified visualization */}
+           <svg className="absolute inset-0 w-full h-full z-0 pointer-events-none" >
+                {allSteps.map(step => (
+                    step.connections.map(conn => {
+                        const fromStep = allSteps.find(s => s.id === step.id);
+                        const toStep = allSteps.find(s => s.id === conn.to);
+                        if (!fromStep || !toStep) return null;
+                        
+                        const fromLaneIndex = process.lanes.findIndex(l => l.steps.some(s => s.id === fromStep.id));
+                        const toLaneIndex = process.lanes.findIndex(l => l.steps.some(s => s.id === toStep.id));
+                        
+                        // Approximate positions - in a real app, you'd use refs and calculate precisely
+                        const startX = 160 + (fromStep.order * 150);
+                        const startY = 110 + (fromLaneIndex * 176);
+                        const endX = 160 + (toStep.order * 150) - 100;
+                        const endY = 110 + (toLaneIndex * 176);
+
+                        return (
+                            <path 
+                                key={`${fromStep.id}-${toStep.id}`}
+                                d={`M ${startX} ${startY} C ${startX + 50} ${startY}, ${endX - 50} ${endY}, ${endX} ${endY}`}
+                                stroke="hsl(var(--primary))"
+                                strokeWidth="2"
+                                fill="none"
+                                markerEnd="url(#arrow)"
+                            />
+                        )
+                    })
+                ))}
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5"
+                        markerWidth="6" markerHeight="6"
+                        orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--primary))" />
+                    </marker>
+                </defs>
+            </svg>
+
         </div>
-        <div className="lg:col-span-1 space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Деталі</CardTitle>
-                </CardHeader>
-                 <CardContent className="space-y-4">
-                    <div className="space-y-1.5">
-                        <Label htmlFor="process-responsible">Відповідальний за процес</Label>
-                         <Select value={process.responsible} onValueChange={(value) => setProcess({...process, responsible: value})}>
-                            <SelectTrigger id="process-responsible">
-                                <SelectValue placeholder="Обрати..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {mockUsers.map(user => <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-1.5">
-                        <Label>Прив'язка до результату</Label>
-                        <Select>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Не прив'язано" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {/* Mock results */}
-                                <SelectItem value="res-1">Запустити рекламну кампанію</SelectItem>
-                                <SelectItem value="res-2">Розробити модуль аналітики</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </CardContent>
-            </Card>
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-2">
-                 <Button onClick={handleSaveChanges} className="flex-1">Зберегти зміни</Button>
-                 <Button variant="destructive" className="flex-1">Видалити процес</Button>
-            </div>
-        </div>
-      </div>
+      </main>
+
+       <Button className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
+          <PlusCircle className="h-8 w-8" />
+          <span className="sr-only">Додати крок</span>
+        </Button>
     </div>
   );
 }
+
+
+// --- Step Card Component ---
+function StepCard({ step }: { step: Step }) {
+    const responsible = mockUsers.find(u => u.id === step.responsibleId);
+    return (
+        <div className="bg-card border rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow cursor-pointer w-40">
+            <p className="font-medium text-sm mb-2">{step.name}</p>
+            <div className="flex items-center gap-2">
+                <Avatar className="h-6 w-6">
+                    <AvatarImage src={responsible?.avatar} />
+                    <AvatarFallback>{responsible?.name[0]}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs text-muted-foreground">{responsible?.name}</span>
+            </div>
+        </div>
+    )
+}
+
