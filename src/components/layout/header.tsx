@@ -10,8 +10,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-4">
-        <SidebarTrigger className="md:hidden" />
-        <h1 className="text-xl font-semibold tracking-tight font-headline">Fineko</h1>
+        <SidebarTrigger />
+        <h1 className="text-xl font-semibold tracking-tight font-headline">FINEKO</h1>
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />
