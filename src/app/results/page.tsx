@@ -516,7 +516,7 @@ function ResultsTable({
                             <h3 className="font-semibold text-base">{group.name}</h3>
                         </div>
                     )}
-                    <div className="border rounded-lg">
+                    <div className="rounded-lg border-y">
                         {group.results.map((result, index) => renderRow(result, index, allResults))}
                          {!group.results.some(r => r.id.startsWith('new-')) && (
                              <div className="p-2">
