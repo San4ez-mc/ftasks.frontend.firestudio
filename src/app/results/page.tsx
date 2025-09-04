@@ -64,38 +64,41 @@ export default function ResultsPage() {
         newResultInputRef.current.focus();
     }
   }, [isCreating, selectedResult]);
-
+  
   const handleResultUpdate = (updatedResult: Result) => {
+    // If the updated result was the one being created, finalize it.
+    if (isCreating && selectedResult?.id === updatedResult.id && updatedResult.name.trim() !== '') {
+        setIsCreating(false);
+    }
+
     setResults(currentResults =>
-      currentResults.map(r => r.id === updatedResult.id ? updatedResult : r)
+      currentResults.map(r => (r.id === updatedResult.id ? updatedResult : r))
     );
     if (selectedResult && selectedResult.id === updatedResult.id) {
       setSelectedResult(updatedResult);
     }
   };
-  
+
   const handleSelectResult = (result: Result | null) => {
     if (isCreating) {
       finalizeNewResult();
     }
     setSelectedResult(result);
-    setIsCreating(false);
-  }
-
-  const finalizeNewResult = () => {
-    if (!isCreating || !selectedResult) return;
-    
-    if (selectedResult.name.trim() === '') {
-        setResults(prev => prev.filter(r => r.id !== selectedResult.id));
-        setSelectedResult(null);
-    }
-    setIsCreating(false);
   }
   
-  const createNewResult = (name = '', index?: number) => {
-    // Finalize any result that is currently being created
+  const finalizeNewResult = () => {
+    if (!isCreating) return;
+    
+    // Remove the temporary result if it's empty
+    setResults(prev => prev.filter(r => !(r.id.startsWith('new-') && r.name.trim() === '')));
+    setIsCreating(false);
+    setSelectedResult(null);
+  }
+  
+  const createNewResult = (name = '', index?: number): Result => {
+     // Finalize any result that is currently being created before starting a new one
     if (isCreating) {
-      finalizeNewResult();
+        finalizeNewResult();
     }
 
     const newResult: Result = {
@@ -112,17 +115,20 @@ export default function ResultsPage() {
       templates: [],
     };
     
-    const insertionIndex = index !== undefined ? index + 1 : results.length;
-    const newResults = [...results];
-    newResults.splice(insertionIndex, 0, newResult);
-    
-    setResults(newResults);
-    setSelectedResult(newResult);
+    setResults(prev => {
+        const newResults = [...prev];
+        const insertionIndex = index !== undefined ? index + 1 : prev.length;
+        newResults.splice(insertionIndex, 0, newResult);
+        return newResults;
+    });
+
     setIsCreating(true);
+    setSelectedResult(newResult);
+    return newResult;
   };
     
   const handleClosePanel = () => {
-    if (isCreating) {
+     if (isCreating) {
       finalizeNewResult();
     }
     setSelectedResult(null);
@@ -164,13 +170,11 @@ export default function ResultsPage() {
               onResultSelect={handleSelectResult} 
               onResultUpdate={handleResultUpdate}
               createNewResult={createNewResult}
-              isCreating={isCreating}
-              selectedResult={selectedResult}
+              selectedResultId={selectedResult?.id}
               newResultInputRef={newResultInputRef}
-              onFinalizeNewResult={finalizeNewResult}
             />
           ) : (
-            <ResultsCards results={results.filter(r => !isCreating || r.id !== selectedResult?.id)} onResultSelect={(r) => handleSelectResult(r)} onResultUpdate={handleResultUpdate} />
+            <ResultsCards results={results.filter(r => !r.id.startsWith('new-'))} onResultSelect={handleSelectResult} onResultUpdate={handleResultUpdate} />
           )}
         </main>
       </div>
@@ -194,10 +198,8 @@ type ResultsTableProps = {
   onResultSelect: (result: Result | null) => void;
   onResultUpdate: (result: Result) => void;
   createNewResult: (name?: string, index?: number) => void;
-  isCreating: boolean;
-  selectedResult: Result | null;
+  selectedResultId?: string;
   newResultInputRef: React.RefObject<HTMLInputElement>;
-  onFinalizeNewResult: () => void;
 };
 
 
@@ -206,25 +208,13 @@ function ResultsTable({
   onResultSelect,
   onResultUpdate,
   createNewResult,
-  isCreating,
-  selectedResult,
+  selectedResultId,
   newResultInputRef,
-  onFinalizeNewResult,
 }: ResultsTableProps) {
   
-  const handleNewResultNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if(selectedResult && isCreating){
-      const updatedResult = {...selectedResult, name: e.target.value};
-      onResultUpdate(updatedResult);
-    }
-  }
-
-  const handleNewResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if(e.key === 'Enter'){
-      onFinalizeNewResult();
-      (e.target as HTMLInputElement).blur();
-    }
-  }
+  const handleNewResultUpdate = (result: Result, name: string) => {
+    onResultUpdate({ ...result, name });
+  };
   
   const handleSubResultChange = (result: Result, subResultId: string, field: 'name' | 'completed', value: string | boolean) => {
     const updatedSubResults = result.subResults.map(sr => 
@@ -234,7 +224,9 @@ function ResultsTable({
   };
 
   const renderRow = (result: Result, index: number) => {
-    if (isCreating && selectedResult?.id === result.id) {
+    const isCreating = result.id.startsWith('new-');
+
+    if (isCreating) {
       return (
         <div key={`creating-${result.id}`} className="relative group">
           <div className="grid grid-cols-12 p-2 border-b border-t items-center gap-2 bg-muted/50 text-sm">
@@ -246,9 +238,9 @@ function ResultsTable({
                 ref={newResultInputRef}
                 placeholder="Назва нового результату..."
                 value={result.name}
-                onChange={handleNewResultNameChange}
-                onKeyDown={handleNewResultKeyDown}
-                onBlur={onFinalizeNewResult}
+                onChange={(e) => handleNewResultUpdate(result, e.target.value)}
+                onBlur={() => onResultUpdate(result)} // Finalize on blur
+                onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                 className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm"
               />
             </div>
@@ -256,7 +248,7 @@ function ResultsTable({
         </div>
       );
     }
-
+    
     return (
       <div key={result.id} className="group/parent">
         <div className="relative group/row">
@@ -268,7 +260,7 @@ function ResultsTable({
             </button>
             <div className={cn(
                 "grid grid-cols-12 p-2 border-t items-center",
-                selectedResult?.id === result.id && "bg-accent"
+                selectedResultId === result.id && "bg-accent"
                 )}>
             <div className="col-span-1 flex justify-center">
                 <Checkbox
