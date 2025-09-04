@@ -3,23 +3,59 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Save, UserPlus } from 'lucide-react';
+import { Plus, Download, Save, UserPlus, Info } from 'lucide-react';
 import { mockDivisions, mockDepartments, mockEmployees } from '@/data/org-structure-mock';
 import type { Department, Employee, Division } from '@/types/org-structure';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
-function DepartmentCard({ department, employees }: { department: Department; employees: Employee[] }) {
+
+function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent, deptId: string) => void; }) {
     const manager = employees.find(e => e.id === department.managerId);
     const departmentEmployees = employees.filter(e => department.employeeIds.includes(e.id) && e.id !== department.managerId);
 
+    const handleCkpChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        onUpdate({ ...department, ckp: e.target.value });
+    }
+
     return (
-        <Card className="bg-background">
+        <Card 
+            className="bg-background cursor-grab"
+            draggable
+            onDragStart={onDragStart}
+        >
             <CardHeader className="p-3">
                 <CardTitle className="text-base">{department.name}</CardTitle>
             </CardHeader>
             <CardContent className="p-3 pt-0 text-sm space-y-3">
+                 <div>
+                    <div className="flex items-center gap-1 mb-1">
+                        <Label htmlFor={`ckp-${department.id}`} className="text-xs font-semibold text-muted-foreground">ЦКП</Label>
+                         <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                    <p className="font-bold">Цінний Кінцевий Продукт (ЦКП)</p>
+                                    <p>Це результат діяльності, який є корисним для зовнішнього або внутрішнього клієнта і за який компанія отримує підтримку (гроші, ресурси).</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+                    <Textarea 
+                        id={`ckp-${department.id}`}
+                        placeholder="Опишіть ЦКП відділу..."
+                        value={department.ckp}
+                        onChange={handleCkpChange}
+                        className="text-xs h-auto min-h-[40px] border-dashed"
+                    />
+                </div>
                 <div>
                     <h4 className="text-xs font-semibold text-muted-foreground mb-1">Керівник</h4>
                     {manager ? (
@@ -65,6 +101,52 @@ export default function OrgStructurePage() {
   const [departments, setDepartments] = useState<Department[]>(mockDepartments);
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
   const [divisions, setDivisions] = useState<Division[]>(mockDivisions);
+  const [draggedDeptId, setDraggedDeptId] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
+
+  const handleAddDepartment = (divisionId: string) => {
+    const newDepartment: Department = {
+        id: `dept-${Date.now()}`,
+        name: 'Новий відділ',
+        divisionId: divisionId,
+        managerId: '',
+        employeeIds: [],
+        ckp: '',
+    };
+    setDepartments(prev => [...prev, newDepartment]);
+  };
+
+  const handleDepartmentUpdate = (updatedDept: Department) => {
+    setDepartments(prev => prev.map(d => d.id === updatedDept.id ? updatedDept : d));
+  };
+  
+  const handleDragStart = (e: React.DragEvent, deptId: string) => {
+    setDraggedDeptId(deptId);
+  };
+  
+  const handleDragOver = (e: React.DragEvent, divisionId: string) => {
+    e.preventDefault();
+    if(divisionId !== isDraggingOver) {
+        setIsDraggingOver(divisionId);
+    }
+  };
+  
+  const handleDragLeave = (e: React.DragEvent) => {
+    setIsDraggingOver(null);
+  }
+
+  const handleDrop = (e: React.DragEvent, toDivisionId: string) => {
+    e.preventDefault();
+    if (draggedDeptId) {
+        setDepartments(prev => 
+            prev.map(d => 
+                d.id === draggedDeptId ? { ...d, divisionId: toDivisionId } : d
+            )
+        );
+    }
+    setDraggedDeptId(null);
+    setIsDraggingOver(null);
+  };
   
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/40">
@@ -82,17 +164,32 @@ export default function OrgStructurePage() {
             {divisions.map(division => {
                 const divisionDepartments = departments.filter(d => d.divisionId === division.id);
                 return (
-                    <div key={division.id} className="flex flex-col gap-4">
+                    <div 
+                        key={division.id} 
+                        className={cn(
+                            "flex flex-col gap-4 p-2 rounded-lg transition-colors",
+                            isDraggingOver === division.id && "bg-primary/10"
+                        )}
+                        onDragOver={(e) => handleDragOver(e, division.id)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, division.id)}
+                    >
                         <div className="p-3 bg-background rounded-lg border">
                              <h3 className="font-bold">{division.name}</h3>
                              <p className="text-xs text-muted-foreground">{division.description}</p>
                         </div>
                         <div className="flex flex-col gap-4">
                             {divisionDepartments.map(dept => (
-                                <DepartmentCard key={dept.id} department={dept} employees={employees} />
+                                <DepartmentCard 
+                                    key={dept.id} 
+                                    department={dept} 
+                                    employees={employees} 
+                                    onUpdate={handleDepartmentUpdate}
+                                    onDragStart={(e) => handleDragStart(e, dept.id)}
+                                />
                             ))}
                         </div>
-                         <Button variant="outline" className="mt-auto">
+                         <Button variant="outline" className="mt-auto" onClick={() => handleAddDepartment(division.id)}>
                             <Plus className="mr-2 h-4 w-4" /> Додати відділ
                         </Button>
                     </div>

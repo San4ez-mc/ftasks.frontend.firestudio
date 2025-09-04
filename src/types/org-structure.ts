@@ -12,6 +12,7 @@ export interface Department {
   divisionId: string;
   managerId: string;
   employeeIds: string[];
+  ckp: string;
 }
 
 export interface Employee {
