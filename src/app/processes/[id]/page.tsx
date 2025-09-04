@@ -21,34 +21,55 @@ const mockUsers = [
   { id: 'user-1', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
   { id: 'user-2', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
   { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+  { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
 ];
 
 const mockInitialProcess = {
   id: '1',
-  name: 'Onboarding нового співробітника',
-  description: 'Процес адаптації та навчання нових членів команди.',
+  name: 'Процес найму та онбордингу нового співробітника',
+  description: 'Повний цикл від створення вакансії до першого робочого дня та адаптації.',
   lanes: [
     {
       id: 'lane-1',
-      role: 'HR Менеджер',
+      role: 'Керівник відділу',
       steps: [
-        { id: 'step-1', name: 'Підписання документів', responsibleId: 'user-3', order: 1, connections: [{ to: 'step-2' }], status: 'new', notes: 'Важливо перевірити всі підписи' },
-        { id: 'step-5', name: 'Фінальний фідбек', responsibleId: 'user-3', order: 4, connections: [], status: 'ok', notes: '' },
+        { id: 'step-1', name: 'Створення заявки на вакансію', responsibleId: 'user-1', order: 1, connections: [{ to: 'step-2' }], status: 'ok', notes: '' },
+        { id: 'step-6', name: 'Технічна співбесіда', responsibleId: 'user-2', order: 6, connections: [{ to: 'step-7' }], status: 'ok', notes: '' },
+        { id: 'step-7', name: 'Фінальна співбесіда', responsibleId: 'user-1', order: 7, connections: [{ to: 'step-8' }], status: 'ok', notes: '' },
+        { id: 'step-9', name: 'Підготовка плану на випробувальний термін', responsibleId: 'user-1', order: 9, connections: [{ to: 'step-12' }], status: 'new', notes: 'Важливо чітко визначити цілі' },
+        { id: 'step-12', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 12, connections: [{ to: 'step-15' }], status: 'ok', notes: '' },
+        { id: 'step-15', name: 'Щотижневі one-to-one', responsibleId: 'user-1', order: 15, connections: [{ to: 'step-18' }], status: 'ok', notes: '' },
+        { id: 'step-18', name: 'Оцінка за результатами випробувального терміну', responsibleId: 'user-1', order: 18, connections: [], status: 'ok', notes: '' },
       ],
     },
     {
       id: 'lane-2',
-      role: 'IT Спеціаліст',
+      role: 'HR Менеджер',
       steps: [
-        { id: 'step-2', name: 'Налаштування робочого місця', responsibleId: 'user-2', order: 2, connections: [{ to: 'step-3' }], status: 'outdated', notes: 'Замовити новий монітор' },
+        { id: 'step-2', name: 'Публікація вакансії', responsibleId: 'user-3', order: 2, connections: [{ to: 'step-3' }], status: 'ok', notes: '' },
+        { id: 'step-3', name: 'Скринінг резюме', responsibleId: 'user-3', order: 3, connections: [{ to: 'step-4' }], status: 'ok', notes: '' },
+        { id: 'step-4', name: 'Первинна співбесіда з HR', responsibleId: 'user-3', order: 4, connections: [{ to: 'step-5' }], status: 'ok', notes: '' },
+        { id: 'step-5', name: 'Надсилання тестового завдання', responsibleId: 'user-3', order: 5, connections: [{ to: 'step-6' }], status: 'outdated', notes: 'Оновити тестове для Frontend' },
+        { id: 'step-8', name: 'Формування та надсилання оферу', responsibleId: 'user-3', order: 8, connections: [{ to: 'step-10' }], status: 'ok', notes: '' },
+        { id: 'step-10', name: 'Підписання документів', responsibleId: 'user-3', order: 10, connections: [{ to: 'step-11' }], status: 'ok', notes: 'Важливо перевірити всі підписи' },
+        { id: 'step-13', name: 'Знайомство з командою та офісом', responsibleId: 'user-3', order: 13, connections: [{ to: 'step-14' }], status: 'ok', notes: '' },
+        { id: 'step-16', name: 'Збір проміжного фідбеку', responsibleId: 'user-3', order: 16, connections: [{ to: 'step-17' }], status: 'ok', notes: '' },
+        { id: 'step-17', name: 'Фінальний фідбек від HR', responsibleId: 'user-3', order: 17, connections: [{ to: 'step-18' }], status: 'ok', notes: '' },
       ],
     },
     {
       id: 'lane-3',
-      role: 'Керівник команди',
+      role: 'IT Спеціаліст',
       steps: [
-        { id: 'step-3', name: 'Проведення першої зустрічі', responsibleId: 'user-1', order: 3, connections: [{ to: 'step-5' }], status: 'problematic', notes: '' },
+        { id: 'step-11', name: 'Налаштування робочого місця та доступів', responsibleId: 'user-2', order: 11, connections: [{ to: 'step-12' }], status: 'problematic', notes: 'Замовити новий монітор, старий мерехтить' },
       ],
+    },
+    {
+        id: 'lane-4',
+        role: 'Бухгалтерія',
+        steps: [
+            { id: 'step-14', name: 'Внесення в payroll систему', responsibleId: 'user-4', order: 14, connections: [{ to: 'step-15' }], status: 'ok', notes: '' },
+        ],
     },
   ],
 };
@@ -197,13 +218,13 @@ export default function EditProcessPage({ params }: { params: { id: string } }) 
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, lane.id)}
                 >
-                    <div className="sticky left-0 bg-background p-4 w-48 border-r">
+                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-20">
                     <Input 
                         defaultValue={lane.role}
                         className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
                     />
                     </div>
-                    <div className="flex-1 grid grid-cols-8 gap-x-8 items-center p-4">
+                    <div className="flex-1 grid grid-cols-20 gap-x-24 items-center p-4">
                     {lane.steps.sort((a,b) => a.order - b.order).map(step => (
                         <div key={step.id} className={`col-start-${step.order} col-span-1`}>
                             <StepCard 
