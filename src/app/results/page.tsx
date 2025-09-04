@@ -57,14 +57,13 @@ export default function ResultsPage() {
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [results, setResults] = useState(initialResults);
   const [isCreating, setIsCreating] = useState(false);
-  const [creatingAtIndex, setCreatingAtIndex] = useState<number | null>(null);
   const newResultInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isCreating && creatingAtIndex !== null && newResultInputRef.current) {
+    if (isCreating && newResultInputRef.current) {
         newResultInputRef.current.focus();
     }
-  }, [isCreating, creatingAtIndex]);
+  }, [isCreating, selectedResult]);
 
   const handleResultUpdate = (updatedResult: Result) => {
     setResults(results.map(r => r.id === updatedResult.id ? updatedResult : r));
@@ -78,7 +77,6 @@ export default function ResultsPage() {
         setResults(results.filter(r => r.id !== selectedResult.id));
     }
     setIsCreating(false);
-    setCreatingAtIndex(null);
     setSelectedResult(result);
   }
 
@@ -87,14 +85,16 @@ export default function ResultsPage() {
        if (selectedResult.name.trim() === '') {
         setResults(prev => prev.filter(r => r.id !== selectedResult.id));
         setSelectedResult(null);
+      } else {
+         // Potentially save the new result here
       }
     }
     setIsCreating(false);
-    setCreatingAtIndex(null);
   }
   
-  const createNewResult = (name = '', index: number | null = null) => {
-    finalizeNewResult(); // Finalize any existing creation
+  const createNewResult = (name = '', index: number) => {
+    finalizeNewResult(); // Finalize any existing creation before starting a new one
+    
     const newResult: Result = {
       id: `new-${Date.now()}`,
       name: name,
@@ -109,26 +109,16 @@ export default function ResultsPage() {
       templates: []
     };
     
-    let insertionIndex: number;
-    if (index !== null) {
-      insertionIndex = index + 1;
-      const newResults = [...results];
-      newResults.splice(insertionIndex, 0, newResult);
-      setResults(newResults);
-    } else {
-      insertionIndex = 0;
-      setResults(prev => [newResult, ...prev]);
-    }
-
-    setCreatingAtIndex(insertionIndex);
+    const newResults = [...results];
+    newResults.splice(index + 1, 0, newResult); // Insert after the specified index
+    setResults(newResults);
+    
     setSelectedResult(newResult);
     setIsCreating(true);
-    
-    return newResult;
   }
 
   const handleAddNewClick = () => {
-    createNewResult(undefined, results.length -1);
+    createNewResult('', results.length - 1);
   }
   
   const handleAddInBetween = (index: number) => {
@@ -140,7 +130,8 @@ export default function ResultsPage() {
     const name = e.target.value;
     if(selectedResult && isCreating){
       const updatedResult = {...selectedResult, name};
-      handleResultUpdate(updatedResult);
+      setSelectedResult(updatedResult); // Update local state for sync
+      handleResultUpdate(updatedResult); // Update the list
     }
   }
 
@@ -196,7 +187,6 @@ export default function ResultsPage() {
               onResultUpdate={handleResultUpdate}
               onAddNewInBetween={handleAddInBetween}
               isCreating={isCreating}
-              creatingAtIndex={creatingAtIndex}
               selectedResult={selectedResult}
               onNewResultNameChange={handleNewResultNameChange}
               onNewResultKeyDown={handleNewResultKeyDown}
@@ -229,7 +219,6 @@ type ResultsTableProps = {
   onResultUpdate: (result: Result) => void;
   onAddNewInBetween: (index: number) => void;
   isCreating: boolean;
-  creatingAtIndex: number | null;
   selectedResult: Result | null;
   onNewResultNameChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onNewResultKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -244,16 +233,16 @@ function ResultsTable({
   onResultUpdate,
   onAddNewInBetween,
   isCreating,
-  creatingAtIndex,
   selectedResult,
   onNewResultNameChange,
   onNewResultKeyDown,
   onBlur,
   newResultInputRef
 }: ResultsTableProps) {
-    const renderRow = (result: Result, index: number) => {
-    
-    if (isCreating && creatingAtIndex === index) {
+
+  const renderRow = (result: Result, index: number) => {
+    // This condition checks if the current row is the one being created.
+    if (isCreating && selectedResult?.id === result.id) {
       return (
         <div key={`creating-${result.id}`} className="relative group">
           <div className="grid grid-cols-12 p-2 border-b border-t items-center gap-2 bg-muted/50 text-sm">
@@ -272,6 +261,7 @@ function ResultsTable({
               />
             </div>
           </div>
+          {/* Always show the plus button for the next row, even for the new input */}
           <button
             onClick={() => onAddNewInBetween(index)}
             className="absolute z-10 -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex"
@@ -347,13 +337,11 @@ function ResultsTable({
                 <div className="col-span-2">Статус</div>
             </div>
             {results.map(renderRow)}
-            {(!isCreating || creatingAtIndex === null || creatingAtIndex > results.length - 2) && (
-              <div className="p-2 border-t">
-                  <button onClick={() => createNewResult('', results.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+             <div className="p-2 border-t">
+                  <button onClick={() => onAddNewInBetween(results.length -1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
                       <Plus className="h-3 w-3" /> Створити результат
                   </button>
               </div>
-            )}
         </div>
     )
 }
