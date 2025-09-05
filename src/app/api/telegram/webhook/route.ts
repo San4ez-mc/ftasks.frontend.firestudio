@@ -16,25 +16,25 @@ interface TelegramUser {
  * Handles incoming webhook updates from the Telegram Bot API.
  */
 export async function POST(request: NextRequest) {
+  console.log("STEP 1: Webhook received a request from Telegram.");
   let chatId: number | undefined;
 
   try {
     const body = await request.json();
 
-    // Log the entire incoming message from Telegram for debugging
-    console.log("Received from Telegram:", JSON.stringify(body, null, 2));
+    console.log("STEP 1 SUCCESS: Sucessfully parsed request body:", JSON.stringify(body, null, 2));
 
-    // Check for a message with the /start command
     if (body.message && body.message.text && body.message.text.startsWith('/start')) {
       const fromUser: TelegramUser = body.message.from;
       chatId = body.message.chat.id;
 
-      // --- BACKEND API INTEGRATION ---
-      // This webhook's job is to get the user data from Telegram and
-      // forward it to our main backend to get a temporary token.
-
+      console.log(`Identified chat ID: ${chatId}`);
+      
       const apiBaseUrl = process.env.API_BASE_URL || 'https://api.tasks.fineko.space';
-      const response = await fetch(`${apiBaseUrl}/auth/telegram/login`, {
+      const loginEndpoint = `${apiBaseUrl}/auth/telegram/login`;
+      
+      console.log(`STEP 2: Attempting to send POST request to backend at ${loginEndpoint}`);
+      const response = await fetch(loginEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,15 +48,17 @@ export async function POST(request: NextRequest) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to parse backend error response.' }));
-        console.error('Failed to get temp token from backend:', response.status, errorData);
+        console.error(`STEP 2 FAILURE: Backend request failed with status ${response.status}`, errorData);
         await sendTelegramReply(chatId, null, `An error occurred during authentication: ${errorData.message || 'Please try again later.'}`);
         return NextResponse.json({ status: 'error', message: 'Backend login failed' }, { status: 500 });
       }
+      
+      console.log("STEP 2 SUCCESS: Backend request was successful.");
 
       const { tempToken } = await response.json();
       
       if (!tempToken) {
-          console.error('Backend response is missing tempToken');
+          console.error('STEP 3 FAILURE: Backend response is missing tempToken.');
           await sendTelegramReply(chatId, null, 'Authentication failed. The server did not provide a login token.');
           return NextResponse.json({ status: 'error', message: 'tempToken missing from backend response' }, { status: 500 });
       }
@@ -64,18 +66,21 @@ export async function POST(request: NextRequest) {
       const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`;
       const redirectUrl = `${frontendUrl}/auth/telegram/callback?token=${tempToken}`;
 
+      console.log(`STEP 3: Generated redirect URL: ${redirectUrl}`);
+      
       await sendTelegramReply(chatId, redirectUrl);
 
+      console.log("STEP 3 SUCCESS: Reply with login button sent to user.");
       return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
     }
 
+    console.log("Webhook finished: No action taken as message was not a /start command.");
     return NextResponse.json({ status: 'ok', message: 'Webhook received, but no action taken.' });
 
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error('CRITICAL WEBHOOK ERROR:', error);
     if (chatId) {
-        // Try to inform the user about the failure
-        await sendTelegramReply(chatId, null, 'A critical error occurred. Please contact support.').catch(e => console.error("Failed to send critical error reply:", e));
+        await sendTelegramReply(chatId, null, 'A critical server error occurred. Please contact support.').catch(e => console.error("Failed to send critical error reply:", e));
     }
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
@@ -87,8 +92,7 @@ export async function POST(request: NextRequest) {
 async function sendTelegramReply(chatId: number, loginUrl: string | null, errorMessage?: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) {
-    // This error is critical and cannot be sent to the user, so it's logged server-side.
-    console.error("TELEGRAM_BOT_TOKEN is not set in environment variables.");
+    console.error("CRITICAL: TELEGRAM_BOT_TOKEN is not set in environment variables.");
     throw new Error("TELEGRAM_BOT_TOKEN is not set.");
   }
   
@@ -124,8 +128,6 @@ async function sendTelegramReply(chatId: number, loginUrl: string | null, errorM
   if (!response.ok) {
     const errorData = await response.json();
     console.error('Failed to send Telegram message:', errorData);
-    // This error cannot be sent to the user as this function is the one failing.
-    // It will be caught by the calling try...catch block.
     throw new Error('Could not send reply to user.');
   }
 }
