@@ -65,7 +65,7 @@ When your webhook receives a message:
 
 5.  **Construct the Redirect URL**:
     *   Create the URL for the user to be redirected back to the frontend:
-        `https://[YOUR_APP_URL]/select-company?token=<temporary_jwt_token>`
+        `https://[YOUR_APP_URL]/auth/telegram/callback?token=<temporary_jwt_token>`
     *   `[YOUR_APP_URL]` should be a configurable environment variable on your backend.
 
 6.  **Send a Reply Message**:
@@ -82,7 +82,7 @@ When your webhook receives a message:
           [
             {
               "text": "Complete Login to FINEKO",
-              "url": "https://[YOUR_APP_URL]/select-company?token=..."
+              "url": "https://[YOUR_APP_URL]/auth/telegram/callback?token=..."
             }
           ]
         ]

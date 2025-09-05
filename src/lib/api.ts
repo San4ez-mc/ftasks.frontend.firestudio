@@ -104,6 +104,26 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
     return response;
 }
 
+/**
+ * Creates a new company and logs the user in, returning a permanent token.
+ * This is a conceptual endpoint. The backend should handle creating the company
+ * and then effectively calling the logic of selectCompany internally.
+ */
+export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string }> {
+    const response = await apiFetch<{ token: string }>('/auth/telegram/create-company-and-login', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${tempToken}`
+        },
+        body: JSON.stringify({ companyName }),
+    });
+    
+    if (response.token) {
+        setToken(response.token);
+    }
+    return response;
+}
+
 
 /**
  * Fetches the currently authenticated user's profile using the permanent token.

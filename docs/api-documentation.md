@@ -15,13 +15,13 @@ The user is redirected from the frontend to the Telegram Bot: `https://t.me/Fine
 ### Step 2: Telegram Bot Authenticates and Redirects
 
 The bot authenticates the user and redirects them back to the application with a temporary token.
-**Redirect URL**: `https://[YOUR_APP_URL]/select-company?token=<temporary_jwt_token>`
+**Redirect URL**: `https://[YOUR_APP_URL]/auth/telegram/callback?token=<temporary_jwt_token>`
 
 ---
 
 ### `GET /auth/telegram/companies`
 
-Validates a temporary token and retrieves the list of companies associated with that user. This is called on the `/select-company` page.
+Validates a temporary token and retrieves the list of companies associated with that user. This is called on the `/auth/telegram/callback` page.
 
 -   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
 -   **Response (200 OK)**: Array of Company objects.
@@ -37,7 +37,7 @@ Validates a temporary token and retrieves the list of companies associated with 
 
 ### `POST /auth/telegram/select-company`
 
-Exchanges the temporary token and a selected `companyId` for a permanent session token. This token should be stored in a secure, HTTP-only cookie by the client.
+Exchanges the temporary token and a selected `companyId` for a permanent session token. This token should be stored in a secure, HTTP-only cookie by the client. This is called when a user with multiple companies makes a selection on the `/select-company` page.
 
 -   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
 -   **Request Body**:
@@ -54,6 +54,27 @@ Exchanges the temporary token and a selected `companyId` for a permanent session
     ```
 -   **Response (401 Unauthorized)**: If the temporary token is invalid.
 -   **Response (403 Forbidden)**: If the user is not a member of the requested company.
+
+---
+
+### `POST /auth/telegram/create-company-and-login`
+
+For new users without a company. Creates a new company for the user and immediately issues a permanent session token.
+
+-   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
+-   **Request Body**:
+    ```json
+    {
+      "companyName": "My New Company"
+    }
+    ```
+-   **Response (200 OK)**:
+    ```json
+    {
+      "token": "your_permanent_jwt_auth_token"
+    }
+    ```
+-   **Response (401 Unauthorized)**: If the temporary token is invalid.
 
 ---
 
