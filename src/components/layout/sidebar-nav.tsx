@@ -17,13 +17,12 @@ import {
   Trophy,
   Users,
   Workflow,
-  Settings,
-  LogOut,
   FileClock,
   Building,
   Send,
   BookText,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const menuItems = [
   { href: '/results', label: 'Результати', icon: Trophy },
@@ -39,6 +38,15 @@ const menuItems = [
 export default function SidebarNav() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const [companyName, setCompanyName] = useState('My Company');
+
+  useEffect(() => {
+    // In a real app, this would be fetched from user session or API
+    const storedCompanyId = localStorage.getItem('selectedCompany');
+    if (storedCompanyId) {
+        setCompanyName(storedCompanyId === 'company-1' ? 'Fineko Development' : 'My Startup Project');
+    }
+  }, []);
 
   return (
     <>
@@ -70,20 +78,9 @@ export default function SidebarNav() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip={{ children: 'Settings' }}>
-              <Settings />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip={{ children: 'Logout' }}>
-              <LogOut />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="p-4 text-sm font-medium text-muted-foreground truncate">
+            {companyName}
+        </div>
       </SidebarFooter>
     </>
   );

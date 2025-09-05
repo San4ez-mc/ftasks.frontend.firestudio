@@ -29,9 +29,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <AppShell>
-            {children}
-          </AppShell>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

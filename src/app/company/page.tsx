@@ -150,7 +150,7 @@ export default function CompanyPage() {
     }
 
     return (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-col md:flex-row h-screen overflow-hidden">
             <InteractiveTour pageKey="company" steps={companyTourSteps} />
             {/* Employee List */}
             <div className={cn(
@@ -174,7 +174,7 @@ export default function CompanyPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Ім'я</TableHead>
-                                <TableHead>Посада</TableHead>
+                                <TableHead className="hidden sm:table-cell">Посада</TableHead>
                                 <TableHead>Telegram</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -199,7 +199,7 @@ export default function CompanyPage() {
                                                 <span>{emp.firstName} {emp.lastName}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-xs">
+                                        <TableCell className="text-xs hidden sm:table-cell">
                                             {employeePositions.map(p => <div key={p}>{p}</div>)}
                                         </TableCell>
                                         <TableCell>
