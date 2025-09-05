@@ -6,38 +6,54 @@ This document outlines the API endpoints required for the FINEKO application to 
 
 ## 1. Authentication
 
-The authentication flow is based on Telegram.
+The authentication flow is based on Telegram and uses a two-token system: a short-lived temporary token for setup and a permanent token for the user session.
 
-### Step 1: User Initiates Login
+### `POST /auth/telegram/login`
 
-The user is redirected from the frontend to the Telegram Bot: `https://t.me/FinekoTasks_Bot?start=auth`
+This is the first step, called by the Next.js webhook. It receives user data from Telegram and issues a temporary JWT.
 
-### Step 2: Telegram Bot Authenticates and Redirects
-
-The bot authenticates the user and redirects them back to the application with a temporary token.
-**Redirect URL**: `https://[YOUR_APP_URL]/auth/telegram/callback?token=<temporary_jwt_token>`
+-   **Request Body**: The Telegram user object.
+    ```json
+    {
+      "id": 123456789,
+      "first_name": "John",
+      "last_name": "Doe",
+      "username": "johndoe",
+      "language_code": "en"
+    }
+    ```
+-   **Response (200 OK)**: A JSON object containing the temporary token.
+    ```json
+    {
+      "tempToken": "your_temporary_jwt_token"
+    }
+    ```
+-   **Backend Logic**:
+    -   Find a user in the `users` table by `id` (Telegram User ID).
+    -   If the user doesn't exist, create a new one.
+    -   Generate a JWT with a very short expiration (e.g., 5 minutes) containing the internal `userId`.
 
 ---
 
 ### `GET /auth/telegram/companies`
 
-Validates a temporary token and retrieves the list of companies associated with that user. This is called on the `/auth/telegram/callback` page.
+Called by the frontend on the `/auth/telegram/callback` page to determine the user's next step.
 
 -   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
--   **Response (200 OK)**: Array of Company objects.
+-   **Response (200 OK)**: An array of Company objects the user is a member of. Can be empty.
     ```json
     [
       { "id": "company-1", "name": "Fineko Development" },
       { "id": "company-2", "name": "My Startup Project" }
     ]
     ```
--   **Response (401 Unauthorized)**: If the token is invalid or expired.
+-   **Response (401 Unauthorized)**: If the temporary token is invalid or expired.
 
 ---
 
 ### `POST /auth/telegram/select-company`
 
-Exchanges the temporary token and a selected `companyId` for a permanent session token. This token should be stored in a secure, HTTP-only cookie by the client. This is called when a user with multiple companies makes a selection on the `/select-company` page.
+Called from the `/select-company` page. Exchanges the temporary token and a selected `companyId` for a permanent session token.
 
 -   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
 -   **Request Body**:
@@ -46,7 +62,7 @@ Exchanges the temporary token and a selected `companyId` for a permanent session
       "companyId": "company-1"
     }
     ```
--   **Response (200 OK)**:
+-   **Response (200 OK)**: The permanent token. The frontend will store this in a secure, session cookie.
     ```json
     {
       "token": "your_permanent_jwt_auth_token"
@@ -59,7 +75,7 @@ Exchanges the temporary token and a selected `companyId` for a permanent session
 
 ### `POST /auth/telegram/create-company-and-login`
 
-For new users without a company. Creates a new company for the user and immediately issues a permanent session token.
+Called from the `/create-company` page for new users. Creates a company and issues a permanent session token.
 
 -   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
 -   **Request Body**:
@@ -68,7 +84,7 @@ For new users without a company. Creates a new company for the user and immediat
       "companyName": "My New Company"
     }
     ```
--   **Response (200 OK)**:
+-   **Response (200 OK)**: The permanent token.
     ```json
     {
       "token": "your_permanent_jwt_auth_token"
@@ -80,7 +96,7 @@ For new users without a company. Creates a new company for the user and immediat
 
 ### `GET /auth/me`
 
-Retrieves the profile of the currently authenticated user using the permanent token.
+Retrieves the profile of the currently authenticated user using the permanent token. This should be called when the main app loads to get user context.
 
 -   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 -   **Response (200 OK)**:
@@ -104,7 +120,15 @@ Logs out the current user by invalidating their session/token on the server side
 
 ---
 
-## 2. Companies
+## 2. Other Endpoints
+
+All subsequent API endpoints for modules like Companies, Employees, Tasks, etc., must be protected and require the permanent session token.
+
+-   **Required Header**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
+
+---
+
+## 3. Companies
 
 ### `GET /companies`
 
@@ -119,35 +143,19 @@ Get a list of companies the authenticated user is a member of.
     ]
     ```
 
-*(Other company endpoints remain the same)*
+*(Other company endpoints require the permanent auth token)*
 
 ---
 
-## 3. Employees
-*(Endpoints remain the same, but require the permanent auth token)*
+## 4. Employees
+*(All endpoints require the permanent auth token)*
 
 ---
 
-## 4. Tasks
-*(Endpoints remain the same, but require the permanent auth token)*
+## 5. Tasks
+*(All endpoints require the permanent auth token)*
 
 ---
 
-## 5. Results
-*(Endpoints remain the same, but require the permanent auth token)*
-
----
-## 6. Organizational Structure
-*(Endpoints remain the same, but require the permanent auth token)*
-
----
-## 7. Processes
-*(Endpoints remain the same, but require the permanent auth token)*
-
----
-## 8. Instructions
-*(Endpoints remain the same, but require the permanent auth token)*
-
----
-## 9. Telegram Groups
-*(Endpoints remain the same, but require the permanent auth token)*
+## 6. Results
+*(All endpoints require the permanent auth token)*
