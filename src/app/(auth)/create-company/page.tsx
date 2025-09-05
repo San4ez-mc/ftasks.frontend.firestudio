@@ -1,66 +1,20 @@
 
-'use client';
-
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { createCompanyAndLogin } from '@/lib/api';
-import { useState } from 'react';
+import { Suspense } from 'react';
+import CreateCompanyForm from './_components/CreateCompanyForm';
 import { Loader2 } from 'lucide-react';
 
 export default function CreateCompanyPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    return (
+        <Suspense fallback={<LoadingState />}>
+            <CreateCompanyForm />
+        </Suspense>
+    )
+}
 
-  const handleCreateCompany = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
-
-    const tempToken = searchParams.get('token');
-    if (!tempToken) {
-      setError("Your session has expired. Please log in again.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const formData = new FormData(event.currentTarget);
-    const companyName = formData.get('companyName') as string;
-
-    try {
-      await createCompanyAndLogin(tempToken, companyName);
-      router.push('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create company.');
-      setIsSubmitting(false);
-    }
-  };
-
+function LoadingState() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-muted/40">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold font-headline">Створити компанію</CardTitle>
-          <CardDescription>Ласкаво просимо! Створіть свою першу компанію, щоб почати.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreateCompany} className="space-y-4">
-            <div>
-              <Label htmlFor="companyName">Назва компанії</Label>
-              <Input id="companyName" name="companyName" placeholder="Acme Inc." required disabled={isSubmitting} />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Створити та увійти
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
+     <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+     </div>
+  )
 }
