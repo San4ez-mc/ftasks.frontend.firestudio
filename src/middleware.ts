@@ -7,7 +7,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // If user is not authenticated and is not on the login page, redirect them to login
-  if (!authToken && pathname !== '/login') {
+  if (!authToken && (pathname !== '/login' && pathname !== '/select-company')) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -16,11 +16,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
   
-  // If user is authenticated and on root, but hasn't selected a company, redirect to company selection
-  // This is a simplified check. A real app might check a claim in the auth token.
-  const selectedCompany = localStorage.getItem('selectedCompany'); // This won't work in middleware
-  // The logic for company selection redirect should be handled client-side after login for this mock.
-  // Middleware cannot access localStorage.
+  // The logic for company selection redirect is handled client-side after login.
+  // Middleware cannot access localStorage, so we don't check for selectedCompany here.
 
   return NextResponse.next();
 }
