@@ -6,8 +6,8 @@ export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  // If user is not authenticated and is not on the login page, redirect them to login
-  if (!authToken && (pathname !== '/login' && pathname !== '/select-company')) {
+  // If user is not authenticated and is not on the login or company selection page, redirect them to login
+  if (!authToken && pathname !== '/login' && pathname !== '/select-company') {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
