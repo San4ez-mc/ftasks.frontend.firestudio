@@ -21,7 +21,10 @@ export default function ProcessArrows({ allSteps, containerRef }: ProcessArrowsP
 
   useEffect(() => {
     const calculateArrows = () => {
-      if (!containerRef.current) return;
+      if (!containerRef.current || allSteps.length === 0) {
+          setArrows([]);
+          return;
+      };
 
       const newArrows: Arrow[] = [];
       const stepElements: Map<string, HTMLElement> = new Map();
