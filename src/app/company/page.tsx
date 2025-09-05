@@ -37,20 +37,20 @@ const mockGroups = [
 ];
 
 const mockEmployeesData = [
-    { 
+    {
         id: 'emp-1',
-        telegramUserId: 'tg-123',
-        telegramUsername: 'ivan_p',
-        firstName: 'Іван',
-        lastName: 'Петренко',
+        telegramUserId: '345126254',
+        telegramUsername: 'olexandrmatsuk',
+        firstName: 'Oleksandr',
+        lastName: 'Matsuk',
         avatar: 'https://picsum.photos/100/100?random=1',
         status: 'active',
         notes: 'Ключовий розробник, спеціалізується на React та Next.js. Відповідальний за архітектуру фронтенду.',
         positions: ['pos-1', 'pos-7'], // Multiple positions
         groups: ['grp-1'],
-        synonyms: ['Ваня', 'Іван П.'],
+        synonyms: ['Alex', 'O.M.'],
     },
-    { 
+    {
         id: 'emp-2',
         telegramUserId: 'tg-456',
         telegramUsername: 'maria_s',
@@ -63,7 +63,7 @@ const mockEmployeesData = [
         groups: ['grp-1', 'grp-2'],
         synonyms: ['Маша'],
     },
-     { 
+     {
         id: 'emp-3',
         telegramUserId: 'tg-789',
         telegramUsername: 'olena_k',
@@ -76,7 +76,7 @@ const mockEmployeesData = [
         groups: ['grp-1'],
         synonyms: [],
     },
-    { 
+    {
         id: 'emp-4',
         telegramUserId: 'tg-101',
         telegramUsername: 'petro_i',
@@ -89,7 +89,7 @@ const mockEmployeesData = [
         groups: ['grp-2'],
         synonyms: ['Петя'],
     },
-     { 
+     {
         id: 'emp-5',
         telegramUserId: 'tg-112',
         telegramUsername: 'andriy_b',
@@ -137,14 +137,14 @@ const companyTourSteps: TourStep[] = [
 export default function CompanyPage() {
     const [employees, setEmployees] = useState(mockEmployeesData);
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(mockEmployeesData[0]);
-    
+
     const handleEmployeeUpdate = (updatedEmployee: Employee) => {
         setEmployees(employees.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
         if (selectedEmployee?.id === updatedEmployee.id) {
             setSelectedEmployee(updatedEmployee);
         }
     };
-    
+
     const handleClosePanel = () => {
         setSelectedEmployee(null);
     }
@@ -182,8 +182,8 @@ export default function CompanyPage() {
                             {employees.map(emp => {
                                 const employeePositions = emp.positions.map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
                                 return (
-                                    <TableRow 
-                                        key={emp.id} 
+                                    <TableRow
+                                        key={emp.id}
                                         onClick={() => setSelectedEmployee(emp)}
                                         className={cn(
                                             "cursor-pointer",
@@ -203,9 +203,9 @@ export default function CompanyPage() {
                                             {employeePositions.map(p => <div key={p}>{p}</div>)}
                                         </TableCell>
                                         <TableCell>
-                                            <Link 
-                                                href={`https://t.me/${emp.telegramUsername}`} 
-                                                target="_blank" 
+                                            <Link
+                                                href={`https://t.me/${emp.telegramUsername}`}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 onClick={(e) => e.stopPropagation()}
                                                 className="text-xs text-blue-500 hover:underline"
@@ -227,9 +227,9 @@ export default function CompanyPage() {
                  selectedEmployee ? "w-full md:w-1/2" : "w-0"
             )}>
                 {selectedEmployee && (
-                    <EmployeeDetails 
+                    <EmployeeDetails
                         key={selectedEmployee.id} // Re-mount component on selection change
-                        employee={selectedEmployee} 
+                        employee={selectedEmployee}
                         onUpdate={handleEmployeeUpdate}
                         onClose={handleClosePanel}
                     />
@@ -242,7 +242,7 @@ export default function CompanyPage() {
 // --- DETAILS PANEL COMPONENT ---
 
 function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; onUpdate: (employee: Employee) => void; onClose: () => void; }) {
-    
+
     // Local state for edits
     const [formData, setFormData] = useState<Partial<Employee>>(employee);
 
@@ -264,7 +264,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
             return { ...prev, positions: newPositions };
         });
     };
-    
+
     const handleSaveChanges = () => {
         onUpdate({ ...employee, ...formData });
         // Optional: show a toast notification
@@ -296,7 +296,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                     <Button variant="ghost" onClick={onClose}>Скасувати</Button>
                 </div>
             </header>
-            
+
             <div className="flex-1 overflow-y-auto space-y-4">
                 <Card>
                     <CardHeader className="p-4">
@@ -339,7 +339,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                                     onClick={() => handlePositionChange(pos.id)}
                                     className={cn(
                                         "px-2 py-1 text-xs rounded-md border",
-                                        formData.positions?.includes(pos.id) 
+                                        formData.positions?.includes(pos.id)
                                             ? "bg-primary text-primary-foreground border-transparent"
                                             : "bg-transparent hover:bg-accent"
                                     )}
