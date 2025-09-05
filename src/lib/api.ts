@@ -8,43 +8,46 @@ const API_BASE_URL = 'https://api.tasks.fineko.space';
 // --- Helper Functions ---
 
 /**
- * Retrieves the authentication token from localStorage.
+ * Retrieves the permanent authentication token from cookies.
  */
 function getToken(): string | null {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token');
+    // Read from cookies instead of localStorage for middleware compatibility
+    return document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1] || null;
   }
   return null;
 }
 
 /**
- * Sets the authentication token in localStorage.
+ * Sets the permanent authentication token in a session cookie.
  */
 function setToken(token: string): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('auth_token', token);
+    // Set as a session cookie
+    document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
   }
 }
 
 /**
- * Removes the authentication token from localStorage.
+ * Removes the authentication token cookie.
  */
 export function clearToken(): void {
     if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
+        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
     }
 }
 
 /**
- * A generic fetch wrapper for making authenticated API requests.
+ * A generic fetch wrapper for making API requests.
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
 
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+  // Check for a permanent token for general requests
+  const permanentToken = getToken();
+  if (permanentToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${permanentToken}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -53,7 +56,6 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   });
 
   if (!response.ok) {
-    // Attempt to parse error response from the server
     const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
     throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
   }
@@ -68,35 +70,43 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
 // --- Authentication API ---
 
-type LoginRequest = {
-  tgUserId: string;
-  username: string;
-  firstName: string;
-  lastName?: string;
-  photoUrl?: string;
-};
-
-type LoginResponse = {
-  token: string;
-  user: User;
+type Company = {
+    id: string;
+    name: string;
 };
 
 /**
- * Logs in a user via Telegram data.
+ * Fetches the user's companies using a temporary token from the Telegram bot.
  */
-export async function loginWithTelegram(userData: LoginRequest): Promise<LoginResponse> {
-  const response = await apiFetch<LoginResponse>('/auth/telegram/login', {
-    method: 'POST',
-    body: JSON.stringify(userData),
-  });
-  if (response.token) {
-    setToken(response.token);
-  }
-  return response;
+export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
+    return apiFetch('/auth/telegram/companies', {
+        headers: {
+            'Authorization': `Bearer ${tempToken}`
+        }
+    });
 }
 
 /**
- * Fetches the currently authenticated user's profile.
+ * Exchanges the temporary token and selected company for a permanent session token.
+ */
+export async function selectCompany(tempToken: string, companyId: string): Promise<{ token: string }> {
+    const response = await apiFetch<{ token: string }>('/auth/telegram/select-company', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${tempToken}`
+        },
+        body: JSON.stringify({ companyId }),
+    });
+    
+    if (response.token) {
+        setToken(response.token);
+    }
+    return response;
+}
+
+
+/**
+ * Fetches the currently authenticated user's profile using the permanent token.
  */
 export async function getMe(): Promise<User & { companies: {id: string, name: string}[] }> {
     return apiFetch('/auth/me');
@@ -113,15 +123,9 @@ export async function logout() {
 
 // --- Company API ---
 
-type Company = {
-    id: string;
-    name: string;
-};
-
 /**
- * Fetches the list of companies for the authenticated user.
+ * Fetches the list of companies for the authenticated user (using permanent token).
  */
 export async function getCompanies(): Promise<Company[]> {
     return apiFetch('/companies');
 }
-
