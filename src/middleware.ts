@@ -7,7 +7,7 @@ export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  const publicPaths = ['/login', '/select-company', '/auth/telegram/callback', '/create-company'];
+  const publicPaths = ['/login', '/select-company', '/auth/telegram/callback', '/create-company', '/api/telegram/webhook'];
   
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
 
