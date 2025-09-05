@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -9,19 +8,23 @@ import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createCompanyAndLogin } from '@/lib/api';
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 
 export default function CreateCompanyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleCreateCompany = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+    setIsSubmitting(true);
 
     const tempToken = searchParams.get('token');
     if (!tempToken) {
       setError("Your session has expired. Please log in again.");
+      setIsSubmitting(false);
       return;
     }
 
@@ -29,11 +32,11 @@ export default function CreateCompanyPage() {
     const companyName = formData.get('companyName') as string;
 
     try {
-      // This function should create the company and log the user in
       await createCompanyAndLogin(tempToken, companyName);
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create company.');
+      setIsSubmitting(false);
     }
   };
 
@@ -48,10 +51,13 @@ export default function CreateCompanyPage() {
           <form onSubmit={handleCreateCompany} className="space-y-4">
             <div>
               <Label htmlFor="companyName">Назва компанії</Label>
-              <Input id="companyName" name="companyName" placeholder="Acme Inc." required />
+              <Input id="companyName" name="companyName" placeholder="Acme Inc." required disabled={isSubmitting} />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full">Створити та увійти</Button>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Створити та увійти
+            </Button>
           </form>
         </CardContent>
       </Card>

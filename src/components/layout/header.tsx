@@ -7,13 +7,13 @@ import { Bell, LogOut, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
+import { logout } from '@/lib/api';
 
 export default function Header() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    // Clear the mock auth token and redirect to login
-    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  const handleLogout = async () => {
+    await logout();
     router.push('/login');
   };
 

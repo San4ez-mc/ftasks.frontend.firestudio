@@ -7,17 +7,23 @@ export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  const publicPaths = ['/login', '/select-company', '/auth/telegram/callback', '/create-company', '/api/telegram/webhook'];
+  const authPaths = ['/login', '/select-company', '/auth/telegram/callback', '/create-company'];
   
-  const isPublicPath = publicPaths.some(path => pathname.startsWith(path));
+  const isAuthPath = authPaths.some(path => pathname.startsWith(path));
+  const isApiWebhook = pathname.startsWith('/api/telegram/webhook');
+
+  // Allow the API webhook to be accessed publicly
+  if (isApiWebhook) {
+      return NextResponse.next();
+  }
 
   // If user is not authenticated and is trying to access a protected page, redirect to login
-  if (!authToken && !isPublicPath) {
+  if (!authToken && !isAuthPath) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If user is authenticated and tries to access the login page, redirect them to the home page
-  if (authToken && pathname === '/login') {
+  // If user is authenticated and tries to access an auth page (like login), redirect them to the home page
+  if (authToken && isAuthPath) {
     return NextResponse.redirect(new URL('/', request.url));
   }
   

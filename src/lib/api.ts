@@ -23,10 +23,12 @@ function getToken(): string | null {
  */
 function setToken(token: string): void {
   if (typeof window !== 'undefined') {
-    // Set as a session cookie
-    document.cookie = `auth_token=${token}; path=/; SameSite=Lax`;
+    // Set as a session cookie that expires when the browser is closed.
+    // Secure flag should be used in production with HTTPS.
+    document.cookie = `auth_token=${token}; path=/; SameSite=Lax;`;
   }
 }
+
 
 /**
  * Removes the authentication token cookie.
@@ -106,8 +108,6 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
 
 /**
  * Creates a new company and logs the user in, returning a permanent token.
- * This is a conceptual endpoint. The backend should handle creating the company
- * and then effectively calling the logic of selectCompany internally.
  */
 export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string }> {
     const response = await apiFetch<{ token: string }>('/auth/telegram/create-company-and-login', {
@@ -136,8 +136,13 @@ export async function getMe(): Promise<User & { companies: {id: string, name: st
  * Logs out the current user.
  */
 export async function logout() {
-    await apiFetch('/auth/logout', { method: 'POST' });
-    clearToken();
+    try {
+        await apiFetch('/auth/logout', { method: 'POST' });
+    } catch (error) {
+        console.warn("Logout API call failed, but clearing token anyway.", error);
+    } finally {
+        clearToken();
+    }
 }
 
 
