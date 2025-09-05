@@ -16,6 +16,17 @@ interface TelegramUser {
  * Handles incoming webhook updates from the Telegram Bot API.
  */
 export async function POST(request: NextRequest) {
+  // Enhanced logging to debug environment variables
+  console.log("--- START OF WEBHOOK INVOCATION ---");
+  console.log("Available environment variables (keys):", Object.keys(process.env));
+  
+  const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!telegramToken) {
+      console.error("CRITICAL FAILURE: TELEGRAM_BOT_TOKEN is not found in process.env.");
+  } else {
+      console.log("SUCCESS: TELEGRAM_BOT_TOKEN was found.");
+  }
+
   console.log("STEP 1: Webhook received a request from Telegram.");
   let chatId: number | undefined;
 
@@ -63,6 +74,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ status: 'error', message: 'tempToken missing from backend response' }, { status: 500 });
       }
       
+      // Use NEXT_PUBLIC_APP_URL for the frontend URL if available
       const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`;
       const redirectUrl = `${frontendUrl}/auth/telegram/callback?token=${tempToken}`;
 
