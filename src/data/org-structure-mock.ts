@@ -14,7 +14,7 @@ export const mockDivisions: Division[] = [
 export const mockEmployees: Employee[] = [
     { id: 'emp-1', name: 'Петро Іваненко', avatar: 'https://picsum.photos/100/100?random=4' },
     { id: 'emp-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/100/100?random=2' },
-    { id: 'emp-3', name: 'Олена Ковальчук', avatar: 'httpsum.photos/100/100?random=3' },
+    { id: 'emp-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/100/100?random=3' },
     { id: 'emp-4', name: 'Іван Петренко', avatar: 'https://picsum.photos/100/100?random=1' },
     { id: 'emp-5', name: 'Андрій Бондаренко', avatar: 'https://picsum.photos/100/100?random=5' },
     { id: 'emp-6', name: 'Сергій Вовк', avatar: 'https://picsum.photos/100/100?random=6' },
@@ -71,4 +71,3 @@ export const mockDepartments: Department[] = [
 
 // --- Deprecated Data ---
 export const mockPositions = [];
-
