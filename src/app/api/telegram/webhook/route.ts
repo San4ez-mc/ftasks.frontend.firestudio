@@ -18,7 +18,6 @@ interface TelegramUser {
 export async function POST(request: NextRequest) {
   // Enhanced logging to debug environment variables
   console.log("--- START OF WEBHOOK INVOCATION ---");
-  console.log("Available environment variables (keys):", Object.keys(process.env));
   
   const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!telegramToken) {
