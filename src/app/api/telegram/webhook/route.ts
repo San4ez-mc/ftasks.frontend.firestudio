@@ -24,9 +24,6 @@ export async function POST(request: NextRequest) {
 
   if (!telegramToken) {
       console.error("CRITICAL FAILURE: TELEGRAM_BOT_TOKEN is not defined in the environment.");
-      // Log all available env vars for debugging, excluding sensitive ones if possible
-      // In a real production scenario, be cautious about logging all env vars.
-      console.log("Available ENV VARS:", Object.keys(process.env).join(', '));
   } else {
       console.log("SUCCESS: TELEGRAM_BOT_TOKEN was found.");
   }
