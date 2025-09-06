@@ -226,5 +226,3 @@ export default function EditInstructionPage({ params }: { params: { id: string }
     </div>
   );
 }
-
-    
