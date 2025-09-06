@@ -18,14 +18,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  serverRuntimeConfig: {
-    // Will only be available on the server side
-    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
-  },
-  publicRuntimeConfig: {
-    // Will be available on both server and client
-    apiBaseUrl: process.env.API_BASE_URL,
-  },
 };
 
 export default nextConfig;
