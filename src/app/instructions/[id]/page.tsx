@@ -55,11 +55,8 @@ const mockInstruction: Instruction = {
 };
 
 // --- Main Page Component ---
-type EditInstructionPageProps = {
-  params: { id: string };
-};
 
-export default function EditInstructionPage({ params }: EditInstructionPageProps) {
+export default function EditInstructionPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [instruction, setInstruction] = useState<Instruction | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -229,3 +226,5 @@ export default function EditInstructionPage({ params }: EditInstructionPageProps
     </div>
   );
 }
+
+    
