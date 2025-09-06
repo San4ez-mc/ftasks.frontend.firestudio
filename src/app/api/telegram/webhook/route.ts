@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import getConfig from 'next/config';
 
 // This is a mock of the Telegram Bot API response for user data
 interface TelegramUser {
@@ -12,6 +13,8 @@ interface TelegramUser {
   language_code?: string;
 }
 
+const { serverRuntimeConfig, publicRuntimeConfig } = getConfig();
+
 /**
  * Handles incoming webhook updates from the Telegram Bot API.
  */
@@ -19,9 +22,11 @@ export async function POST(request: NextRequest) {
   // Enhanced logging to debug environment variables
   console.log("--- START OF WEBHOOK INVOCATION ---");
   
-  const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+  const telegramToken = serverRuntimeConfig.telegramBotToken;
+
   if (!telegramToken) {
-      console.error("CRITICAL FAILURE: TELEGRAM_BOT_TOKEN is not found in process.env.");
+      console.error("CRITICAL FAILURE: TELEGRAM_BOT_TOKEN is not found in next/config.");
+      console.log("All available server runtime config:", JSON.stringify(serverRuntimeConfig));
   } else {
       console.log("SUCCESS: TELEGRAM_BOT_TOKEN was found.");
   }
@@ -34,13 +39,14 @@ export async function POST(request: NextRequest) {
 
     console.log("STEP 1 SUCCESS: Sucessfully parsed request body:", JSON.stringify(body, null, 2));
 
-    if (body.message && body.message.text && body.message.text.startsWith('/start')) {
+    // Updated check for the /start command
+    if (body.message && body.message.text && body.message.text === '/start') {
       const fromUser: TelegramUser = body.message.from;
       chatId = body.message.chat.id;
 
       console.log(`Identified chat ID: ${chatId}`);
       
-      const apiBaseUrl = process.env.API_BASE_URL || 'https://api.tasks.fineko.space';
+      const apiBaseUrl = publicRuntimeConfig.apiBaseUrl || 'https://api.tasks.fineko.space';
       const loginEndpoint = `${apiBaseUrl}/auth/telegram/login`;
       
       console.log(`STEP 2: Attempting to send POST request to backend at ${loginEndpoint}`);
@@ -101,9 +107,9 @@ export async function POST(request: NextRequest) {
  * Sends a reply message back to the user via the Telegram Bot API.
  */
 async function sendTelegramReply(chatId: number, loginUrl: string | null, errorMessage?: string) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = serverRuntimeConfig.telegramBotToken;
   if (!botToken) {
-    console.error("CRITICAL: TELEGRAM_BOT_TOKEN is not set in environment variables.");
+    console.error("CRITICAL: TELEGRAM_BOT_TOKEN is not set in environment variables via next/config.");
     throw new Error("TELEGRAM_BOT_TOKEN is not set.");
   }
   
