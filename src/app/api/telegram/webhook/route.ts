@@ -17,7 +17,7 @@ interface TelegramUser {
  */
 export async function POST(request: NextRequest) {
   console.log("--- START OF WEBHOOK INVOCATION ---");
-
+  
   // Directly access the environment variable provided by App Hosting
   const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
   const apiBaseUrl = process.env.API_BASE_URL || 'https://api.tasks.fineko.space';
