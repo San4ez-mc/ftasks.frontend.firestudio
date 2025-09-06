@@ -1,6 +1,21 @@
 
 'use client';
 
+import React from 'react';
+
+export default function EditInstructionPage({ params }: { params: { id: string } }) {
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <h1>Сторінку тимчасово відключено</h1>
+      <p>Цей компонент закоментовано для діагностики помилки збірки.</p>
+      <p>ID: {params.id}</p>
+    </div>
+  );
+}
+
+/*
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -226,3 +241,4 @@ export default function EditInstructionPage({ params }: { params: { id: string }
     </div>
   );
 }
+*/
