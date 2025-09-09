@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       const fromUser: TelegramUser = body.message.from;
       chatId = body.message.chat.id;
 
-      // The URL for our own internal API endpoint to handle the login logic
+      // The URL for our own internal API endpoint to handle the login logic.
+      // Use a relative path to avoid SSL issues in server-to-server communication.
       const internalLoginApiUrl = new URL('/api/auth/telegram/login', request.url).toString();
       
       const response = await fetch(internalLoginApiUrl, {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ status: 'error', message: 'tempToken missing from internal response' }, { status: 500 });
       }
       
-      // Force HTTPS for the redirect URL
+      // Force HTTPS for the redirect URL that goes to the user's browser via Telegram.
       const host = request.headers.get('host');
       const redirectUrl = `https://${host}/auth/telegram/callback?token=${tempToken}`;
       
