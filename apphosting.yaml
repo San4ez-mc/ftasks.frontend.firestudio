@@ -1,3 +1,4 @@
+
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
@@ -10,8 +11,7 @@ runConfig:
 env:
   - variable: TELEGRAM_BOT_TOKEN
     secret: TELEGRAM_BOT_TOKEN
-  - variable: API_BASE_URL
-    value: https://api.tasks.fineko.space
-    availability:
-      - BUILD
-      - RUNTIME
+  - variable: JWT_SECRET
+    secret: JWT_SECRET
+  - variable: PERMANENT_JWT_SECRET
+    secret: PERMANENT_JWT_SECRET

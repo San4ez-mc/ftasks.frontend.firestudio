@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// This is a mock of the Telegram Bot API response for user data
 interface TelegramUser {
   id: number;
   is_bot: boolean;
@@ -13,132 +12,92 @@ interface TelegramUser {
 }
 
 /**
- * Handles incoming webhook updates from the Telegram Bot API.
+ * This is the Next.js backend endpoint that Telegram will call.
  */
 export async function POST(request: NextRequest) {
-  console.log("--- START OF WEBHOOK INVOCATION ---");
-  
-  // Directly access the environment variable provided by App Hosting
   const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
-  const apiBaseUrl = process.env.API_BASE_URL;
 
   if (!telegramToken) {
-      console.error("CRITICAL FAILURE: TELEGRAM_BOT_TOKEN is not defined in the environment.");
-  } else {
-      console.log("SUCCESS: TELEGRAM_BOT_TOKEN was found.");
+    console.error("TELEGRAM_BOT_TOKEN is not defined.");
+    return NextResponse.json({ status: 'error', message: 'Server configuration error' }, { status: 500 });
   }
 
-  console.log("STEP 1: Webhook received a request from Telegram.");
   let chatId: number | undefined;
 
   try {
     const body = await request.json();
 
-    console.log("STEP 1 SUCCESS: Sucessfully parsed request body:", JSON.stringify(body, null, 2));
-
     if (body.message && body.message.text && body.message.text.startsWith('/start')) {
       const fromUser: TelegramUser = body.message.from;
       chatId = body.message.chat.id;
 
-      console.log(`Identified chat ID: ${chatId}`);
+      // The URL for our own internal API endpoint to handle the login logic
+      const internalLoginApiUrl = new URL('/api/auth/telegram/login', request.url).toString();
       
-      const loginEndpoint = `${apiBaseUrl}/auth/telegram/login`;
-      
-      console.log(`STEP 2: Attempting to send POST request to backend at ${loginEndpoint}`);
-      const response = await fetch(loginEndpoint, {
+      const response = await fetch(internalLoginApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: fromUser.id,
-          first_name: fromUser.first_name,
-          last_name: fromUser.last_name,
-          username: fromUser.username,
-          language_code: fromUser.language_code
-        })
+        body: JSON.stringify(fromUser)
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to parse backend error response.' }));
-        console.error(`STEP 2 FAILURE: Backend request failed with status ${response.status}`, errorData);
-        await sendTelegramReply(chatId, null, `An error occurred during authentication: ${errorData.message || 'Please try again later.'}`);
-        return NextResponse.json({ status: 'error', message: 'Backend login failed' }, { status: 500 });
+        const errorData = await response.json().catch(() => ({ message: 'Internal login failed.' }));
+        await sendTelegramReply(chatId, null, `Authentication error: ${errorData.message || 'Please try again.'}`);
+        return NextResponse.json({ status: 'error', message: 'Internal login failed' }, { status: 500 });
       }
-      
-      console.log("STEP 2 SUCCESS: Backend request was successful.");
 
       const { tempToken } = await response.json();
       
       if (!tempToken) {
-          console.error('STEP 3 FAILURE: Backend response is missing tempToken.');
-          await sendTelegramReply(chatId, null, 'Authentication failed. The server did not provide a login token.');
-          return NextResponse.json({ status: 'error', message: 'tempToken missing from backend response' }, { status: 500 });
+          await sendTelegramReply(chatId, null, 'Authentication failed. No token provided.');
+          return NextResponse.json({ status: 'error', message: 'tempToken missing from internal response' }, { status: 500 });
       }
       
-      const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`;
+      // Use the host from the request to build the redirect URL
+      const frontendUrl = `https://${request.headers.get('host')}`;
       const redirectUrl = `${frontendUrl}/auth/telegram/callback?token=${tempToken}`;
-
-      console.log(`STEP 3: Generated redirect URL: ${redirectUrl}`);
       
       await sendTelegramReply(chatId, redirectUrl);
 
-      console.log("STEP 3 SUCCESS: Reply with login button sent to user.");
       return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
     }
 
-    console.log("Webhook finished: No action taken as message was not a /start command.");
     return NextResponse.json({ status: 'ok', message: 'Webhook received, but no action taken.' });
 
   } catch (error) {
-    console.error('CRITICAL WEBHOOK ERROR:', error);
+    console.error('Webhook Error:', error);
     if (chatId) {
-        await sendTelegramReply(chatId, null, 'A critical server error occurred. Please contact support.').catch(e => console.error("Failed to send critical error reply:", e));
+        await sendTelegramReply(chatId, null, 'A critical server error occurred. Please contact support.');
     }
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-/**
- * Sends a reply message back to the user via the Telegram Bot API.
- */
 async function sendTelegramReply(chatId: number, loginUrl: string | null, errorMessage?: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  if (!botToken) {
-    console.error("CRITICAL: TELEGRAM_BOT_TOKEN is not set in environment variables.");
-    throw new Error("TELEGRAM_BOT_TOKEN is not set.");
-  }
-  
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
-  let messagePayload;
-  if (loginUrl) {
-    messagePayload = {
-      chat_id: chatId,
-      text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
-      reply_markup: {
-        inline_keyboard: [
-          [{
-            text: "Завершити вхід у FINEKO",
-            url: loginUrl,
-          }],
-        ],
-      },
-    };
-  } else {
-    messagePayload = {
-      chat_id: chatId,
-      text: errorMessage || "Щось пішло не так. Спробуйте ще раз.",
-    };
-  }
+  const payload = loginUrl
+    ? {
+        chat_id: chatId,
+        text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
+        reply_markup: {
+          inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: loginUrl }]],
+        },
+      }
+    : {
+        chat_id: chatId,
+        text: errorMessage || "Щось пішло не так. Спробуйте ще раз.",
+      };
 
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(messagePayload),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
     console.error('Failed to send Telegram message:', errorData);
-    throw new Error('Could not send reply to user.');
   }
 }

@@ -3,7 +3,8 @@
 
 import { User } from '@/types/user';
 
-const API_BASE_URL = 'https://api.tasks.fineko.space';
+// The API base URL is now relative, pointing to our own Next.js backend.
+const API_BASE_URL = '/api';
 
 // --- Helper Functions ---
 
@@ -12,7 +13,6 @@ const API_BASE_URL = 'https://api.tasks.fineko.space';
  */
 function getToken(): string | null {
   if (typeof window !== 'undefined') {
-    // Read from cookies instead of localStorage for middleware compatibility
     return document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1] || null;
   }
   return null;
@@ -23,8 +23,6 @@ function getToken(): string | null {
  */
 function setToken(token: string): void {
   if (typeof window !== 'undefined') {
-    // Set as a session cookie that expires when the browser is closed.
-    // Secure flag should be used in production with HTTPS.
     document.cookie = `auth_token=${token}; path=/; SameSite=Lax;`;
   }
 }
@@ -46,7 +44,6 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
 
-  // Check for a permanent token for general requests
   const permanentToken = getToken();
   if (permanentToken && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${permanentToken}`);
