@@ -12,7 +12,7 @@ interface TelegramUser {
   photo_url?: string;
 }
 
-export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{ tempToken?: string; error?: string }> {
+export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{ tempToken?: string; error?: string; details?: string }> {
   if (!JWT_SECRET) {
     console.error("JWT_SECRET is not defined.");
     return { error: 'Server configuration error' };
@@ -27,6 +27,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{
   try {
     // --- Database Logic (Mocked) ---
     let user = users.find(u => u.telegramUserId === telegramUserId.toString());
+    let details: string;
 
     if (!user) {
       user = {
@@ -38,13 +39,16 @@ export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{
         photo_url: photo_url || '',
       };
       users.push(user);
+      details = `Нового користувача ${first_name} створено з ID ${user.id}.`;
+    } else {
+      details = `Існуючого користувача ${first_name} знайдено з ID ${user.id}.`;
     }
     // --- End Database Logic ---
 
     // Generate a short-lived temporary token
     const tempToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
     
-    return { tempToken };
+    return { tempToken, details };
 
   } catch (error) {
       console.error('Error in handleTelegramLogin:', error);
