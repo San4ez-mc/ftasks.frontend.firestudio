@@ -1,36 +1,30 @@
 
-'use client'
-
-import { Suspense } from 'react';
+// SERVER component (за замовчуванням у app/)
+// ВАЖЛИВО: тут не використовуємо useState/useEffect/useRouter — усе інтерактивне винесемо у клієнтський компонент
 import ProcessEditor from './_components/ProcessEditor';
-import { Loader2 } from 'lucide-react';
-
-// Mock data fetching function. In a real app, this would fetch from an API or database.
 import { mockInitialProcess, mockUsers } from '@/data/process-mock';
-import type { Process, User } from '@/types/process';
 
-type EditProcessPageProps = {
-  params: { id: string };
+type ProcessesPageProps = {
+  params: Promise<{ id: string }>;
 };
 
-// This is the main page component. It's now an async Server Component.
-// It extracts params and passes them down to the client component.
-export default function EditProcessPage({ params }: EditProcessPageProps) {
-  // In a real app, you would fetch the process data based on the id.
-  // For now, we use mock data.
-  const { process, users } = { process: mockInitialProcess, users: mockUsers };
+export default async function Page({ params }: ProcessesPageProps) {
+  const { id } = await params;
 
+  // Завантаження даних на сервері (приклад — заміни на свою функцію)
+  const process = mockInitialProcess; // В реальності: await getProcessById(id);
+  const users = mockUsers; // В реальності: await getUsers();
+
+  // Передаємо дані у клієнтський компонент
   return (
-    <Suspense fallback={<LoadingState />}>
-      <ProcessEditor initialProcess={process} users={users} />
-    </Suspense>
+    <ProcessEditor 
+        initialProcess={process} 
+        users={users} 
+    />
   );
 }
 
-function LoadingState() {
-  return (
-     <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-     </div>
-  )
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return { title: `Process ${id}` };
 }

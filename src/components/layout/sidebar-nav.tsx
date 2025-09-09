@@ -16,9 +16,11 @@ import {
   LayoutDashboard,
   Trophy,
   Users,
+  Workflow,
   FileClock,
   Building,
   Send,
+  BookText,
   ClipboardCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -28,6 +30,8 @@ const menuItems = [
   { href: '/', label: 'Задачі щоденні', icon: LayoutDashboard },
   { href: '/templates', label: 'Шаблони', icon: FileClock },
   { href: '/org-structure', label: 'Орг.структура', icon: Users },
+  { href: '/processes', label: 'Бізнес процеси', icon: Workflow },
+  { href: '/instructions', label: 'Інструкції', icon: BookText },
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
   { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
@@ -62,7 +66,7 @@ export default function SidebarNav() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href) && (item.href === '/' ? pathname === '/' : true)}
                 tooltip={{ children: item.label }}
                 onClick={() => setOpenMobile(false)}
               >
