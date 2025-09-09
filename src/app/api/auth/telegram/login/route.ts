@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id: telegramUserId, first_name, last_name, username } = body;
+    const { id: telegramUserId, first_name, last_name, username, photo_url } = body;
 
     if (!telegramUserId) {
       return NextResponse.json({ message: 'Telegram user ID is required' }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         firstName: first_name,
         lastName: last_name,
         telegramUsername: username,
+        photo_url: photo_url || '',
       };
       users.push(user);
     }
