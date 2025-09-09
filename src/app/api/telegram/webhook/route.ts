@@ -15,6 +15,8 @@ interface TelegramUser {
  * This is the Next.js backend endpoint that Telegram will call.
  */
 export async function POST(request: NextRequest) {
+  console.log("Received a request on /api/telegram/webhook");
+
   const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!telegramToken) {
@@ -26,6 +28,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    console.log("Webhook body:", JSON.stringify(body, null, 2));
+
 
     if (body.message && body.message.text && body.message.text.startsWith('/start')) {
       const fromUser: TelegramUser = body.message.from;
