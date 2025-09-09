@@ -12,6 +12,11 @@ export async function POST(request: NextRequest) {
     }
     const { userId } = authResult;
 
+    // Fix: Ensure userId is not undefined before proceeding
+    if (!userId) {
+      return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
+    }
+
     const { companyName } = await request.json();
     if (!companyName) {
       return NextResponse.json({ message: 'companyName is required' }, { status: 400 });
