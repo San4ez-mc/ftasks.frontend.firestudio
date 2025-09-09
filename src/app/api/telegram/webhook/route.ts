@@ -42,14 +42,18 @@ export async function POST(request: NextRequest) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Internal login failed.' }));
-        await sendTelegramReply(chatId, null, `Authentication error: ${errorData.message || 'Please try again.'}`);
+        if (chatId) {
+          await sendTelegramReply(chatId, null, `Authentication error: ${errorData.message || 'Please try again.'}`);
+        }
         return NextResponse.json({ status: 'error', message: 'Internal login failed' }, { status: 500 });
       }
 
       const { tempToken } = await response.json();
       
       if (!tempToken) {
-          await sendTelegramReply(chatId, null, 'Authentication failed. No token provided.');
+          if (chatId) {
+            await sendTelegramReply(chatId, null, 'Authentication failed. No token provided.');
+          }
           return NextResponse.json({ status: 'error', message: 'tempToken missing from internal response' }, { status: 500 });
       }
       
@@ -57,7 +61,9 @@ export async function POST(request: NextRequest) {
       const frontendUrl = `https://${request.headers.get('host')}`;
       const redirectUrl = `${frontendUrl}/auth/telegram/callback?token=${tempToken}`;
       
-      await sendTelegramReply(chatId, redirectUrl);
+      if (chatId) {
+        await sendTelegramReply(chatId, redirectUrl);
+      }
 
       return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
     }
