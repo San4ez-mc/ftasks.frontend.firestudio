@@ -1,4 +1,5 @@
 
+
 export type StepStatus = 'new' | 'outdated' | 'problematic' | 'ok';
 
 export type Step = {
@@ -10,6 +11,7 @@ export type Step = {
     status: StepStatus;
     notes: string;
     isDataSavePoint?: boolean;
+    dataSaveLocation?: string;
 };
 
 export type Lane = {
@@ -25,6 +27,8 @@ export type Process = {
   lanes: Lane[];
 };
 
-    
-
-    
+export type User = {
+    id: string;
+    name: string;
+    avatar: string;
+}
