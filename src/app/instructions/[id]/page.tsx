@@ -46,7 +46,7 @@ const mockInstruction: Instruction = {
 <p><br></p>
 <h2>Крок 3: Відео-інструкція</h2>
 <p>Перегляньте це відео для детального розбору налаштувань рекламного кабінету:</p>
-<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameborder="0" allowfullscreen></iframe>
+<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameBorder="0" allowFullScreen></iframe>
 `,
     accessList: [
       { userId: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1', access: 'edit' },
@@ -96,7 +96,8 @@ export default function EditInstructionPage({ params }: EditInstructionPageProps
     if (type === 'image') {
         embedHtml = `<img src="${url}" alt="Зображення" >`;
     } else {
-        const videoId = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
+        const videoIdMatch = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11}).*/);
+        const videoId = videoIdMatch ? videoIdMatch[1] : null;
         if (videoId) {
             embedHtml = `<iframe src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
         } else {
