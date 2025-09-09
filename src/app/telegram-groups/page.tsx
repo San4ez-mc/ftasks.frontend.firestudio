@@ -262,7 +262,7 @@ function GroupStatusCard({ status }: { status: Group | null }) {
                     <p><strong>Назва:</strong> {status.title}</p>
                     {status.username && <p><strong>Юзернейм:</strong> @{status.username}</p>}
                     <p><strong>Group ID:</strong> <code className="bg-muted px-1.5 py-0.5 rounded">{status.group_id}</code></p>
-                    <p><strong>Дата прив'язки:</strong> {new Date(status.linked_at).toLocaleString()}</p>
+                    {status.linked_at && <p><strong>Дата прив'язки:</strong> {new Date(status.linked_at).toLocaleString()}</p>}
                 </div>
                  <div className="flex flex-col gap-2">
                     <Button variant="outline">Перевірити підключення</Button>
