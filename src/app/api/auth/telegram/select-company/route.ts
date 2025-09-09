@@ -17,6 +17,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'companyId is required' }, { status: 400 });
     }
 
+    // Fix: Ensure userId is not undefined before proceeding
+    if (!userId) {
+      return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
+    }
+
     // --- Database Logic (Mocked) ---
     const isMember = employees.some(e => e.userId === userId && e.companyId === companyId);
     if (!isMember) {
