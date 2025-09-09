@@ -13,6 +13,11 @@ export async function GET(request: NextRequest) {
     const { userId } = authResult;
 
     // --- Database Logic (Mocked) ---
+    // ЗАВДАННЯ ДЛЯ БЕКЕНД-РОЗРОБНИКА:
+    // Замінити цей блок на реальні запити до бази даних, використовуючи клієнт з `src/lib/real-db.ts`.
+    // Приклад:
+    // const userResult = await dbClient.query('SELECT * FROM users WHERE id = $1', [userId]);
+    // const user = userResult.rows[0];
     const user = users.find(u => u.id === userId);
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
