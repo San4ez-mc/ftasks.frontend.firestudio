@@ -63,14 +63,12 @@ type EditInstructionPageProps = {
 export default function EditInstructionPage({ params }: EditInstructionPageProps) {
   const router = useRouter();
   const [instruction, setInstruction] = useState<Instruction | null>(null);
-  const [isNew, setIsNew] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
     if (params.id === 'new') {
-        setIsNew(true);
         setInstruction({
             id: `instr-${Date.now()}`,
             title: 'Нова інструкція',
@@ -233,3 +231,5 @@ export default function EditInstructionPage({ params }: EditInstructionPageProps
     </div>
   );
 }
+
+    
