@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       
       console.log("Крок 3: Тимчасовий токен успішно згенеровано.");
       
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      const appUrl = "https://studio--fineko-tasktracker.us-central1.hosted.app";
       if (!appUrl) {
           console.error("Помилка конфігурації: NEXT_PUBLIC_APP_URL не знайдено.");
           throw new Error("Application URL is not configured.");
