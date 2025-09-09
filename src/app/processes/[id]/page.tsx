@@ -1,6 +1,4 @@
 
-'use client';
-
 import { Suspense } from 'react';
 import ProcessEditor from './_components/ProcessEditor';
 import { Loader2 } from 'lucide-react';
@@ -9,24 +7,19 @@ import { Loader2 } from 'lucide-react';
 import { mockInitialProcess, mockUsers } from '@/data/process-mock';
 import type { Process, User } from '@/types/process';
 
-// This is the client-side data fetching and rendering component.
-function EditProcessPageContent({ id }: { id: string }) {
-  // In a real app, you might use a hook like SWR or React Query to fetch data
-  // based on the id, but for this mock, we'll just use the imported data.
-  const { process, users } = { process: mockInitialProcess, users: mockUsers };
-  
-  console.log(`Rendering editor for process: ${id}`);
-  
-  return <ProcessEditor initialProcess={process} users={users} />;
-}
-
-
-// This is the main page component. It remains a server component by default in App Router.
+// This is the main page component. It's now an async Server Component.
 // It extracts params and passes them down to the client component.
-export default function EditProcessPage({ params }: { params: { id: string } }) {
+export default async function EditProcessPage({ params }: { params: Promise<{ id: string }> }) {
+  // Await the promise to get the actual params
+  const { id } = await params;
+  
+  // In a real app, you would fetch the process data based on the id.
+  // For now, we use mock data.
+  const { process, users } = { process: mockInitialProcess, users: mockUsers };
+
   return (
     <Suspense fallback={<LoadingState />}>
-      <EditProcessPageContent id={params.id} />
+      <ProcessEditor initialProcess={process} users={users} />
     </Suspense>
   );
 }
