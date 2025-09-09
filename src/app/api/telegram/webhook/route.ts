@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { handleTelegramLogin, sendTelegramReply } from '@/lib/telegram-auth';
+import { handleTelegramLogin } from '@/lib/telegram-auth';
 
 interface TelegramUser {
   id: number;
@@ -11,6 +11,54 @@ interface TelegramUser {
   username?: string;
   language_code?: string;
 }
+
+async function sendTelegramReply(chatId: number, loginUrl: string | null, errorMessage?: string) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!botToken) {
+    console.error("Крок 5 (Помилка конфігурації): TELEGRAM_BOT_TOKEN не знайдено в env.");
+    // Do not proceed if token is missing
+    return;
+  }
+
+  const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  console.log(`Крок 5 (Підготовка до відправки): Цільовий URL Telegram API: ${apiUrl}`);
+
+  const payload = loginUrl
+    ? {
+        chat_id: chatId,
+        text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
+        reply_markup: {
+          inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: loginUrl }]],
+        },
+      }
+    : {
+        chat_id: chatId,
+        text: errorMessage || "Щось пішло не так. Спробуйте ще раз.",
+      };
+      
+  console.log("Крок 5 (Payload):", JSON.stringify(payload, null, 2));
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error(`Крок 5 (Помилка): Не вдалося надіслати повідомлення Telegram:`, responseData);
+    } else {
+        console.log("Крок 5 (Успіх): Повідомлення в Telegram успішно надіслано.");
+    }
+  } catch(error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown fetch error";
+      console.error("Крок 5 (Критична помилка): Не вдалося виконати fetch-запит до Telegram API.", errorMessage, error);
+  }
+}
+
 
 /**
  * This is the Next.js backend endpoint that Telegram will call.
