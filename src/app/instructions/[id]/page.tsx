@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, a part of 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,11 +62,11 @@ type EditInstructionPageProps = {
 
 export default function EditInstructionPage({ params }: EditInstructionPageProps) {
   const router = useRouter();
-  const [instruction, setInstruction] = useState<Instruction | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [instruction, setInstruction] = React.useState<Instruction | null>(null);
+  const editorRef = React.useRef<HTMLDivElement>(null);
+  const [isClient, setIsClient] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setIsClient(true);
     if (params.id === 'new') {
         setInstruction({
@@ -231,5 +231,3 @@ export default function EditInstructionPage({ params }: EditInstructionPageProps
     </div>
   );
 }
-
-    
