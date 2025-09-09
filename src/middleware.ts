@@ -1,6 +1,10 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { config } from 'dotenv';
+
+// Load environment variables from .env.local
+config();
 
 export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
