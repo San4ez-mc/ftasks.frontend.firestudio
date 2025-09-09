@@ -2,8 +2,11 @@
 import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-for-dev';
-const PERMANENT_JWT_SECRET = process.env.PERMANENT_JWT_SECRET || 'a-different-super-secret-key-for-dev';
+// --- TEMPORARY WORKAROUND for deployment issue ---
+// Using hardcoded secrets. This is insecure and for development/debugging only.
+// TODO: Revert to process.env variables once the secret manager issue is resolved.
+const JWT_SECRET = 'temporary-super-secret-key-for-dev';
+const PERMANENT_JWT_SECRET = 'temporary-different-super-secret-key-for-dev';
 
 type AuthResult = {
   userId?: string;

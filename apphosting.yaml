@@ -8,12 +8,13 @@ runConfig:
   maxInstances: 1
 
 # Environment variables and secrets
-env:
-  - variable: TELEGRAM_BOT_TOKEN
-    secret: TELEGRAM_BOT_TOKEN
-  - variable: JWT_SECRET
-    secret: JWT_SECRET
-  - variable: PERMANENT_JWT_SECRET
-    secret: PERMANENT_JWT_SECRET
-  - variable: API_BASE_URL
-    value: "https://api.tasks.fineko.space/"
+# --- TEMPORARILY DISABLED TO BYPASS DEPLOYMENT ERROR ---
+# env:
+#   - variable: TELEGRAM_BOT_TOKEN
+#     secret: TELEGRAM_BOT_TOKEN
+#   - variable: JWT_SECRET
+#     secret: JWT_SECRET
+#   - variable: PERMANENT_JWT_SECRET
+#     secret: PERMANENT_JWT_SECRET
+#   - variable: API_BASE_URL
+#     value: "https://api.tasks.fineko.space/"

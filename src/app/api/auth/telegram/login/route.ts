@@ -4,8 +4,10 @@ import type { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { db, users, companies, employees } from '@/lib/db'; // Mock DB
 
-// A secret key for signing JWTs. In a real app, this MUST be in environment variables.
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-for-dev';
+// --- TEMPORARY WORKAROUND for deployment issue ---
+// Using a hardcoded secret. This is insecure and for development/debugging only.
+// TODO: Revert to process.env.JWT_SECRET once the secret manager issue is resolved.
+const JWT_SECRET = 'temporary-super-secret-key-for-dev';
 
 export async function POST(request: NextRequest) {
   try {
