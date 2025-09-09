@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { handleTelegramLogin } from '@/lib/telegram-auth';
 
 interface TelegramUser {
   id: number;
@@ -35,31 +36,15 @@ export async function POST(request: NextRequest) {
       const fromUser: TelegramUser = body.message.from;
       chatId = body.message.chat.id;
 
-      // The URL for our own internal API endpoint to handle the login logic.
-      // Use a relative path to avoid SSL issues in server-to-server communication.
-      const internalLoginApiUrl = new URL('/api/auth/telegram/login', request.url).toString();
-      
-      const response = await fetch(internalLoginApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fromUser)
-      });
+      // Directly call the login logic instead of using fetch
+      const { tempToken, error } = await handleTelegramLogin(fromUser);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Internal login failed.' }));
+      if (error || !tempToken) {
+        const errorMessage = error || 'Authentication failed. No token provided.';
         if (chatId) {
-          await sendTelegramReply(chatId, null, `Authentication error: ${errorData.message || 'Please try again.'}`);
+          await sendTelegramReply(chatId, null, `Authentication error: ${errorMessage}`);
         }
-        return NextResponse.json({ status: 'error', message: 'Internal login failed' }, { status: 500 });
-      }
-
-      const { tempToken } = await response.json();
-      
-      if (!tempToken) {
-          if (chatId) {
-            await sendTelegramReply(chatId, null, 'Authentication failed. No token provided.');
-          }
-          return NextResponse.json({ status: 'error', message: 'tempToken missing from internal response' }, { status: 500 });
+        return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
       }
       
       // Force HTTPS for the redirect URL that goes to the user's browser via Telegram.
