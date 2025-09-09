@@ -4,12 +4,14 @@ import type { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { db, users, companies, employees } from '@/lib/db'; // Mock DB
 
-// --- TEMPORARY WORKAROUND for deployment issue ---
-// Using a hardcoded secret. This is insecure and for development/debugging only.
-// TODO: Revert to process.env.JWT_SECRET once the secret manager issue is resolved.
-const JWT_SECRET = 'temporary-super-secret-key-for-dev';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function POST(request: NextRequest) {
+  if (!JWT_SECRET) {
+    console.error("JWT_SECRET is not defined.");
+    return NextResponse.json({ message: 'Server configuration error' }, { status: 500 });
+  }
+
   try {
     const body = await request.json();
     const { id: telegramUserId, first_name, last_name, username } = body;

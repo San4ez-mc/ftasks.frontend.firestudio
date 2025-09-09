@@ -2,11 +2,8 @@
 import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 
-// --- TEMPORARY WORKAROUND for deployment issue ---
-// Using hardcoded secrets. This is insecure and for development/debugging only.
-// TODO: Revert to process.env variables once the secret manager issue is resolved.
-const JWT_SECRET = 'temporary-super-secret-key-for-dev';
-const PERMANENT_JWT_SECRET = 'temporary-different-super-secret-key-for-dev';
+const JWT_SECRET = process.env.JWT_SECRET;
+const PERMANENT_JWT_SECRET = process.env.PERMANENT_JWT_SECRET;
 
 type AuthResult = {
   userId?: string;
@@ -24,6 +21,11 @@ export async function verifyToken(request: NextRequest, isPermanent = false): Pr
   const token = authHeader.split(' ')[1];
   const secret = isPermanent ? PERMANENT_JWT_SECRET : JWT_SECRET;
 
+  if (!secret) {
+    console.error('JWT secret is not defined in environment variables.');
+    return { error: 'Server configuration error', status: 500 };
+  }
+
   try {
     const decoded = jwt.verify(token, secret) as { userId: string, companyId?: string, iat: number, exp: number };
     return { userId: decoded.userId, companyId: decoded.companyId };
@@ -33,5 +35,8 @@ export async function verifyToken(request: NextRequest, isPermanent = false): Pr
 }
 
 export function createPermanentToken(userId: string, companyId: string): string {
+    if (!PERMANENT_JWT_SECRET) {
+      throw new Error('Permanent JWT secret is not defined in environment variables.');
+    }
     return jwt.sign({ userId, companyId }, PERMANENT_JWT_SECRET, { expiresIn: '7d' });
 }

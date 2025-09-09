@@ -15,13 +15,10 @@ interface TelegramUser {
  * This is the Next.js backend endpoint that Telegram will call.
  */
 export async function POST(request: NextRequest) {
-  // --- TEMPORARY WORKAROUND for deployment issue ---
-  // Using a hardcoded placeholder. Telegram functionality will not work.
-  // TODO: Revert to process.env.TELEGRAM_BOT_TOKEN once the secret manager issue is resolved.
-  const telegramToken = 'temporary-placeholder-token';
+  const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!telegramToken) {
-    console.error("TELEGRAM_BOT_TOKEN is not defined.");
+    console.error("TELEGRAM_BOT_TOKEN is not defined in environment variables.");
     return NextResponse.json({ status: 'error', message: 'Server configuration error' }, { status: 500 });
   }
 
@@ -77,8 +74,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function sendTelegramReply(chatId: number, loginUrl: string | null, errorMessage?: string) {
-  // --- TEMPORARY WORKAROUND for deployment issue ---
-  const botToken = 'temporary-placeholder-token';
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
   const payload = loginUrl
