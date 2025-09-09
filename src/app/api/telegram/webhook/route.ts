@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    console.error('Критична помилка в обробнику вебхука:', errorMessage);
+    console.error('Критична помилка в обробнику вебхука:', errorMessage, error);
     if (chatId) {
         await sendTelegramReply(chatId, null, 'A critical server error occurred. Please contact support.');
     }

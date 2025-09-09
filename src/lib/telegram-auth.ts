@@ -67,7 +67,8 @@ export async function sendTelegramReply(chatId: number, loginUrl: string | null,
 
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
-  console.log(`Крок 5 (Підготовка до відправки): Цільовий URL Telegram API: ${apiUrl.replace(botToken, "СКРИТИЙ_ТОКЕН")}`);
+  // Виводимо повний URL без приховування токена для налагодження
+  console.log(`Крок 5 (Підготовка до відправки): Цільовий URL Telegram API: ${apiUrl}`);
 
   const payload = loginUrl
     ? {
@@ -100,4 +101,3 @@ export async function sendTelegramReply(chatId: number, loginUrl: string | null,
       console.error("Крок 5 (Критична помилка): Не вдалося виконати fetch-запит до Telegram API.", error);
   }
 }
-
