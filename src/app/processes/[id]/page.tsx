@@ -1,4 +1,6 @@
 
+'use client'
+
 import { Suspense } from 'react';
 import ProcessEditor from './_components/ProcessEditor';
 import { Loader2 } from 'lucide-react';
@@ -7,12 +9,13 @@ import { Loader2 } from 'lucide-react';
 import { mockInitialProcess, mockUsers } from '@/data/process-mock';
 import type { Process, User } from '@/types/process';
 
+type EditProcessPageProps = {
+  params: { id: string };
+};
+
 // This is the main page component. It's now an async Server Component.
 // It extracts params and passes them down to the client component.
-export default async function EditProcessPage({ params }: { params: Promise<{ id: string }> }) {
-  // Await the promise to get the actual params
-  const { id } = await params;
-  
+export default function EditProcessPage({ params }: EditProcessPageProps) {
   // In a real app, you would fetch the process data based on the id.
   // For now, we use mock data.
   const { process, users } = { process: mockInitialProcess, users: mockUsers };
