@@ -2,8 +2,6 @@
 
 import type { Task, TaskPrioritizationInput, TaskPrioritizationOutput } from '@/ai/flows/ai-task-prioritization';
 import { suggestTaskPriorities } from '@/ai/flows/ai-task-prioritization';
-import type { HelpContentInput, HelpContentOutput } from '@/ai/flows/ai-help-assistant';
-import { getHelpContent as getHelpContentFromAI } from '@/ai/flows/ai-help-assistant';
 
 
 type ActionResult<T> = {
