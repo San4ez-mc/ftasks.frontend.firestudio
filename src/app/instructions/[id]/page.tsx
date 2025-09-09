@@ -65,8 +65,10 @@ export default function EditInstructionPage({ params }: EditInstructionPageProps
   const [instruction, setInstruction] = useState<Instruction | null>(null);
   const [isNew, setIsNew] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     if (params.id === 'new') {
         setIsNew(true);
         setInstruction({
@@ -108,7 +110,7 @@ export default function EditInstructionPage({ params }: EditInstructionPageProps
     document.execCommand('insertHTML', false, embedHtml);
   };
 
-  if (!instruction) return <div>Завантаження...</div>;
+  if (!instruction || !isClient) return <div>Завантаження...</div>;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/40">

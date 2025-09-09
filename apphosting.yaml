@@ -9,17 +9,11 @@ runConfig:
 
 # Environment variables and secrets
 env:
-  # Temporarily commenting out secrets to debug deployment.
-  # TODO: Uncomment these lines after resolving Secret Manager access issues.
-  # - variable: TELEGRAM_BOT_TOKEN
-  #   secret: TELEGRAM_BOT_TOKEN
-  # - variable: JWT_SECRET
-  #   secret: JWT_SECRET
-  # - variable: PERMANENT_JWT_SECRET
-  #   secret: PERMANENT_JWT_SECRET
   - variable: TELEGRAM_BOT_TOKEN
-    value: "your_telegram_bot_token_placeholder"
+    secret: TELEGRAM_BOT_TOKEN
   - variable: JWT_SECRET
-    value: "your_jwt_secret_placeholder"
+    secret: JWT_SECRET
   - variable: PERMANENT_JWT_SECRET
-    value: "your_permanent_jwt_secret_placeholder"
+    secret: PERMANENT_JWT_SECRET
+  - variable: API_BASE_URL
+    value: "https://api.tasks.fineko.space/"
