@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ status: 'error', message: 'tempToken missing from internal response' }, { status: 500 });
       }
       
-      // Use the host from the request to build the redirect URL
-      const frontendUrl = `https://${request.headers.get('host')}`;
-      const redirectUrl = `${frontendUrl}/auth/telegram/callback?token=${tempToken}`;
+      // Force HTTPS for the redirect URL
+      const host = request.headers.get('host');
+      const redirectUrl = `https://${host}/auth/telegram/callback?token=${tempToken}`;
       
       if (chatId) {
         await sendTelegramReply(chatId, redirectUrl);
