@@ -3,6 +3,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // --- AUTHENTICATION DISABLED FOR DEVELOPMENT ---
+  // The original authentication logic is commented out below.
+  // This allows access to all pages without needing to log in.
+  // To re-enable authentication, uncomment the section below and remove the `return NextResponse.next();` line.
+  
+  return NextResponse.next();
+
+  /*
   // Assume a cookie `auth_token` signifies a permanent session
   const authToken = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
@@ -28,6 +36,7 @@ export function middleware(request: NextRequest) {
   }
   
   return NextResponse.next();
+  */
 }
 
 // See "Matching Paths" below to learn more

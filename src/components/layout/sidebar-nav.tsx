@@ -21,6 +21,7 @@ import {
   Building,
   Send,
   BookText,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -33,6 +34,7 @@ const menuItems = [
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
   { href: '/instructions', label: 'Інструкції', icon: BookText },
+  { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
 ];
 
 export default function SidebarNav() {
