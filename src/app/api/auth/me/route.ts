@@ -1,4 +1,6 @@
 
+'use server';
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
@@ -11,6 +13,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }
     const { userId } = authResult;
+
+    if (!userId) {
+      return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
+    }
 
     // --- Database Logic (Mocked) ---
     // ЗАВДАННЯ ДЛЯ БЕКЕНД-РОЗРОБНИКА:
