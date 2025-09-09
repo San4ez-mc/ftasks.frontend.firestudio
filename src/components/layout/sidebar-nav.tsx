@@ -33,7 +33,6 @@ const menuItems = [
   { href: '/processes', label: 'Бізнес процеси', icon: Workflow },
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
-  { href: '/instructions', label: 'Інструкції', icon: BookText },
   { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
 ];
 
