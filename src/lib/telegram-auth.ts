@@ -33,8 +33,8 @@ export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{
         id: `user-${Date.now()}`,
         telegramUserId: telegramUserId.toString(),
         firstName: first_name,
-        lastName: last_name,
-        telegramUsername: username,
+        lastName: last_name || '',
+        telegramUsername: username || '',
         photo_url: photo_url || '',
       };
       users.push(user);
