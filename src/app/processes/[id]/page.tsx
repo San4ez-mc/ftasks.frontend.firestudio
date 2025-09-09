@@ -1,4 +1,6 @@
 
+'use client';
+
 import { Suspense } from 'react';
 import ProcessEditor from './_components/ProcessEditor';
 import { Loader2 } from 'lucide-react';
@@ -7,23 +9,24 @@ import { Loader2 } from 'lucide-react';
 import { mockInitialProcess, mockUsers } from '@/data/process-mock';
 import type { Process, User } from '@/types/process';
 
-async function getProcessData(id: string): Promise<{ process: Process, users: User[] }> {
-    // Here you would fetch the process by its ID.
-    // We'll return the mock data for now.
-    console.log(`Fetching data for process: ${id}`);
-    return Promise.resolve({ process: mockInitialProcess, users: mockUsers });
+// This is the client-side data fetching and rendering component.
+function EditProcessPageContent({ id }: { id: string }) {
+  // In a real app, you might use a hook like SWR or React Query to fetch data
+  // based on the id, but for this mock, we'll just use the imported data.
+  const { process, users } = { process: mockInitialProcess, users: mockUsers };
+  
+  console.log(`Rendering editor for process: ${id}`);
+  
+  return <ProcessEditor initialProcess={process} users={users} />;
 }
 
 
-// This is now an async Server Component, which correctly handles async params.
-export default async function EditProcessPage({ params }: { params: { id: string } }) {
-  // We can safely fetch data on the server before rendering.
-  const { process, users } = await getProcessData(params.id);
-
+// This is the main page component. It remains a server component by default in App Router.
+// It extracts params and passes them down to the client component.
+export default function EditProcessPage({ params }: { params: { id: string } }) {
   return (
-    // The Suspense boundary is good practice for components that fetch data.
     <Suspense fallback={<LoadingState />}>
-      <ProcessEditor initialProcess={process} users={users} />
+      <EditProcessPageContent id={params.id} />
     </Suspense>
   );
 }

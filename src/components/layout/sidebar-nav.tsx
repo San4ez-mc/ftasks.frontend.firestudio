@@ -31,6 +31,7 @@ const menuItems = [
   { href: '/templates', label: 'Шаблони', icon: FileClock },
   { href: '/org-structure', label: 'Орг.структура', icon: Users },
   { href: '/processes', label: 'Бізнес процеси', icon: Workflow },
+  { href: '/instructions', label: 'Інструкції', icon: BookText },
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
   { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
