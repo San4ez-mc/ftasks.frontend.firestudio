@@ -1,12 +1,12 @@
 
 
-type User = {
+export type User = {
     id: string;
     name: string;
     avatar?: string;
 };
 
-type SubResult = {
+export type SubResult = {
     id: string;
     name: string;
     completed: boolean;
@@ -14,19 +14,25 @@ type SubResult = {
     deadline?: string;
 }
 
-type ResultTask = {
+export type ResultTask = {
     id: string;
     title: string;
     status: 'todo' | 'done';
 }
 
-type ResultTemplate = {
+export type ResultTemplate = {
     id: string;
     name: string;
     repeatability?: string;
 }
 
-export type { SubResult, User };
+export type ResultComment = {
+    id: string;
+    text: string;
+    author: User;
+    timestamp: string;
+}
+
 
 export interface Result {
   id: string;
@@ -42,4 +48,5 @@ export interface Result {
   subResults: SubResult[];
   tasks: ResultTask[];
   templates: ResultTemplate[];
+  comments: ResultComment[];
 }

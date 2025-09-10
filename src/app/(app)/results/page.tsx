@@ -97,12 +97,15 @@ export default function ResultsPage() {
 
   const handleCreateNewResult = (index?: number) => {
     startTransition(async () => {
+        const twoWeeksFromNow = new Date();
+        twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+
         const newResultData: Omit<Result, 'id'> = {
             name: '',
             status: 'Заплановано',
             completed: false,
             isUrgent: false,
-            deadline: new Date().toISOString().split('T')[0],
+            deadline: twoWeeksFromNow.toISOString().split('T')[0],
             assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
             reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
             description: '',
@@ -110,6 +113,7 @@ export default function ResultsPage() {
             subResults: [],
             tasks: [],
             templates: [],
+            comments: []
         };
         try {
             const createdResult = await createResult(newResultData, index);

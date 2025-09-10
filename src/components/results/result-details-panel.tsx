@@ -1,6 +1,6 @@
 
 'use client';
-import type { Result, SubResult, User } from '@/types/result';
+import type { Result, SubResult, User, ResultComment } from '@/types/result';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -175,40 +175,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
             </header>
             <div className="flex-1 p-4 space-y-4 overflow-y-auto">
                 {/* Details Section */}
-                <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div>
-                        <p className="text-muted-foreground mb-1">Відповідальний</p>
-                         <Select 
-                            value={result.assignee.id} 
-                            onValueChange={(userId) => {
-                                const user = mockUsers.find(u => u.id === userId);
-                                if (user) onUpdate({...result, assignee: user})
-                            }}>
-                            <SelectTrigger className="h-8 text-xs">
-                                <div className="flex items-center gap-2 truncate">
-                                    <Avatar className="h-6 w-6"><AvatarImage src={result.assignee.avatar} /></Avatar>
-                                    <span className="truncate"><SelectValue /></span>
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {mockUsers.map(user => (
-                                    <SelectItem key={user.id} value={user.id}>
-                                         <div className="flex items-center gap-2">
-                                            <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
-                                            <span>{user.name}</span>
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div>
-                        <p className="text-muted-foreground mb-1">Постановник</p>
-                        <div className="flex items-center gap-2 h-8">
-                            <Avatar className="h-6 w-6"><AvatarImage src={result.reporter.avatar} /></Avatar>
-                            <span>{result.reporter.name}</span>
-                        </div>
-                    </div>
+                 <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
                         <p className="text-muted-foreground mb-1">Дедлайн</p>
                          <Popover>
@@ -241,11 +208,46 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <Switch id="urgent-mode" checked={result.isUrgent} onCheckedChange={(checked) => onUpdate({...result, isUrgent: checked})}/>
-                        <Label htmlFor="urgent-mode" className="text-xs">Терміновий</Label>
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                         <Select 
+                            value={result.assignee.id} 
+                            onValueChange={(userId) => {
+                                const user = mockUsers.find(u => u.id === userId);
+                                if (user) onUpdate({...result, assignee: user})
+                            }}>
+                            <SelectTrigger className="h-8 text-xs w-auto border-none p-0 focus:ring-0">
+                                <SelectValue asChild>
+                                    <Avatar className="h-8 w-8 cursor-pointer"><AvatarImage src={result.assignee.avatar} /></Avatar>
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {mockUsers.map(user => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                         <div className="flex items-center gap-2">
+                                            <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
+                                            <span>{user.name}</span>
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <div>
+                            <p className="font-medium">{result.assignee.name}</p>
+                            <p className="text-xs text-muted-foreground">Відповідальний</p>
+                        </div>
+                    </div>
+                     <div className="flex items-center gap-2 text-right">
+                         <div>
+                            <p className="font-medium">{result.reporter.name}</p>
+                            <p className="text-xs text-muted-foreground">Постановник</p>
+                        </div>
+                        <Avatar className="h-8 w-8"><AvatarImage src={result.reporter.avatar} /></Avatar>
                     </div>
                 </div>
+
                 <div>
                     <Label htmlFor="description" className="text-xs text-muted-foreground">Опис результату</Label>
                     <p className="text-xs text-muted-foreground/70 mb-1">Той результат детально, який постановник хоче отримати</p>
@@ -395,13 +397,15 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                  <div>
                     <h3 className="font-semibold text-xs mb-2">Коментарі</h3>
                     <div className="space-y-4">
-                        <div className="flex gap-3">
-                            <Avatar className="h-8 w-8"><AvatarImage src={result.reporter.avatar} /></Avatar>
-                            <div>
-                                <p className="font-medium text-xs">{result.reporter.name} <span className="text-xs text-muted-foreground ml-2">2 години тому</span></p>
-                                <p className="text-xs bg-muted p-2 rounded-md mt-1">Не забудьте перевірити бюджети перед запуском.</p>
+                        {result.comments?.map(comment => (
+                            <div key={comment.id} className="flex gap-3">
+                                <Avatar className="h-8 w-8"><AvatarImage src={comment.author.avatar} /></Avatar>
+                                <div>
+                                    <p className="font-medium text-xs">{comment.author.name} <span className="text-xs text-muted-foreground ml-2">{comment.timestamp}</span></p>
+                                    <p className="text-xs bg-muted p-2 rounded-md mt-1">{comment.text}</p>
+                                </div>
                             </div>
-                        </div>
+                        ))}
                     </div>
                  </div>
 

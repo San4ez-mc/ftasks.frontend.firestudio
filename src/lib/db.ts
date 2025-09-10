@@ -178,6 +178,9 @@ export let resultsDb: Result[] = [
     ],
     templates: [
         { id: 'tpl-1', name: 'Щотижневий звіт по кампанії' }
+    ],
+    comments: [
+        { id: 'comment-1', text: 'Не забудьте перевірити бюджети перед запуском.', author: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4'}, timestamp: '2 години тому' }
     ]
   },
   {
@@ -193,7 +196,8 @@ export let resultsDb: Result[] = [
     expectedResult: 'Новий модуль аналітики доступний всім користувачам з роллю "Менеджер".',
     subResults: [],
     tasks: [],
-    templates: []
+    templates: [],
+    comments: []
   },
   {
     id: 'res-3',
@@ -212,7 +216,8 @@ export let resultsDb: Result[] = [
          { id: 'sub-3-3', name: 'Сформувати презентацію', completed: false },
     ],
     tasks: [],
-    templates: []
+    templates: [],
+    comments: []
   },
    {
     id: 'res-4',
@@ -227,7 +232,8 @@ export let resultsDb: Result[] = [
     expectedResult: 'Новий дизайн головної сторінки опубліковано.',
     subResults: [],
     tasks: [],
-    templates: []
+    templates: [],
+    comments: []
   },
   {
     id: 'res-5',
@@ -242,7 +248,8 @@ export let resultsDb: Result[] = [
     expectedResult: 'Звіт з результатами A/B тестування та рекомендаціями по ціноутворенню.',
     subResults: [],
     tasks: [],
-    templates: []
+    templates: [],
+    comments: []
   },
 ];
 
