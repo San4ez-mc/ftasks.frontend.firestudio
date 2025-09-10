@@ -35,26 +35,31 @@ const resultsTourSteps: TourStep[] = [
         elementId: 'results-tabs',
         title: 'Фільтрація результатів',
         content: 'Використовуйте ці вкладки, щоб переглядати результати, за які ви відповідальні (Мої), які ви доручили іншим (Делеговані), результати ваших підлеглих, або відкладені.',
+        placement: 'bottom'
     },
     {
         elementId: 'results-view-toggle',
         title: 'Режими перегляду',
         content: 'Перемикайтеся між режимом таблиці для детального огляду та режимом карток для візуального представлення.',
+        placement: 'left'
     },
     {
         elementId: 'results-table',
         title: 'Список результатів',
         content: 'Це ваш основний робочий простір. Тут ви можете створювати нові результати, відзначати їх виконання та бачити ключову інформацію.',
+        placement: 'bottom'
     },
      {
         elementId: 'result-details-panel',
         title: 'Панель деталей',
         content: 'Натисніть на будь-який результат, щоб відкрити цю панель. Тут можна редагувати опис, дедлайн, додавати підрезультати, задачі та коментарі.',
+        placement: 'left'
     },
      {
         elementId: 'create-result-fab',
         title: 'Створити новий результат',
         content: 'Натисніть цю кнопку, щоб швидко додати новий результат до вашого списку.',
+        placement: 'left'
     },
 ];
 
@@ -396,56 +401,58 @@ function ResultsTable({
                     onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
                     />
                 </div>
-                <div className="col-span-11 md:col-span-5 font-medium flex items-center gap-2">
-                    <div className="flex-1">
-                        {isCreating ? (
-                            <Input
-                                ref={newResultInputRef}
-                                placeholder="Назва нового результату..."
-                                value={result.name}
-                                onChange={(e) => onResultUpdate({ ...result, name: e.target.value })}
-                                onBlur={() => { if (result.name.trim() !== '') { onResultUpdate(result) } else { handleDeleteResult(result.id) } }}
-                                onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                                className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm bg-transparent"
-                            />
-                        ) : (
-                            <span
-                                onClick={() => onResultSelect(result)}
-                                className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}
-                                >
-                                {result.name || <span className="text-muted-foreground">Без назви</span>}
-                            </span>
-                        )}
-                    </div>
-                     <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)} title="Редагувати"><Edit className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePostponeResult(result)} title="Відкласти"><Clock className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)} title="Створити шаблон"><FileText className="h-3 w-3"/></Button>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()} title="Видалити"><Trash2 className="h-3 w-3 text-destructive"/></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Цю дію неможливо скасувати. Це назавжди видалить результат "{result.name}".
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Скасувати</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteResult(result.id)}>Видалити</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                <div className={cn("col-span-11", panelOpen ? "md:col-span-11" : "md:col-span-5" )}>
+                    <div className="font-medium flex items-center gap-2">
+                        <div className="flex-1">
+                            {isCreating ? (
+                                <Input
+                                    ref={newResultInputRef}
+                                    placeholder="Назва нового результату..."
+                                    value={result.name}
+                                    onChange={(e) => onResultUpdate({ ...result, name: e.target.value })}
+                                    onBlur={() => { if (result.name.trim() !== '') { onResultUpdate(result) } else { handleDeleteResult(result.id) } }}
+                                    onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+                                    className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm bg-transparent"
+                                />
+                            ) : (
+                                <span
+                                    onClick={() => onResultSelect(result)}
+                                    className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}
+                                    >
+                                    {result.name || <span className="text-muted-foreground">Без назви</span>}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)} title="Редагувати"><Edit className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePostponeResult(result)} title="Відкласти"><Clock className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)} title="Створити шаблон"><FileText className="h-3 w-3"/></Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()} title="Видалити"><Trash2 className="h-3 w-3 text-destructive"/></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Цю дію неможливо скасувати. Це назавжди видалить результат "{result.name}".
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeleteResult(result.id)}>Видалити</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                     </div>
                 </div>
-                <div className={cn("hidden md:col-span-2 text-xs text-muted-foreground cursor-pointer transition-all duration-300 xl:block", panelOpen && "hidden xl:block")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:block")} onClick={() => onResultSelect(result)}>
                     <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
                     {formatDate(result.deadline)}
                 </div>
-                <div className={cn("hidden lg:flex col-span-3 md:col-span-2 items-center gap-2 cursor-pointer transition-all duration-300", panelOpen && "hidden lg:flex")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden items-center gap-2 cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")} onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' ? 'Постановник' : 'Відповідальний'}</p>
                         <div className="flex items-center gap-2">
@@ -457,7 +464,7 @@ function ResultsTable({
                         </div>
                     </div>
                 </div>
-                <div className="col-span-3 md:col-span-2 flex items-center cursor-pointer" onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden items-center cursor-pointer", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")} onClick={() => onResultSelect(result)}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
                         <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : (result.status === 'В роботі' ? 'default' : 'secondary'))} className={cn("text-xs", {'bg-pink-600 text-white': result.status === 'В роботі'})}>

@@ -179,21 +179,25 @@ const orgStructureTourSteps: TourStep[] = [
         elementId: 'division-column-div-1',
         title: 'Відділення (Колонки)',
         content: 'Це основні підрозділи вашої компанії. Ви можете бачити, які відділи належать до кожного відділення.',
+        placement: 'right'
     },
     {
         elementId: 'department-card-dept-1',
         title: 'Картка Відділу',
         content: 'Кожна картка представляє відділ. Тут ви можете редагувати назву, ЦКП, призначати керівника та співробітників. Перетягуйте картки між відділеннями, щоб змінити структуру.',
+        placement: 'bottom'
     },
     {
         elementId: 'add-department-button-div-1',
         title: 'Додавання нового відділу',
         content: 'Натисніть цю кнопку, щоб додати новий відділ до відповідного відділення.',
+        placement: 'top'
     },
     {
         elementId: 'add-employee-button-dept-1',
         title: 'Керування складом',
         content: 'Додавайте або видаляйте співробітників з відділу за допомогою цих елементів керування.',
+        placement: 'top'
     },
 ];
 
@@ -312,5 +316,3 @@ export default function OrgStructurePage() {
     </div>
   );
 }
-
-    

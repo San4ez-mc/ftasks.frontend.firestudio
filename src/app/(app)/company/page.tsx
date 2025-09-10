@@ -5,7 +5,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, Search, Trash2, Upload } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Upload, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,21 +46,25 @@ const companyTourSteps: TourStep[] = [
         elementId: 'employee-list-table',
         title: 'Список співробітників',
         content: 'Тут ви бачите повний список всіх співробітників компанії. Ви можете шукати, сортувати та переглядати основну інформацію.',
+        placement: 'right'
     },
     {
         elementId: 'invite-employee-button',
         title: 'Запрошення нових співробітників',
         content: 'Натисніть цю кнопку, щоб надіслати запрошення новому члену команди приєднатися до вашого робочого простору.',
+        placement: 'left'
     },
     {
         elementId: 'employee-details-panel',
         title: 'Панель деталей',
         content: 'Після вибору співробітника тут з\'являється детальна інформація: посади, контакти, нотатки. Ви можете редагувати ці дані.',
+        placement: 'left'
     },
      {
         elementId: 'save-employee-button',
         title: 'Збереження змін',
         content: 'Не забувайте зберігати будь-які зміни, внесені в профіль співробітника, натиснувши цю кнопку.',
+        placement: 'left'
     },
 ];
 
@@ -72,6 +76,8 @@ export default function CompanyPage() {
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
+    const [companyName, setCompanyName] = useState('Fineko Development');
+    const [companyDescription, setCompanyDescription] = useState('Інноваційні рішення для вашого бізнесу.');
 
     useEffect(() => {
         startTransition(async () => {
@@ -106,6 +112,11 @@ export default function CompanyPage() {
     const handleClosePanel = () => {
         setSelectedEmployee(null);
     }
+    
+    const handleCompanyInfoSave = () => {
+        // In a real app, you would call an action to save this data
+        toast({ title: "Успіх", description: "Інформацію про компанію оновлено." });
+    }
 
     return (
         <div className="flex flex-col md:flex-row h-screen overflow-hidden">
@@ -128,6 +139,25 @@ export default function CompanyPage() {
                     </div>
                 </header>
                 <div className="flex-1 overflow-y-auto" id="employee-list-table">
+                     <Card className="m-4">
+                        <CardHeader>
+                            <CardTitle>Інформація про компанію</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <div>
+                                <Label htmlFor="companyName">Назва компанії</Label>
+                                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+                            </div>
+                             <div>
+                                <Label htmlFor="companyDescription">Опис</Label>
+                                <Textarea id="companyDescription" value={companyDescription} onChange={(e) => setCompanyDescription(e.target.value)} />
+                            </div>
+                            <Button size="sm" onClick={handleCompanyInfoSave}>
+                                <Save className="mr-2 h-4 w-4" />
+                                Зберегти
+                            </Button>
+                        </CardContent>
+                    </Card>
                     {isPending ? <p className="p-4">Завантаження...</p> : (
                     <Table>
                         <TableHeader>

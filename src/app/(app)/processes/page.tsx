@@ -39,16 +39,19 @@ const processesTourSteps: TourStep[] = [
         elementId: 'create-process-button',
         title: 'Створення нового процесу',
         content: 'Натисніть цю кнопку, щоб створити новий бізнес-процес. Ви зможете дати йому назву та опис.',
+        placement: 'left'
     },
     {
         elementId: 'process-card-1',
         title: 'Картка процесу',
         content: 'Кожен процес відображається у вигляді такої картки. Натисніть на неї, щоб перейти до візуального редактора та налаштувати кроки.',
+        placement: 'bottom'
     },
      {
         elementId: 'process-actions-menu',
         title: 'Дії з процесом',
         content: 'Відкрийте це меню, щоб редагувати назву та опис існуючого процесу або видалити його.',
+        placement: 'left'
     },
 ];
 
@@ -202,5 +205,3 @@ export default function ProcessesPage() {
     </div>
   );
 }
-
-    
