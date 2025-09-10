@@ -2,7 +2,7 @@
 'use client';
 import type { Result, SubResult, User, ResultComment } from '@/types/result';
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,6 +46,19 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     const [description, setDescription] = useState(result.description);
     const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
+    const subResultContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const previousSubResultsLength = subResultContainerRef.current?.dataset.subresultsCount || '0';
+        if (subResults.length > parseInt(previousSubResultsLength)) {
+            const lastInput = subResultContainerRef.current?.querySelector('input[data-subresult-input]:last-of-type') as HTMLInputElement;
+            lastInput?.focus();
+        }
+        if (subResultContainerRef.current) {
+            subResultContainerRef.current.dataset.subresultsCount = String(subResults.length);
+        }
+    }, [subResults.length]);
+
 
     useEffect(() => {
         setName(result.name)
@@ -64,7 +77,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     }
     
     const handleNameBlur = () => {
-        if(name !== result.name && (!result.id.startsWith('new-') || name.trim() !== '')){
+        if(name !== result.name){
             onUpdate({...result, name: name});
         }
     }
@@ -274,7 +287,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                 <Separator />
 
                 {/* Sub-results */}
-                <div>
+                <div ref={subResultContainerRef}>
                     <h3 className="font-semibold text-xs mb-2">Підрезультати</h3>
                     <div className="space-y-2">
                         {subResults.map((sr, index) => (
@@ -285,6 +298,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                                         onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
                                     />
                                     <Input 
+                                        data-subresult-input
                                         value={sr.name}
                                         onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
                                         onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
