@@ -24,11 +24,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 type ResultDetailsPanelProps = {
   result: Result;
   onUpdate: (result: Result) => void;
   onClose: () => void;
+  onDelete: (resultId: string) => void;
 };
 
 const mockUsers: User[] = [
@@ -39,7 +41,7 @@ const mockUsers: User[] = [
 ];
 
 
-export default function ResultDetailsPanel({ result, onUpdate, onClose }: ResultDetailsPanelProps) {
+export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete }: ResultDetailsPanelProps) {
     const [name, setName] = useState(result.name);
     const [description, setDescription] = useState(result.description);
     const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
@@ -150,7 +152,23 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose }: Result
                         <DropdownMenuItem onClick={handleCreateTask}>Створити задачу</DropdownMenuItem>
                         <DropdownMenuItem onClick={handleCreateTemplate}>Створити шаблон</DropdownMenuItem>
                         <DropdownMenuItem>Дублювати</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Видалити</DropdownMenuItem>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">Видалити</DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Цю дію неможливо скасувати. Це назавжди видалить результат "{result.name}".
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => onDelete(result.id)}>Видалити</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>

@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { parseTime, formatTime } from '@/lib/timeUtils';
-import { deleteTask } from '@/app/tasks/actions';
+import { deleteTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
 
 type TaskDetailsPanelProps = {
@@ -370,5 +370,3 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
     </div>
   );
 }
-
-    
