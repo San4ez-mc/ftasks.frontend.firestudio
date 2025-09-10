@@ -3,18 +3,17 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Checkbox } from '@/components/ui/checkbox';
+
 
 // The URL for the Telegram bot authentication.
 const TELEGRAM_BOT_BASE_URL = "https://t.me/FinekoTasks_Bot";
 
 export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
-  const router = useRouter();
 
   const getAuthUrl = () => {
     // We pass the "remember me" choice in the payload of the start command.
@@ -28,7 +27,8 @@ export default function LoginPage() {
     // In a real app, this would be highly insecure.
     const MOCK_PERMANENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJjb21wYW55SWQiOiJjb21wYW55LTEiLCJyZW1lbWJlck1lIjp0cnVlLCJpYXQiOjE3MjU5NzQ0MDAsImV4cCI6MTcyODU2NjQwMH0.7a_7c6b5e9f8d4a3e2c1b0a9f8c7d6e5f4d3c2b1a0e9f8d7c6b5a4e3d2c1b0a9";
     localStorage.setItem('auth_token', MOCK_PERMANENT_TOKEN);
-    router.push('/');
+    // Use window.location.href to force a full page reload, which is necessary for the middleware to re-evaluate the auth state.
+    window.location.href = '/';
   }
 
   return (
