@@ -2,9 +2,7 @@
 'use server';
 
 import type { Task } from '@/types/task';
-import { tasksDb } from '@/lib/db';
-
-let tasks: Task[] = tasksDb;
+import { tasksService } from '@/lib/firestore-service';
 
 // --- SERVER ACTIONS ---
 
@@ -20,7 +18,8 @@ export async function getTasksForDate(
     userId: string, 
     filter: 'mine' | 'delegated' | 'subordinates'
 ): Promise<Task[]> {
-    const dateFilteredTasks = tasks.filter(task => task.dueDate === date);
+    const allTasks = await tasksService.getAll();
+    const dateFilteredTasks = allTasks.filter(task => task.dueDate === date);
 
     switch(filter) {
         case 'delegated':
@@ -40,12 +39,7 @@ export async function getTasksForDate(
  * @returns A promise that resolves to the newly created task.
  */
 export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
-    const newTask: Task = {
-        id: `task-${Date.now()}-${Math.random()}`,
-        ...taskData,
-    };
-    tasks.unshift(newTask); // Add to the beginning of the array
-    return newTask;
+    return tasksService.create(taskData);
 }
 
 /**
@@ -55,15 +49,7 @@ export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
  * @returns A promise that resolves to the updated task, or null if not found.
  */
 export async function updateTask(taskId: string, updates: Partial<Task>): Promise<Task | null> {
-    let updatedTask: Task | null = null;
-    tasks = tasks.map(task => {
-        if (task.id === taskId) {
-            updatedTask = { ...task, ...updates };
-            return updatedTask;
-        }
-        return task;
-    });
-    return updatedTask;
+    return tasksService.update(taskId, updates);
 }
 
 /**
@@ -72,7 +58,5 @@ export async function updateTask(taskId: string, updates: Partial<Task>): Promis
  * @returns A promise that resolves to an object indicating success.
  */
 export async function deleteTask(taskId: string): Promise<{ success: boolean }> {
-    const initialLength = tasks.length;
-    tasks = tasks.filter(task => task.id !== taskId);
-    return { success: tasks.length < initialLength };
+    return tasksService.delete(taskId);
 }

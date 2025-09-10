@@ -116,7 +116,7 @@ export default function ResultsPage() {
             comments: []
         };
         try {
-            const createdResult = await createResult(newResultData, index);
+            const createdResult = await createResult(newResultData);
             setResults(prev => {
                 const newResults = [...prev];
                 const insertionIndex = index !== undefined ? index + 1 : prev.length;
