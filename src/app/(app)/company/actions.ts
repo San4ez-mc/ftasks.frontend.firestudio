@@ -2,24 +2,24 @@
 'use server';
 
 import type { Employee } from '@/types/company';
-import { companyEmployees } from '@/lib/db';
+import { firestore } from '@/lib/firebase-admin';
 
-let employees: Employee[] = companyEmployees;
+const employeesCollection = firestore.collection('employees');
 
 export async function getEmployees(): Promise<Employee[]> {
-    // Simulate async operation
-    await new Promise(resolve => setTimeout(resolve, 100));
-    return employees;
+    const snapshot = await employeesCollection.orderBy('firstName').get();
+    if (snapshot.empty) {
+        return [];
+    }
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
 }
 
 export async function updateEmployee(employeeId: string, updates: Partial<Employee>): Promise<Employee | null> {
-    let updatedEmployee: Employee | null = null;
-    employees = employees.map(emp => {
-        if (emp.id === employeeId) {
-            updatedEmployee = { ...emp, ...updates };
-            return updatedEmployee;
-        }
-        return emp;
-    });
-    return updatedEmployee;
+    const docRef = employeesCollection.doc(employeeId);
+    await docRef.update(updates);
+    const updatedDoc = await docRef.get();
+    if (!updatedDoc.exists) {
+        return null;
+    }
+    return { id: updatedDoc.id, ...updatedDoc.data() } as Employee;
 }
