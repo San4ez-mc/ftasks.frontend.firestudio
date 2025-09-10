@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Search, Edit, Trash2, X, Clock } from 'lucide-react';
 import {
@@ -25,15 +25,10 @@ import { Separator } from '@/components/ui/separator';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from './actions';
+import { getResults } from '../results/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
-
-
-const initialResults = [
-    { id: '1', name: 'Конверсія з сайту', value: '12%' },
-    { id: '2', name: 'Залучено нових клієнтів', value: '84' },
-    { id: '3', name: 'Середній час відповіді', value: '2.5 год' },
-];
+import type { Result } from '@/types/result';
 
 
 // --- TOUR STEPS ---
@@ -63,6 +58,7 @@ const templatesTourSteps: TourStep[] = [
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -71,8 +67,12 @@ export default function TemplatesPage() {
 
   useEffect(() => {
     startTransition(async () => {
-        const fetchedTemplates = await getTemplates();
+        const [fetchedTemplates, fetchedResults] = await Promise.all([
+            getTemplates(),
+            getResults()
+        ]);
         setTemplates(fetchedTemplates);
+        setResults(fetchedResults);
     });
   }, []);
 
@@ -138,7 +138,7 @@ export default function TemplatesPage() {
   };
 
   const handleCreateFromRes = (resultId: string) => {
-      const result = initialResults.find(r => r.id === resultId);
+      const result = results.find(r => r.id === resultId);
       if(result) {
         setNewTemplateName(result.name);
         setIsCreateDialogOpen(true);
@@ -216,12 +216,13 @@ export default function TemplatesPage() {
                         <CardDescription>Клікніть щоб створити шаблон</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                        {initialResults.map(result => (
+                       {results.length > 0 ? results.map(result => (
                             <div key={result.id} onClick={() => handleCreateFromRes(result.id)} className="p-3 rounded-md border hover:bg-accent cursor-pointer">
                                 <p className="font-medium text-sm">{result.name}</p>
-                                <p className="text-xs text-muted-foreground">{result.value}</p>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-sm text-muted-foreground text-center p-4">Результати не очікуються</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>
