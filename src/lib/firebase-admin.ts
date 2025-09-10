@@ -1,5 +1,6 @@
 
 import * as admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 if (!admin.apps.length) {
   try {
@@ -11,4 +12,5 @@ if (!admin.apps.length) {
   }
 }
 
-export const firestore = admin.firestore();
+// Підключаємось до конкретної бази даних 'tasktrakerdb'
+export const firestore = getFirestore(admin.app(), 'tasktrakerdb');

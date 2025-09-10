@@ -11,7 +11,8 @@ const firebaseConfig = {
   "apiKey": "AIzaSyDd29GCigbCCJAPuwCtCwEgjJPzMnYDNmI",
   "authDomain": "fineko-tasktracker.firebaseapp.com",
   "measurementId": "",
-  "messagingSenderId": "1061908932290"
+  "messagingSenderId": "1061908932290",
+  "databaseURL": "https://fineko-tasktracker-tasktrakerdb.firebaseio.com"
 };
 
 // Initialize Firebase
