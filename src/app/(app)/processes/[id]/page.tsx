@@ -1,7 +1,7 @@
 
 // SERVER component (за замовчуванням у app/)
 // ВАЖЛИВО: тут не використовуємо useState/useEffect/useRouter — усе інтерактивне винесемо у клієнтський компонент
-import ProcessEditor from './_components/ProcessEditor';
+import ProcessEditor from '@/app/processes/[id]/_components/ProcessEditor';
 import { mockInitialProcess, mockUsers } from '@/data/process-mock';
 
 type ProcessesPageProps = {
