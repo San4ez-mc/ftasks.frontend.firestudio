@@ -1,43 +1,124 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, ArrowRight, ArrowLeft, Send } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, Wand2, AlertTriangle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { generateAuditSummary } from '@/ai/flows/audit-summary-flow';
+import { useToast } from '@/hooks/use-toast';
 
-const initialQuestions = [
-  { id: 1, text: 'Яка головна ціль вашої компанії на найближчий рік?' },
-  { id: 2, text: 'Опишіть вашого ідеального клієнта. Хто він?' },
-  { id: 3, text: 'Яка найбільша перешкода, що заважає вам досягти цілей швидше?' },
-  { id: 4, text: 'Які процеси у вашій компанії ви вважаєте найбільш хаотичними або неефективними?' },
-  { id: 5, text: 'Якби у вас була чарівна паличка, яку одну бізнес-проблему ви б вирішили негайно?' },
+const auditSections = [
+  {
+    title: 'Загальне бачення та Стратегія',
+    questions: [
+      'Опишіть головний бізнес-процес вашої компанії одним реченням: звідки приходять клієнти і який кінцевий продукт вони отримують?',
+      'Яка головна фінансова мета компанії на найближчий рік (наприклад, оборот, прибуток)?',
+      'Хто у компанії відповідальний за досягнення цієї фінансової мети? Чиї рішення на це впливають найбільше?',
+    ],
+  },
+  {
+    title: 'Маркетинг та Залучення клієнтів',
+    questions: [
+      'Перерахуйте 2-3 основні канали, звідки приходять клієнти. Хто відповідає за роботу кожного каналу?',
+      'Які ключові метрики ви використовуєте для оцінки ефективності маркетингу (наприклад, вартість ліда, ROMI)?',
+      'Чи бере власник участь в операційній роботі з маркетингу (наприклад, налаштування реклами, написання текстів)?',
+    ],
+  },
+  {
+    title: 'Продажі та Робота з клієнтами',
+    questions: [
+      'Опишіть коротко процес продажу: від першого контакту до отримання оплати. Хто є ключовою особою на кожному етапі?',
+      'Чи є у відділі продажів скрипти, регламенти або CRM-система? Наскільки системно вони використовуються?',
+      'Хто в компанії є найкращим продавцем? Наскільки сильно впадуть продажі, якщо ця людина піде у відпустку на місяць?',
+    ],
+  },
+  {
+    title: 'Продукт та Виробництво',
+    questions: [
+      'Хто відповідає за якість кінцевого продукту чи послуги? Як ви цю якість вимірюєте?',
+      'Чи є у вас задокументовані процеси або інструкції для створення продукту чи надання послуги?',
+      'Наскільки сильно ви, як власник, залучені у процес виробництва або надання послуг клієнтам?',
+    ],
+  },
+  {
+      title: 'Команда та Найм',
+      questions: [
+          'Хто ухвалює остаточне рішення про найм нового співробітника?',
+          'Чи є у вас програма адаптації (онбордингу) для нових членів команди?',
+          'Які ключові співробітники, крім власника, "незамінні"? Що станеться, якщо вони раптово звільняться?',
+      ]
+  },
+  {
+      title: 'Фінанси та Управління',
+      questions: [
+          'Хто в компанії регулярно веде фінансовий облік (P&L, Cash Flow)? Як часто власник переглядає ці звіти?',
+          'Хто приймає рішення про ключові витрати в компанії?',
+          'Які задачі ви, як власник, виконували протягом останнього тижня? Перерахуйте 5-7 основних.',
+      ]
+  }
 ];
 
-type Answer = {
-    questionId: number;
-    textAnswer?: string;
-    audioAnswer?: string; // URL to audio file
-}
+const allQuestions = auditSections.flatMap(section =>
+  section.questions.map(q => ({ text: q, section: section.title }))
+);
 
 export default function AuditPage() {
-  const [questions, setQuestions] = useState(initialQuestions);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Answer[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [summary, setSummary] = useState('Аудит ще не розпочато.');
+  const [problems, setProblems] = useState<string[]>([]);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+  
+  const currentQuestion = allQuestions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex) / allQuestions.length) * 100;
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  const handleAnswerChange = (text: string) => {
+      setAnswers(prev => ({...prev, [currentQuestionIndex]: text}));
+  }
 
   const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      // Handle audit completion
-      alert('Аудит завершено!');
+    const currentAnswer = answers[currentQuestionIndex];
+    if (!currentAnswer || currentAnswer.trim().length < 5) {
+        toast({
+            title: "Будь ласка, дайте відповідь",
+            description: "Надайте більш розгорнуту відповідь на запитання.",
+            variant: "destructive"
+        });
+        return;
     }
+
+    startTransition(async () => {
+        try {
+            const result = await generateAuditSummary({
+                currentSummary: summary === 'Аудит ще не розпочато.' ? '' : summary,
+                identifiedProblems: problems,
+                question: currentQuestion.text,
+                answer: currentAnswer,
+            });
+            setSummary(result.updatedSummary);
+            setProblems(result.updatedProblems);
+
+            if (currentQuestionIndex < allQuestions.length - 1) {
+                setCurrentQuestionIndex(prev => prev + 1);
+            } else {
+                 toast({
+                    title: "Аудит завершено!",
+                    description: "Ваш фінальний звіт готовий на панелі праворуч.",
+                });
+            }
+
+        } catch (error) {
+            toast({
+                title: "Помилка ШІ",
+                description: "Не вдалося обробити вашу відповідь. Спробуйте ще раз.",
+                variant: "destructive"
+            });
+        }
+    });
   };
 
   const handleBack = () => {
@@ -46,11 +127,7 @@ export default function AuditPage() {
     }
   };
   
-  const handleVoiceRecord = () => {
-      setIsRecording(prev => !prev);
-      // Here you would integrate a voice recording library
-      // For now, it's just a UI toggle
-  }
+  const isLastQuestion = currentQuestionIndex === allQuestions.length - 1;
 
   return (
     <div className="flex flex-col md:flex-row h-full">
@@ -58,27 +135,21 @@ export default function AuditPage() {
       <div className="flex flex-col flex-1 p-4 md:p-8 lg:p-12 space-y-6">
         <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
-                <span className="text-3xl font-bold font-headline">{currentQuestion.id}</span>
+                <span className="text-3xl font-bold font-headline">{currentQuestionIndex + 1}</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold font-headline">{currentQuestion.text}</h1>
+            <div>
+                 <p className="text-sm font-semibold text-primary">{currentQuestion.section}</p>
+                 <h1 className="text-2xl md:text-3xl font-bold font-headline">{currentQuestion.text}</h1>
+            </div>
         </div>
         
         <div className="flex-1 flex flex-col space-y-4">
              <Textarea
                 placeholder="Введіть вашу відповідь тут..."
                 className="flex-1 text-base"
+                value={answers[currentQuestionIndex] || ''}
+                onChange={(e) => handleAnswerChange(e.target.value)}
             />
-             <div className="flex flex-col items-center justify-center gap-4 p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Або дайте відповідь голосом</p>
-                <Button 
-                    size="lg" 
-                    className={`h-20 w-20 rounded-full transition-all duration-300 ${isRecording ? 'bg-red-500 hover:bg-red-600 animate-pulse' : ''}`}
-                    onClick={handleVoiceRecord}
-                >
-                    <Mic className="h-10 w-10" />
-                </Button>
-                {isRecording && <p className="text-sm text-red-500">Йде запис...</p>}
-            </div>
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t">
@@ -86,35 +157,46 @@ export default function AuditPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Назад
           </Button>
-          <Button onClick={handleNext}>
-            {currentQuestionIndex === questions.length - 1 ? 'Завершити' : 'Далі'}
+           <div className="flex-1 text-center px-4">
+             <Progress value={progress} />
+           </div>
+          <Button onClick={handleNext} disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isLastQuestion ? 'Завершити' : 'Далі'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Right Panel: Progress */}
+      {/* Right Panel: Summary */}
       <aside className="w-full md:w-1/3 lg:w-1/4 bg-card border-l p-6 flex flex-col">
         <CardHeader className="p-0">
-            <CardTitle>Прогрес аудиту</CardTitle>
-            <CardDescription>Дайте відповідь на всі запитання, щоб отримати повний звіт.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+                <Wand2/>
+                Аналітичне резюме
+            </CardTitle>
+            <CardDescription>Результати оновлюються після кожної вашої відповіді.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0 mt-6 space-y-4">
-            <div className="space-y-2">
-                <Progress value={progress} />
-                <p className="text-sm text-muted-foreground text-center">{currentQuestionIndex + 1} з {questions.length} запитань</p>
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                {questions.map((q, index) => (
-                    <div 
-                        key={q.id}
-                        className={`p-2 rounded-md text-xs cursor-pointer ${index === currentQuestionIndex ? 'bg-primary/20 font-semibold' : 'hover:bg-muted'}`}
-                        onClick={() => setCurrentQuestionIndex(index)}
-                    >
-                       {q.id}. {q.text}
-                    </div>
-                ))}
-            </div>
+        <CardContent className="flex-1 flex flex-col p-0 mt-6 space-y-4 overflow-y-auto">
+           <div className="space-y-1">
+                <h4 className="text-sm font-semibold">Загальне резюме</h4>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{summary}</p>
+           </div>
+           <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Виявлені проблеми та ризики</h4>
+                {problems.length > 0 ? (
+                    <ul className="space-y-2">
+                        {problems.map((problem, index) => (
+                            <li key={index} className="flex items-start gap-2 text-sm">
+                                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5"/>
+                                <span>{problem}</span>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-sm text-muted-foreground">Проблем поки не виявлено.</p>
+                )}
+           </div>
         </CardContent>
       </aside>
     </div>
