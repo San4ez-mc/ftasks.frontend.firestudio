@@ -17,7 +17,7 @@ import type { Result as ResultType } from '@/components/tasks/results-list';
 import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
-import { getTasksForDate, createTask, updateTask } from '@/app/tasks/actions';
+import { getTasksForDate, createTask, updateTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
 
 
