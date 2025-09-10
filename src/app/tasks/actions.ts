@@ -2,70 +2,9 @@
 'use server';
 
 import type { Task } from '@/types/task';
+import { tasksDb } from '@/lib/db';
 
-// --- MOCK DATABASE ---
-// In a real application, this data would come from a database like Firestore.
-
-let tasks: Task[] = [
-    { 
-        id: '1', 
-        title: 'Розробити API для авторизації', 
-        description: 'Створити ендпоінти для реєстрації, входу та виходу користувача. Використовувати JWT для автентифікації.',
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo', 
-        type: 'important-urgent', 
-        expectedTime: 60,
-        assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        resultName: 'Розробити новий модуль аналітики',
-    },
-    { 
-        id: '2', 
-        title: 'Створити UI/UX для сторінки задач', 
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo',
-        type: 'important-not-urgent',
-        expectedTime: 120,
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
-    },
-    { 
-        id: '3', 
-        title: 'Налаштувати інтеграцію з Telegram', 
-        dueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
-        status: 'done',
-        type: 'not-important-urgent',
-        expectedTime: 45,
-        actualTime: 50,
-        expectedResult: 'Інтеграція має бути налаштована',
-        actualResult: 'Інтеграція налаштована і протестована',
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        resultName: 'Запустити рекламну кампанію в Google Ads'
-    },
-    { 
-        id: '4', 
-        title: 'Підготувати презентацію для клієнта', 
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo',
-        type: 'not-important-not-urgent',
-        expectedTime: 30,
-        assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
-    },
-    { 
-        id: '5', 
-        title: 'Задача від керівника', 
-        description: 'Перевірити звіти за минулий місяць.',
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo', 
-        type: 'important-urgent', 
-        expectedTime: 90,
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    },
-];
-
+let tasks: Task[] = tasksDb;
 
 // --- SERVER ACTIONS ---
 
@@ -88,7 +27,7 @@ export async function getTasksForDate(
             return dateFilteredTasks.filter(t => t.reporter.id === userId && t.assignee.id !== userId);
         case 'subordinates':
             // In a real app, you'd have a hierarchy. For mock data, we'll treat it like 'delegated'.
-            return dateFilteredTasks.filter(t => t.reporter.id === userId && t.assignee.id !== userId);
+            return dateFilteredTasks.filter(t => t.reporter.id !== userId && t.assignee.id !== userId);
         case 'mine':
         default:
             return dateFilteredTasks.filter(t => t.assignee.id === userId);

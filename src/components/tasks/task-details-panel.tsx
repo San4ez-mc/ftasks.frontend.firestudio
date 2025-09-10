@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { formatDate } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -27,6 +27,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { parseTime, formatTime } from '@/lib/timeUtils';
+import { deleteTask } from '@/app/tasks/actions';
+import { useToast } from '@/hooks/use-toast';
 
 type TaskDetailsPanelProps = {
   task: Task;
@@ -58,6 +60,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [expectedTime, setExpectedTime] = useState(formatTime(task.expectedTime));
+  const { toast } = useToast();
   
   useEffect(() => {
       setTitle(task.title);
@@ -111,6 +114,16 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
     setExpectedTime(formatTime(newTimeInMinutes));
   };
 
+  const handleDelete = async () => {
+      try {
+          await deleteTask(task.id);
+          toast({ title: "Успіх", description: "Задачу видалено." });
+          onClose(); // Close panel after deletion
+      } catch (error) {
+          toast({ title: "Помилка", description: "Не вдалося видалити задачу.", variant: "destructive" });
+      }
+  }
+
 
   return (
     <div className="flex flex-col h-full bg-card border-l">
@@ -136,7 +149,23 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
             <DropdownMenuContent align="end">
                 <DropdownMenuItem>Перенести</DropdownMenuItem>
                 <DropdownMenuItem>Дублювати</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive">Видалити</DropdownMenuItem>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">Видалити</DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Цю дію неможливо скасувати. Це назавжди видалить задачу.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete}>Видалити</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </DropdownMenuContent>
         </DropdownMenu>
         <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>

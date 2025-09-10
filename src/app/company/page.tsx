@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +16,9 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
+import type { Employee } from '@/types/company';
+import { getEmployees, updateEmployee } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 // --- MOCK DATA ---
@@ -35,76 +38,6 @@ const mockGroups = [
     { id: 'grp-2', name: 'Менеджмент' },
     { id: 'grp-3', name: 'Маркетинг' },
 ];
-
-const mockEmployeesData = [
-    {
-        id: 'emp-1',
-        telegramUserId: '345126254',
-        telegramUsername: 'olexandrmatsuk',
-        firstName: 'Oleksandr',
-        lastName: 'Matsuk',
-        avatar: 'https://picsum.photos/100/100?random=1',
-        status: 'active',
-        notes: 'Ключовий розробник, спеціалізується на React та Next.js. Відповідальний за архітектуру фронтенду.',
-        positions: ['pos-1', 'pos-7'], // Multiple positions
-        groups: ['grp-1'],
-        synonyms: ['Alex', 'O.M.'],
-    },
-    {
-        id: 'emp-2',
-        telegramUserId: 'tg-456',
-        telegramUsername: 'maria_s',
-        firstName: 'Марія',
-        lastName: 'Сидоренко',
-        avatar: 'https://picsum.photos/100/100?random=2',
-        status: 'active',
-        notes: 'Менеджер проектів, відповідає за комунікацію з клієнтами та планування спринтів.',
-        positions: ['pos-3'],
-        groups: ['grp-1', 'grp-2'],
-        synonyms: ['Маша'],
-    },
-     {
-        id: 'emp-3',
-        telegramUserId: 'tg-789',
-        telegramUsername: 'olena_k',
-        firstName: 'Олена',
-        lastName: 'Ковальчук',
-        avatar: 'https://picsum.photos/100/100?random=3',
-        status: 'vacation',
-        notes: 'Сильний дизайнер з досвідом у мобільних додатках.',
-        positions: ['pos-5'],
-        groups: ['grp-1'],
-        synonyms: [],
-    },
-    {
-        id: 'emp-4',
-        telegramUserId: 'tg-101',
-        telegramUsername: 'petro_i',
-        firstName: 'Петро',
-        lastName: 'Іваненко',
-        avatar: 'https://picsum.photos/100/100?random=4',
-        status: 'active',
-        notes: 'Засновник та ідейний лідер компанії.',
-        positions: ['pos-6'],
-        groups: ['grp-2'],
-        synonyms: ['Петя'],
-    },
-     {
-        id: 'emp-5',
-        telegramUserId: 'tg-112',
-        telegramUsername: 'andriy_b',
-        firstName: 'Андрій',
-        lastName: 'Бондаренко',
-        avatar: 'https://picsum.photos/100/100?random=5',
-        status: 'inactive',
-        notes: 'Спеціаліст з контекстної реклами та SEO.',
-        positions: ['pos-4'],
-        groups: ['grp-3'],
-        synonyms: [],
-    },
-];
-
-type Employee = typeof mockEmployeesData[0];
 
 // --- TOUR STEPS ---
 
@@ -135,14 +68,39 @@ const companyTourSteps: TourStep[] = [
 // --- MAIN COMPONENT ---
 
 export default function CompanyPage() {
-    const [employees, setEmployees] = useState(mockEmployeesData);
-    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(mockEmployeesData[0]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+
+    useEffect(() => {
+        startTransition(async () => {
+            const fetchedEmployees = await getEmployees();
+            setEmployees(fetchedEmployees);
+            if (fetchedEmployees.length > 0) {
+                setSelectedEmployee(fetchedEmployees[0]);
+            }
+        });
+    }, []);
 
     const handleEmployeeUpdate = (updatedEmployee: Employee) => {
-        setEmployees(employees.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
-        if (selectedEmployee?.id === updatedEmployee.id) {
-            setSelectedEmployee(updatedEmployee);
-        }
+        startTransition(async () => {
+            // Optimistic update
+            setEmployees(employees.map(e => e.id === updatedEmployee.id ? updatedEmployee : e));
+            if (selectedEmployee?.id === updatedEmployee.id) {
+                setSelectedEmployee(updatedEmployee);
+            }
+
+            try {
+                await updateEmployee(updatedEmployee.id, updatedEmployee);
+                toast({ title: "Успіх", description: "Дані співробітника оновлено." });
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося оновити дані.", variant: "destructive" });
+                // Re-fetch to sync
+                const fetchedEmployees = await getEmployees();
+                setEmployees(fetchedEmployees);
+            }
+        });
     };
 
     const handleClosePanel = () => {
@@ -170,6 +128,7 @@ export default function CompanyPage() {
                     </div>
                 </header>
                 <div className="flex-1 overflow-y-auto" id="employee-list-table">
+                    {isPending ? <p className="p-4">Завантаження...</p> : (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -218,6 +177,7 @@ export default function CompanyPage() {
                             })}
                         </TableBody>
                     </Table>
+                    )}
                 </div>
             </div>
 
@@ -243,7 +203,6 @@ export default function CompanyPage() {
 
 function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; onUpdate: (employee: Employee) => void; onClose: () => void; }) {
 
-    // Local state for edits
     const [formData, setFormData] = useState<Partial<Employee>>(employee);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -267,7 +226,6 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
 
     const handleSaveChanges = () => {
         onUpdate({ ...employee, ...formData });
-        // Optional: show a toast notification
     };
 
     const employeePositions = formData.positions?.map(pId => mockPositions.find(p => p.id === pId)).filter(Boolean) || [];

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,95 +18,9 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
+import { getResults, createResult, updateResult, deleteResult } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
-const initialResults: Result[] = [
-  {
-    id: 'res-1',
-    name: 'Запустити рекламну кампанію в Google Ads',
-    status: 'В роботі',
-    completed: false,
-    isUrgent: true,
-    deadline: '2024-09-01',
-    assignee: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-    reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    description: 'Основна мета - залучити 1000 нових користувачів через пошукову рекламу. Бюджет 500$.',
-    expectedResult: 'Залучено 1000 нових користувачів з конверсією не нижче 5%.',
-    subResults: [
-        { id: 'sub-1', name: 'Налаштувати аналітику', completed: true },
-        { id: 'sub-2', name: 'Створити креативи', completed: false },
-    ],
-    tasks: [
-        { id: 'task-5', title: 'Зібрати семантичне ядро', status: 'done' },
-    ],
-    templates: [
-        { id: 'tpl-1', name: 'Щотижневий звіт по кампанії' }
-    ]
-  },
-  {
-    id: 'res-2',
-    name: 'Розробити новий модуль аналітики',
-    status: 'Заплановано',
-    completed: false,
-    isUrgent: false,
-    deadline: '2024-10-15',
-    assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-    reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-    description: 'Інтегрувати нові дашборди для відстеження KPI в реальному часі.',
-    expectedResult: 'Новий модуль аналітики доступний всім користувачам з роллю "Менеджер".',
-    subResults: [],
-    tasks: [],
-    templates: []
-  },
-  {
-    id: 'res-3',
-    name: 'Підготувати квартальний звіт для інвесторів',
-    status: 'В роботі',
-    completed: false,
-    isUrgent: false,
-    deadline: '2024-09-30',
-    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    description: 'Звіт має містити аналіз фінансових показників, досягнень та планів на наступний квартал.',
-    expectedResult: 'Фінальна версія звіту у форматі PDF надіслана усім інвесторам.',
-    subResults: [
-         { id: 'sub-3-1', name: 'Зібрати фінансові дані', completed: true },
-         { id: 'sub-3-2', name: 'Проаналізувати маркетингові метрики', completed: true },
-         { id: 'sub-3-3', name: 'Сформувати презентацію', completed: false },
-    ],
-    tasks: [],
-    templates: []
-  },
-   {
-    id: 'res-4',
-    name: 'Оновити дизайн головної сторінки',
-    status: 'Відкладено',
-    completed: false,
-    isUrgent: false,
-    deadline: '2024-08-25',
-    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-    description: 'Переробити UI/UX для підвищення конверсії на 15%.',
-    expectedResult: 'Новий дизайн головної сторінки опубліковано.',
-    subResults: [],
-    tasks: [],
-    templates: []
-  },
-  {
-    id: 'res-5',
-    name: 'Провести A/B тестування цін',
-    status: 'Виконано',
-    completed: true,
-    isUrgent: false,
-    deadline: '2024-07-30',
-    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    reporter: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-    description: 'Визначити оптимальну цінову стратегію для нового продукту.',
-    expectedResult: 'Звіт з результатами A/B тестування та рекомендаціями по ціноутворенню.',
-    subResults: [],
-    tasks: [],
-    templates: []
-  },
-];
 
 // Assume current user for filtering
 const currentUserId = 'user-4';
@@ -147,56 +61,68 @@ const resultsTourSteps: TourStep[] = [
 export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
-  const [results, setResults] = useState(initialResults);
+  const [results, setResults] = useState<Result[]>([]);
   const [activeTab, setActiveTab] = useState('mine');
   const [statusFilter, setStatusFilter] = useState<string[]>(allStatuses);
   const newResultInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
-    useEffect(() => {
-      if (initialResults.length > 0 && !selectedResult) {
-        //   setSelectedResult(initialResults[0]);
-      }
-    }, [selectedResult, results]);
+  useEffect(() => {
+    startTransition(async () => {
+        const fetchedResults = await getResults();
+        setResults(fetchedResults);
+    });
+  }, []);
 
   const handleResultUpdate = (updatedResult: Result) => {
-    setResults(currentResults =>
-      currentResults.map(r => (r.id === updatedResult.id ? updatedResult : r))
-    );
-    if (selectedResult && selectedResult.id === updatedResult.id) {
-      setSelectedResult(updatedResult);
-    }
-  };
-
-  const createNewResult = (index?: number): Result => {
-    const newResult: Result = {
-      id: `new-${Date.now()}`,
-      name: '',
-      status: 'Заплановано',
-      completed: false,
-      isUrgent: false,
-      deadline: new Date().toISOString().split('T')[0],
-      assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
-      reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
-      description: '',
-      expectedResult: '',
-      subResults: [],
-      tasks: [],
-      templates: [],
-    };
-
-    setResults(prev => {
-        const newResults = [...prev];
-        const insertionIndex = index !== undefined ? index + 1 : prev.length;
-        newResults.splice(insertionIndex, 0, newResult);
-        return newResults;
+    startTransition(async () => {
+        setResults(currentResults =>
+          currentResults.map(r => (r.id === updatedResult.id ? updatedResult : r))
+        );
+        if (selectedResult && selectedResult.id === updatedResult.id) {
+            setSelectedResult(updatedResult);
+        }
+        try {
+            await updateResult(updatedResult.id, updatedResult);
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося оновити результат.", variant: "destructive" });
+            const fetchedResults = await getResults(); // Re-fetch to sync
+            setResults(fetchedResults);
+        }
     });
-    return newResult;
   };
 
   const handleCreateNewResult = (index?: number) => {
-    const newResult = createNewResult(index);
-    setSelectedResult(newResult);
+    startTransition(async () => {
+        const newResultData: Omit<Result, 'id'> = {
+            name: '',
+            status: 'Заплановано',
+            completed: false,
+            isUrgent: false,
+            deadline: new Date().toISOString().split('T')[0],
+            assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
+            reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
+            description: '',
+            expectedResult: '',
+            subResults: [],
+            tasks: [],
+            templates: [],
+        };
+        try {
+            const createdResult = await createResult(newResultData, index);
+            setResults(prev => {
+                const newResults = [...prev];
+                const insertionIndex = index !== undefined ? index + 1 : prev.length;
+                newResults.splice(insertionIndex, 0, createdResult);
+                return newResults;
+            });
+            setSelectedResult(createdResult);
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося створити результат.", variant: "destructive" });
+        }
+    });
   };
   
     const handleCreateTask = (result: Result) => {
@@ -219,10 +145,19 @@ export default function ResultsPage() {
     }
 
     const handleDeleteResult = (resultId: string) => {
-        setResults(prev => prev.filter(r => r.id !== resultId));
-        if (selectedResult?.id === resultId) {
-            setSelectedResult(null);
-        }
+        startTransition(async () => {
+            const originalResults = results;
+            setResults(prev => prev.filter(r => r.id !== resultId));
+            if (selectedResult?.id === resultId) {
+                setSelectedResult(null);
+            }
+            try {
+                await deleteResult(resultId);
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося видалити результат.", variant: "destructive" });
+                setResults(originalResults); // Revert on error
+            }
+        });
     }
 
     const handlePostponeResult = (result: Result) => {
@@ -230,28 +165,19 @@ export default function ResultsPage() {
     }
 
   useEffect(() => {
-    if (selectedResult?.id.startsWith('new-') && newResultInputRef.current) {
+    if (selectedResult?.name === '' && newResultInputRef.current) {
       newResultInputRef.current.focus();
     }
   }, [selectedResult]);
 
   const handleClosePanel = () => {
-    setResults(prev => prev.filter(r => !(r.id.startsWith('new-') && r.name.trim() === '')));
+    const resultToClose = selectedResult;
     setSelectedResult(null);
-  };
-  
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-            handleClosePanel();
-        }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
+    if (resultToClose && resultToClose.name.trim() === '') {
+       handleDeleteResult(resultToClose.id);
+    }
+  };
   
   const filteredResults = useMemo(() => {
     let filtered = results;
@@ -352,7 +278,8 @@ export default function ResultsPage() {
         </header>
         
         <main id="results-table" className="flex-1 overflow-y-auto px-4 md:px-6">
-          {viewMode === 'table' ? (
+          {isPending && <p>Завантаження...</p>}
+          {!isPending && viewMode === 'table' ? (
             <ResultsTable 
               groupedResults={groupedResults}
               onResultSelect={setSelectedResult} 
@@ -368,7 +295,7 @@ export default function ResultsPage() {
               handlePostponeResult={handlePostponeResult}
             />
           ) : (
-            <ResultsCards results={filteredResults.filter(r => !r.id.startsWith('new-'))} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
+            <ResultsCards results={filteredResults.filter(r => r.name !== '')} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
           )}
         </main>
       </div>
@@ -442,7 +369,7 @@ function ResultsTable({
   };
 
   const renderRow = (result: Result, index: number, allResults: Result[]) => {
-    const isCreating = result.id.startsWith('new-');
+    const isCreating = result.name === '';
     const globalIndex = allResults.findIndex(r => r.id === result.id);
     
     return (
@@ -471,8 +398,8 @@ function ResultsTable({
                                 ref={newResultInputRef}
                                 placeholder="Назва нового результату..."
                                 value={result.name}
-                                onChange={(e) => handleNewResultUpdate(result, e.target.value)}
-                                onBlur={() => onResultUpdate(result)}
+                                onChange={(e) => onResultUpdate({ ...result, name: e.target.value })}
+                                onBlur={() => { if (result.name.trim() !== '') { onResultUpdate(result) } else { handleDeleteResult(result.id) } }}
                                 onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                                 className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm bg-transparent"
                             />
@@ -565,7 +492,7 @@ function ResultsTable({
                     )}
                     <div className="border-y">
                         {group.results.map((result, index) => renderRow(result, index, allResults))}
-                         {!group.results.some(r => r.id.startsWith('new-')) && (
+                         {!group.results.some(r => r.name === '') && (
                              <div className="p-2">
                                 <button onClick={() => createNewResult(allResults.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
                                     <Plus className="h-3 w-3" /> Створити результат

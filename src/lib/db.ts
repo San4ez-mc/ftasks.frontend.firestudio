@@ -2,6 +2,11 @@
 // --- Mock Database ---
 // In a real application, this would connect to a real database like PostgreSQL or Firestore.
 
+import type { Result } from "@/types/result";
+import type { Task } from "@/types/task";
+import type { Template } from "@/types/template";
+import type { Employee } from "@/types/company";
+
 // User table based on docs/database-schema.md
 export let users = [
     {
@@ -20,15 +25,274 @@ export let companies = [
     { id: 'company-2', name: 'My Startup Project', ownerId: 'user-1' }
 ];
 
+export let companyEmployees: Employee[] = [
+    {
+        id: 'emp-1',
+        telegramUserId: '345126254',
+        telegramUsername: 'olexandrmatsuk',
+        firstName: 'Oleksandr',
+        lastName: 'Matsuk',
+        avatar: 'https://picsum.photos/100/100?random=1',
+        status: 'active',
+        notes: 'Ключовий розробник, спеціалізується на React та Next.js. Відповідальний за архітектуру фронтенду.',
+        positions: ['pos-1', 'pos-7'],
+        groups: ['grp-1'],
+        synonyms: ['Alex', 'O.M.'],
+    },
+    {
+        id: 'emp-2',
+        telegramUserId: 'tg-456',
+        telegramUsername: 'maria_s',
+        firstName: 'Марія',
+        lastName: 'Сидоренко',
+        avatar: 'https://picsum.photos/100/100?random=2',
+        status: 'active',
+        notes: 'Менеджер проектів, відповідає за комунікацію з клієнтами та планування спринтів.',
+        positions: ['pos-3'],
+        groups: ['grp-1', 'grp-2'],
+        synonyms: ['Маша'],
+    },
+     {
+        id: 'emp-3',
+        telegramUserId: 'tg-789',
+        telegramUsername: 'olena_k',
+        firstName: 'Олена',
+        lastName: 'Ковальчук',
+        avatar: 'https://picsum.photos/100/100?random=3',
+        status: 'vacation',
+        notes: 'Сильний дизайнер з досвідом у мобільних додатках.',
+        positions: ['pos-5'],
+        groups: ['grp-1'],
+        synonyms: [],
+    },
+    {
+        id: 'emp-4',
+        telegramUserId: 'tg-101',
+        telegramUsername: 'petro_i',
+        firstName: 'Петро',
+        lastName: 'Іваненко',
+        avatar: 'https://picsum.photos/100/100?random=4',
+        status: 'active',
+        notes: 'Засновник та ідейний лідер компанії.',
+        positions: ['pos-6'],
+        groups: ['grp-2'],
+        synonyms: ['Петя'],
+    },
+     {
+        id: 'emp-5',
+        telegramUserId: 'tg-112',
+        telegramUsername: 'andriy_b',
+        firstName: 'Андрій',
+        lastName: 'Бондаренко',
+        avatar: 'https://picsum.photos/100/100?random=5',
+        status: 'inactive',
+        notes: 'Спеціаліст з контекстної реклами та SEO.',
+        positions: ['pos-4'],
+        groups: ['grp-3'],
+        synonyms: [],
+    },
+];
+
 // Employee join table
 export let employees = [
     { id: 'emp-1', userId: 'user-1', companyId: 'company-1', status: 'active', notes: '' },
     { id: 'emp-2', userId: 'user-1', companyId: 'company-2', status: 'active', notes: '' }
 ];
 
+export let tasksDb: Task[] = [
+    { 
+        id: '1', 
+        title: 'Розробити API для авторизації', 
+        description: 'Створити ендпоінти для реєстрації, входу та виходу користувача. Використовувати JWT для автентифікації.',
+        dueDate: new Date().toISOString().split('T')[0], 
+        status: 'todo', 
+        type: 'important-urgent', 
+        expectedTime: 60,
+        assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        resultName: 'Розробити новий модуль аналітики',
+    },
+    { 
+        id: '2', 
+        title: 'Створити UI/UX для сторінки задач', 
+        dueDate: new Date().toISOString().split('T')[0], 
+        status: 'todo',
+        type: 'important-not-urgent',
+        expectedTime: 120,
+        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+    },
+    { 
+        id: '3', 
+        title: 'Налаштувати інтеграцію з Telegram', 
+        dueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
+        status: 'done',
+        type: 'not-important-urgent',
+        expectedTime: 45,
+        actualTime: 50,
+        expectedResult: 'Інтеграція має бути налаштована',
+        actualResult: 'Інтеграція налаштована і протестована',
+        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        resultName: 'Запустити рекламну кампанію в Google Ads'
+    },
+    { 
+        id: '4', 
+        title: 'Підготувати презентацію для клієнта', 
+        dueDate: new Date().toISOString().split('T')[0], 
+        status: 'todo',
+        type: 'not-important-not-urgent',
+        expectedTime: 30,
+        assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
+    },
+    { 
+        id: '5', 
+        title: 'Задача від керівника', 
+        description: 'Перевірити звіти за минулий місяць.',
+        dueDate: new Date().toISOString().split('T')[0], 
+        status: 'todo', 
+        type: 'important-urgent', 
+        expectedTime: 90,
+        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+        reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    },
+];
+
+export let resultsDb: Result[] = [
+  {
+    id: 'res-1',
+    name: 'Запустити рекламну кампанію в Google Ads',
+    status: 'В роботі',
+    completed: false,
+    isUrgent: true,
+    deadline: '2024-09-01',
+    assignee: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+    reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    description: 'Основна мета - залучити 1000 нових користувачів через пошукову рекламу. Бюджет 500$.',
+    expectedResult: 'Залучено 1000 нових користувачів з конверсією не нижче 5%.',
+    subResults: [
+        { id: 'sub-1', name: 'Налаштувати аналітику', completed: true },
+        { id: 'sub-2', name: 'Створити креативи', completed: false },
+    ],
+    tasks: [
+        { id: 'task-5', title: 'Зібрати семантичне ядро', status: 'done' },
+    ],
+    templates: [
+        { id: 'tpl-1', name: 'Щотижневий звіт по кампанії' }
+    ]
+  },
+  {
+    id: 'res-2',
+    name: 'Розробити новий модуль аналітики',
+    status: 'Заплановано',
+    completed: false,
+    isUrgent: false,
+    deadline: '2024-10-15',
+    assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
+    reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+    description: 'Інтегрувати нові дашборди для відстеження KPI в реальному часі.',
+    expectedResult: 'Новий модуль аналітики доступний всім користувачам з роллю "Менеджер".',
+    subResults: [],
+    tasks: [],
+    templates: []
+  },
+  {
+    id: 'res-3',
+    name: 'Підготувати квартальний звіт для інвесторів',
+    status: 'В роботі',
+    completed: false,
+    isUrgent: false,
+    deadline: '2024-09-30',
+    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    description: 'Звіт має містити аналіз фінансових показників, досягнень та планів на наступний квартал.',
+    expectedResult: 'Фінальна версія звіту у форматі PDF надіслана усім інвесторам.',
+    subResults: [
+         { id: 'sub-3-1', name: 'Зібрати фінансові дані', completed: true },
+         { id: 'sub-3-2', name: 'Проаналізувати маркетингові метрики', completed: true },
+         { id: 'sub-3-3', name: 'Сформувати презентацію', completed: false },
+    ],
+    tasks: [],
+    templates: []
+  },
+   {
+    id: 'res-4',
+    name: 'Оновити дизайн головної сторінки',
+    status: 'Відкладено',
+    completed: false,
+    isUrgent: false,
+    deadline: '2024-08-25',
+    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+    description: 'Переробити UI/UX для підвищення конверсії на 15%.',
+    expectedResult: 'Новий дизайн головної сторінки опубліковано.',
+    subResults: [],
+    tasks: [],
+    templates: []
+  },
+  {
+    id: 'res-5',
+    name: 'Провести A/B тестування цін',
+    status: 'Виконано',
+    completed: true,
+    isUrgent: false,
+    deadline: '2024-07-30',
+    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    reporter: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+    description: 'Визначити оптимальну цінову стратегію для нового продукту.',
+    expectedResult: 'Звіт з результатами A/B тестування та рекомендаціями по ціноутворенню.',
+    subResults: [],
+    tasks: [],
+    templates: []
+  },
+];
+
+export let templatesDb: Template[] = [
+  { 
+    id: '1', 
+    name: 'Щоденний звіт', 
+    repeatability: 'Щоденно о 9:00', 
+    startDate: '2024-08-01',
+    expectedResult: 'Звіт про виконані задачі за день',
+    tasksGenerated: [
+        { id: 't1-1', date: '2024-08-01', status: 'done'},
+        { id: 't1-2', date: '2024-08-02', status: 'done'},
+        { id: 't1-3', date: '2024-08-03', status: 'todo'},
+    ]
+  },
+  { 
+    id: '2', 
+    name: 'Щотижнева аналітика', 
+    repeatability: 'Щотижня (Пн)', 
+    startDate: '2024-07-29',
+    expectedResult: 'Аналітичний звіт по ключових метриках за тиждень',
+    tasksGenerated: [
+        { id: 't2-1', date: '2024-07-29', status: 'done'},
+        { id: 't2-2', date: '2024-08-05', status: 'todo'},
+    ]
+  },
+  { 
+    id: '3', 
+    name: 'Підготовка до щомісячної зустрічі', 
+    repeatability: 'Щомісяця (25 число)', 
+    startDate: '2024-06-25',
+    expectedResult: 'Презентація з результатами місяця',
+    tasksGenerated: [
+        { id: 't3-1', date: '2024-06-25', status: 'done'},
+        { id: 't3-2', date: '2024-07-25', status: 'done'},
+    ]
+  },
+];
+
+
 // Export all tables as a single object for convenience
 export const db = {
     users,
     companies,
     employees,
+    companyEmployees,
+    tasks: tasksDb,
+    results: resultsDb,
+    templates: templatesDb,
 };

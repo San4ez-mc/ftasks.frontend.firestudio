@@ -2,10 +2,8 @@
 'use client';
 
 import type { Task } from '@/types/task';
-import { useState, useRef, useEffect, useMemo } from 'react';
-import {
-  Plus,
-} from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
@@ -19,67 +17,9 @@ import type { Result as ResultType } from '@/components/tasks/results-list';
 import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
+import { getTasksForDate, createTask, updateTask } from '@/app/tasks/actions';
+import { useToast } from '@/hooks/use-toast';
 
-
-const initialTasks: Task[] = [
-    { 
-        id: '1', 
-        title: 'Розробити API для авторизації', 
-        description: 'Створити ендпоінти для реєстрації, входу та виходу користувача. Використовувати JWT для автентифікації.',
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo', 
-        type: 'important-urgent', 
-        expectedTime: 60,
-        assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        resultName: 'Розробити новий модуль аналітики',
-    },
-    { 
-        id: '2', 
-        title: 'Створити UI/UX для сторінки задач', 
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo',
-        type: 'important-not-urgent',
-        expectedTime: 120,
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
-    },
-    { 
-        id: '3', 
-        title: 'Налаштувати інтеграцію з Telegram', 
-        dueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
-        status: 'done',
-        type: 'not-important-urgent',
-        expectedTime: 45,
-        actualTime: 50,
-        expectedResult: 'Інтеграція має бути налаштована',
-        actualResult: 'Інтеграція налаштована і протестована',
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        resultName: 'Запустити рекламну кампанію в Google Ads'
-    },
-    { 
-        id: '4', 
-        title: 'Підготувати презентацію для клієнта', 
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo',
-        type: 'not-important-not-urgent',
-        expectedTime: 30,
-        assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
-    },
-    { 
-        id: '5', 
-        title: 'Задача від керівника', 
-        description: 'Перевірити звіти за минулий місяць.',
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo', 
-        type: 'important-urgent', 
-        expectedTime: 90,
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    },
-];
 
 const currentUserId = 'user-2'; // Mock current user
 
@@ -115,12 +55,14 @@ const tasksTourSteps: TourStep[] = [
 
 
 export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTab, setActiveTab] = useState('mine');
   const newTaskInputRef = useRef<HTMLInputElement>(null);
   const taskTitleInputRef = useRef<HTMLInputElement>(null);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   useEffect(() => {
     // Set the date only on the client side to avoid hydration mismatch
@@ -128,19 +70,23 @@ export default function TasksPage() {
   }, []);
 
   useEffect(() => {
+    if (currentDate) {
+        startTransition(async () => {
+            const fetchedTasks = await getTasksForDate(currentDate.toISOString().split('T')[0], currentUserId, activeTab as any);
+            setTasks(fetchedTasks);
+        });
+    }
+  }, [currentDate, activeTab]);
+
+  useEffect(() => {
     if (selectedTask && taskTitleInputRef.current) {
         taskTitleInputRef.current.focus();
     }
   }, [selectedTask]);
 
-  useEffect(() => {
-      if (initialTasks.length > 0 && !selectedTask) {
-        //   setSelectedTask(initialTasks[0]);
-      }
-  }, [selectedTask, tasks]);
-
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
+    setSelectedTask(null);
   };
 
   const handleTaskSelect = (task: Task) => {
@@ -148,15 +94,52 @@ export default function TasksPage() {
   };
   
   const handleTaskUpdate = (updatedTask: Task) => {
-    setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
-    if (selectedTask && selectedTask.id === updatedTask.id) {
-        setSelectedTask(updatedTask);
-    }
+     startTransition(async () => {
+        // Optimistic update
+        setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+        if (selectedTask && selectedTask.id === updatedTask.id) {
+            setSelectedTask(updatedTask);
+        }
+        
+        try {
+            await updateTask(updatedTask.id, updatedTask);
+        } catch (error) {
+            // Revert on error
+            toast({ title: "Помилка", description: "Не вдалося оновити задачу.", variant: "destructive" });
+             if (currentDate) {
+                const fetchedTasks = await getTasksForDate(currentDate.toISOString().split('T')[0], currentUserId, activeTab as any);
+                setTasks(fetchedTasks);
+            }
+        }
+    });
   }
 
-  const createNewTask = (title: string, resultName?: string): Task => {
-    const newTask: Task = {
-      id: `task-${Date.now()}`,
+  const handleTaskCreate = (taskData: Omit<Task, 'id'>) => {
+      startTransition(async () => {
+        const tempId = `temp-${Date.now()}`;
+        const newTask: Task = { id: tempId, ...taskData };
+
+        // Optimistic update
+        setTasks(prevTasks => [newTask, ...prevTasks]);
+        setSelectedTask(newTask);
+
+        try {
+            const createdTask = await createTask(taskData);
+            // Replace temporary task with the real one from the server
+            setTasks(prevTasks => prevTasks.map(t => t.id === tempId ? createdTask : t));
+            if (selectedTask?.id === tempId) {
+                setSelectedTask(createdTask);
+            }
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося створити задачу.", variant: "destructive" });
+            // Revert on error
+            setTasks(prevTasks => prevTasks.filter(t => t.id !== tempId));
+        }
+    });
+  }
+
+  const createNewTask = (title: string, resultName?: string) => {
+    const newTaskData: Omit<Task, 'id'> = {
       title: title,
       dueDate: (currentDate || new Date()).toISOString().split('T')[0],
       status: 'todo',
@@ -168,13 +151,11 @@ export default function TasksPage() {
       reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
       resultName: resultName,
     };
-    setTasks(prevTasks => [newTask, ...prevTasks]);
-    return newTask;
+    handleTaskCreate(newTaskData);
   };
 
   const handleResultClick = (result: ResultType) => {
-    const newTask = createNewTask(result.name, result.name);
-    setSelectedTask(newTask);
+    createNewTask(result.name, result.name);
   };
 
   const handleNewTaskKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -183,16 +164,14 @@ export default function TasksPage() {
       const inputElement = event.currentTarget;
       const title = inputElement.value.trim();
       if (title) {
-        const newTask = createNewTask(title);
-        setSelectedTask(newTask);
+        createNewTask(title);
         inputElement.value = '';
       }
     }
   };
 
   const handleFabClick = () => {
-    const newTask = createNewTask('');
-    setSelectedTask(newTask);
+    createNewTask('');
     setTimeout(() => newTaskInputRef.current?.focus(), 0);
   };
   
@@ -201,27 +180,7 @@ export default function TasksPage() {
   };
 
   const { totalExpectedTime, totalActualTime, filteredTasks } = useMemo(() => {
-    if (!currentDate) return { totalExpectedTime: 0, totalActualTime: 0, filteredTasks: [] };
-    
-    const selectedDateString = currentDate.toISOString().split('T')[0];
-    let dateFilteredTasks = tasks.filter(task => task.dueDate === selectedDateString);
-    
-    let tabFilteredTasks;
-    switch(activeTab) {
-        case 'delegated':
-            tabFilteredTasks = dateFilteredTasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
-            break;
-        case 'subordinates':
-            // This is a simplified logic. A real app would have a proper user hierarchy.
-             tabFilteredTasks = dateFilteredTasks.filter(t => t.reporter.id === currentUserId && t.assignee.id !== currentUserId);
-            break;
-        case 'mine':
-        default:
-            tabFilteredTasks = dateFilteredTasks.filter(t => t.assignee.id === currentUserId);
-            break;
-    }
-
-    const totals = tabFilteredTasks.reduce(
+    const totals = tasks.reduce(
       (acc, task) => {
         acc.totalExpectedTime += task.expectedTime || 0;
         acc.totalActualTime += task.actualTime || 0;
@@ -229,8 +188,8 @@ export default function TasksPage() {
       },
       { totalExpectedTime: 0, totalActualTime: 0 }
     );
-    return { ...totals, filteredTasks: tabFilteredTasks };
-  }, [tasks, activeTab, currentDate]);
+    return { ...totals, filteredTasks: tasks };
+  }, [tasks]);
   
   const groupedTasks = useMemo(() => {
     if (activeTab === 'mine') {
@@ -269,7 +228,8 @@ export default function TasksPage() {
           />
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
             <div className="border-t" id="tasks-table">
-                 {Object.values(groupedTasks).map(group => (
+                 {isPending && <div>Завантаження...</div>}
+                 {!isPending && Object.values(groupedTasks).map(group => (
                     <div key={group.id || group.name}>
                         {activeTab !== 'mine' && (
                             <div className="flex items-center gap-3 p-2 border-b bg-muted/50">
