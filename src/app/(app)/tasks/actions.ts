@@ -2,72 +2,77 @@
 'use server';
 
 import type { Task } from '@/types/task';
-import { firestore } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { tasksDb } from '@/lib/db';
 
-const tasksCollection = firestore.collection('tasks');
+let tasks: Task[] = tasksDb;
+
+// --- SERVER ACTIONS ---
 
 /**
  * Fetches tasks for a specific date and user filter.
+ * @param date - The date in 'YYYY-MM-DD' format.
+ * @param userId - The ID of the current user.
+ * @param filter - The filter type: 'mine', 'delegated', or 'subordinates'.
+ * @returns A promise that resolves to an array of tasks.
  */
 export async function getTasksForDate(
     date: string, 
     userId: string, 
     filter: 'mine' | 'delegated' | 'subordinates'
 ): Promise<Task[]> {
-    let query = tasksCollection.where('dueDate', '==', date);
+    const dateFilteredTasks = tasks.filter(task => task.dueDate === date);
 
     switch(filter) {
         case 'delegated':
-            query = query.where('reporter.id', '==', userId).where('assignee.id', '!=', userId);
-            break;
+            return dateFilteredTasks.filter(t => t.reporter.id === userId && t.assignee.id !== userId);
         case 'subordinates':
-             // In a real app, you'd have a hierarchy. For mock data, we'll check not reporter and not assignee
-            query = query.where('reporter.id', '!=', userId).where('assignee.id', '!=', userId);
-            break;
+            // In a real app, you'd have a hierarchy. For mock data, we'll treat it like 'delegated'.
+            return dateFilteredTasks.filter(t => t.reporter.id !== userId && t.assignee.id !== userId);
         case 'mine':
         default:
-            query = query.where('assignee.id', '==', userId);
-            break;
+            return dateFilteredTasks.filter(t => t.assignee.id === userId);
     }
-
-    const snapshot = await query.get();
-    if (snapshot.empty) {
-        return [];
-    }
-
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 }
 
 /**
  * Creates a new task.
+ * @param taskData - The data for the new task, excluding the ID.
+ * @returns A promise that resolves to the newly created task.
  */
 export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
-    const docRef = await tasksCollection.add({
+    const newTask: Task = {
+        id: `task-${Date.now()}-${Math.random()}`,
         ...taskData,
-        createdAt: FieldValue.serverTimestamp(), // Add a creation timestamp
-    });
-    const doc = await docRef.get();
-    return { id: doc.id, ...doc.data() } as Task;
+    };
+    tasks.unshift(newTask); // Add to the beginning of the array
+    return newTask;
 }
 
 /**
  * Updates an existing task.
+ * @param taskId - The ID of the task to update.
+ * @param updates - An object with the fields to update.
+ * @returns A promise that resolves to the updated task, or null if not found.
  */
 export async function updateTask(taskId: string, updates: Partial<Task>): Promise<Task | null> {
-    const docRef = tasksCollection.doc(taskId);
-    await docRef.update(updates);
-    const updatedDoc = await docRef.get();
-    if (!updatedDoc.exists) {
-        return null;
-    }
-    return { id: updatedDoc.id, ...updatedDoc.data() } as Task;
+    let updatedTask: Task | null = null;
+    tasks = tasks.map(task => {
+        if (task.id === taskId) {
+            updatedTask = { ...task, ...updates };
+            return updatedTask;
+        }
+        return task;
+    });
+    return updatedTask;
 }
 
 /**
  * Deletes a task.
+ * @param taskId - The ID of the task to delete.
+ * @returns A promise that resolves to an object indicating success.
  */
 export async function deleteTask(taskId: string): Promise<{ success: boolean }> {
-    await tasksCollection.doc(taskId).delete();
-    return { success: true };
+    const initialLength = tasks.length;
+    tasks = tasks.filter(task => task.id !== taskId);
+    return { success: tasks.length < initialLength };
 }
