@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ResultsList from '@/components/tasks/results-list';
-import type { Result as ResultType } from '@/components/tasks/results-list';
+import type { Result as ResultType } from '@/types/result';
 import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
