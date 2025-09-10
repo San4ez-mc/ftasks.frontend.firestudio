@@ -6,7 +6,8 @@ import { handleTelegramLogin } from '@/lib/telegram-auth';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tempToken, error } = await handleTelegramLogin(body);
+    // FIX: Added the second argument 'rememberMe' with a default of false.
+    const { tempToken, error } = await handleTelegramLogin(body, false);
 
     if (error) {
       return NextResponse.json({ message: error }, { status: 500 });
