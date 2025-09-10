@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, ArrowLeft, Loader2, Wand2, AlertTriangle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, Wand2, AlertTriangle, Mic } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { generateAuditSummary } from '@/ai/flows/audit-summary-flow';
 import { useToast } from '@/hooks/use-toast';
@@ -144,12 +144,17 @@ export default function AuditPage() {
         </div>
         
         <div className="flex-1 flex flex-col space-y-4">
-             <Textarea
-                placeholder="Введіть вашу відповідь тут..."
-                className="flex-1 text-base"
-                value={answers[currentQuestionIndex] || ''}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-            />
+            <div className="relative flex-1">
+                <Textarea
+                    placeholder="Введіть вашу відповідь тут..."
+                    className="flex-1 text-base h-full pr-12"
+                    value={answers[currentQuestionIndex] || ''}
+                    onChange={(e) => handleAnswerChange(e.target.value)}
+                />
+                <Button variant="ghost" size="icon" className="absolute right-2 top-2 text-muted-foreground">
+                    <Mic className="h-5 w-5" />
+                </Button>
+            </div>
         </div>
 
         <div className="flex items-center justify-between pt-4 border-t">
