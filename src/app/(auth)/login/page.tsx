@@ -34,8 +34,11 @@ export default function LoginPage() {
             </Link>
           </Button>
           <div className="flex items-center space-x-2">
-            <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
-            <Label htmlFor="remember-me" className="text-sm font-normal cursor-pointer">
+            <Label
+              htmlFor="remember-me"
+              className="flex items-center gap-2 text-sm font-normal cursor-pointer"
+            >
+              <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
               Запам'ятати мене
             </Label>
           </div>
