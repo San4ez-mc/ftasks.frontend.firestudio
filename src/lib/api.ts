@@ -5,35 +5,36 @@ import { User } from '@/types/user';
 
 // The API base URL is now relative, pointing to our own Next.js backend.
 const API_BASE_URL = '/api';
+const TOKEN_STORAGE_KEY = 'auth_token';
 
 // --- Helper Functions ---
 
 /**
- * Retrieves the permanent authentication token from cookies.
+ * Retrieves the permanent authentication token from localStorage.
  */
 function getToken(): string | null {
   if (typeof window !== 'undefined') {
-    return document.cookie.split('; ').find(row => row.startsWith('auth_token='))?.split('=')[1] || null;
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
   }
   return null;
 }
 
 /**
- * Sets the permanent authentication token in a session cookie.
+ * Sets the permanent authentication token in localStorage.
  */
 function setToken(token: string): void {
   if (typeof window !== 'undefined') {
-    document.cookie = `auth_token=${token}; path=/; SameSite=Lax;`;
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
   }
 }
 
 
 /**
- * Removes the authentication token cookie.
+ * Removes the authentication token from localStorage.
  */
 export function clearToken(): void {
     if (typeof window !== 'undefined') {
-        document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
 }
 

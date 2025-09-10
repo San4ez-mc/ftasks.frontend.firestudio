@@ -77,8 +77,13 @@ export async function POST(request: NextRequest) {
       const fromUser: TelegramUser = body.message.from;
       chatId = body.message.chat.id;
 
+      // Extract payload from the /start command
+      const commandText = body.message.text as string;
+      const payload = commandText.split(' ')[1] || 'auth'; // e.g., "auth" or "auth_remember"
+      const rememberMe = payload === 'auth_remember';
+
       // Directly call the login logic instead of using fetch
-      const { tempToken, error, details } = await handleTelegramLogin(fromUser);
+      const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);
       console.log(`Крок 2: Пошук/створення користувача. Результат: ${details}`);
 
       if (error || !tempToken) {

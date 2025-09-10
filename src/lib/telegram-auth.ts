@@ -12,7 +12,7 @@ interface TelegramUser {
   photo_url?: string;
 }
 
-export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{ tempToken?: string; error?: string; details?: string }> {
+export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
   if (!JWT_SECRET) {
     console.error("JWT_SECRET is not defined.");
     return { error: 'Server configuration error' };
@@ -45,8 +45,8 @@ export async function handleTelegramLogin(telegramUser: TelegramUser): Promise<{
     }
     // --- End Database Logic ---
 
-    // Generate a short-lived temporary token
-    const tempToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '5m' });
+    // Generate a short-lived temporary token, now including the rememberMe flag
+    const tempToken = jwt.sign({ userId: user.id, rememberMe }, JWT_SECRET, { expiresIn: '5m' });
     
     return { tempToken, details };
 

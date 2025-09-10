@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }
-    const { userId } = authResult;
+    const { userId, rememberMe } = authResult;
 
     // Fix: Ensure userId is not undefined before proceeding
     if (!userId) {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     employees.push(newEmployeeEntry);
     // --- End Database Logic ---
 
-    const permanentToken = createPermanentToken(userId, newCompany.id);
+    const permanentToken = createPermanentToken(userId, newCompany.id, rememberMe || false);
     
     return NextResponse.json({ token: permanentToken });
 

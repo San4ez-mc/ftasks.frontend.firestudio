@@ -8,6 +8,7 @@ const PERMANENT_JWT_SECRET = process.env.PERMANENT_JWT_SECRET;
 type AuthResult = {
   userId?: string;
   companyId?: string;
+  rememberMe?: boolean;
   error?: string;
   status?: number;
 };
@@ -27,16 +28,17 @@ export async function verifyToken(request: NextRequest, isPermanent = false): Pr
   }
 
   try {
-    const decoded = jwt.verify(token, secret) as { userId: string, companyId?: string, iat: number, exp: number };
-    return { userId: decoded.userId, companyId: decoded.companyId };
+    const decoded = jwt.verify(token, secret) as { userId: string, companyId?: string, rememberMe?: boolean, iat: number, exp: number };
+    return { userId: decoded.userId, companyId: decoded.companyId, rememberMe: decoded.rememberMe };
   } catch (err) {
     return { error: 'Invalid or expired token', status: 401 };
   }
 }
 
-export function createPermanentToken(userId: string, companyId: string): string {
+export function createPermanentToken(userId: string, companyId: string, rememberMe: boolean): string {
     if (!PERMANENT_JWT_SECRET) {
       throw new Error('Permanent JWT secret is not defined in environment variables.');
     }
-    return jwt.sign({ userId, companyId }, PERMANENT_JWT_SECRET, { expiresIn: '7d' });
+    const expiresIn = rememberMe ? '30d' : '7d';
+    return jwt.sign({ userId, companyId, rememberMe }, PERMANENT_JWT_SECRET, { expiresIn });
 }

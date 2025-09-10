@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }
-    const { userId } = authResult;
+    const { userId, rememberMe } = authResult;
 
     const { companyId } = await request.json();
     if (!companyId) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
     // --- End Database Logic ---
 
-    const permanentToken = createPermanentToken(userId, companyId);
+    const permanentToken = createPermanentToken(userId, companyId, rememberMe || false);
 
     return NextResponse.json({ token: permanentToken });
 
