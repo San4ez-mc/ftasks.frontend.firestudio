@@ -2,7 +2,7 @@
 'use server';
 
 import type { Task } from '@/types/task';
-import { tasksService } from '@/lib/firestore-service';
+import { getAllTasks, createTaskInDb, updateTaskInDb, deleteTaskFromDb } from '@/lib/firestore-service';
 
 // --- SERVER ACTIONS ---
 
@@ -18,7 +18,7 @@ export async function getTasksForDate(
     userId: string, 
     filter: 'mine' | 'delegated' | 'subordinates'
 ): Promise<Task[]> {
-    const allTasks = await tasksService.getAll();
+    const allTasks = await getAllTasks();
     const dateFilteredTasks = allTasks.filter(task => task.dueDate === date);
 
     switch(filter) {
@@ -39,7 +39,7 @@ export async function getTasksForDate(
  * @returns A promise that resolves to the newly created task.
  */
 export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
-    return tasksService.create(taskData);
+    return createTaskInDb(taskData);
 }
 
 /**
@@ -49,7 +49,7 @@ export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
  * @returns A promise that resolves to the updated task, or null if not found.
  */
 export async function updateTask(taskId: string, updates: Partial<Task>): Promise<Task | null> {
-    return tasksService.update(taskId, updates);
+    return updateTaskInDb(taskId, updates);
 }
 
 /**
@@ -58,5 +58,5 @@ export async function updateTask(taskId: string, updates: Partial<Task>): Promis
  * @returns A promise that resolves to an object indicating success.
  */
 export async function deleteTask(taskId: string): Promise<{ success: boolean }> {
-    return tasksService.delete(taskId);
+    return deleteTaskFromDb(taskId);
 }

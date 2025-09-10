@@ -19,32 +19,28 @@ export async function seedDatabase() {
   const seedStatusDoc = await seedStatusRef.get();
 
   if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded) {
-    console.log('Database has already been seeded.');
+    // console.log('Database has already been seeded.');
     return { success: true, message: 'Database already seeded.' };
   }
 
-  console.log('Seeding database...');
+  // console.log('Seeding database...');
   const batch = firestore.batch();
 
-  // Seed Results
   resultsDb.forEach(result => {
     const docRef = firestore.collection(RESULTS_COLLECTION).doc(result.id);
     batch.set(docRef, result);
   });
 
-  // Seed Tasks
   tasksDb.forEach(task => {
     const docRef = firestore.collection(TASKS_COLLECTION).doc(task.id);
     batch.set(docRef, task);
   });
   
-  // Seed Templates
   templatesDb.forEach(template => {
       const docRef = firestore.collection(TEMPLATES_COLLECTION).doc(template.id);
       batch.set(docRef, template);
   });
 
-  // Seed Employees
   employeesDb.forEach(employee => {
       const docRef = firestore.collection(EMPLOYEES_COLLECTION).doc(employee.id);
       batch.set(docRef, employee);
@@ -53,25 +49,25 @@ export async function seedDatabase() {
   await batch.commit();
   await seedStatusRef.set({ seeded: true });
 
-  console.log('Database seeding complete.');
+  // console.log('Database seeding complete.');
   return { success: true, message: 'Database seeded successfully.' };
 }
-
 
 // --- Generic Firestore Functions ---
 
 async function getAll<T>(collectionName: string): Promise<T[]> {
-  await seedDatabase(); // Ensure DB is seeded before any read
+  await seedDatabase();
   const snapshot = await firestore.collection(collectionName).get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 }
 
 async function create<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
   const docRef = firestore.collection(collectionName).doc();
-  const newDoc = { id: docRef.id, ...data };
-  await docRef.set(newDoc);
-  return newDoc as T;
+  const newDocData = { ...data, id: docRef.id }; // Add id to the data object
+  await docRef.set(newDocData);
+  return { ...newDocData } as T; // Return the full object including id
 }
+
 
 async function update<T>(collectionName: string, docId: string, updates: Partial<T>): Promise<T | null> {
   const docRef = firestore.collection(collectionName).doc(docId);
@@ -85,32 +81,24 @@ async function remove(collectionName: string, docId: string): Promise<{ success:
   return { success: true };
 }
 
-// --- Tasks Service ---
-export const tasksService = {
-  getAll: () => getAll<Task>(TASKS_COLLECTION),
-  create: (data: Omit<Task, 'id'>) => create<Task>(TASKS_COLLECTION, data),
-  update: (id: string, updates: Partial<Task>) => update<Task>(TASKS_COLLECTION, id, updates),
-  delete: (id: string) => remove(TASKS_COLLECTION, id),
-};
+// --- Tasks Service Exports ---
+export async function getAllTasks(): Promise<Task[]> { return getAll<Task>(TASKS_COLLECTION); }
+export async function createTaskInDb(data: Omit<Task, 'id'>): Promise<Task> { return create<Task>(TASKS_COLLECTION, data); }
+export async function updateTaskInDb(id: string, updates: Partial<Task>): Promise<Task | null> { return update<Task>(TASKS_COLLECTION, id, updates); }
+export async function deleteTaskFromDb(id: string): Promise<{ success: boolean }> { return remove(TASKS_COLLECTION, id); }
 
-// --- Results Service ---
-export const resultsService = {
-  getAll: () => getAll<Result>(RESULTS_COLLECTION),
-  create: (data: Omit<Result, 'id'>) => create<Result>(RESULTS_COLLECTION, data),
-  update: (id: string, updates: Partial<Result>) => update<Result>(RESULTS_COLLECTION, id, updates),
-  delete: (id: string) => remove(RESULTS_COLLECTION, id),
-};
+// --- Results Service Exports ---
+export async function getAllResults(): Promise<Result[]> { return getAll<Result>(RESULTS_COLLECTION); }
+export async function createResultInDb(data: Omit<Result, 'id'>): Promise<Result> { return create<Result>(RESULTS_COLLECTION, data); }
+export async function updateResultInDb(id: string, updates: Partial<Result>): Promise<Result | null> { return update<Result>(RESULTS_COLLECTION, id, updates); }
+export async function deleteResultFromDb(id: string): Promise<{ success: boolean }> { return remove(RESULTS_COLLECTION, id); }
 
-// --- Templates Service ---
-export const templatesService = {
-  getAll: () => getAll<Template>(TEMPLATES_COLLECTION),
-  create: (data: Omit<Template, 'id'>) => create<Template>(TEMPLATES_COLLECTION, data),
-  update: (id: string, updates: Partial<Template>) => update<Template>(TEMPLATES_COLLECTION, id, updates),
-  delete: (id: string) => remove(TEMPLATES_COLLECTION, id),
-};
+// --- Templates Service Exports ---
+export async function getAllTemplates(): Promise<Template[]> { return getAll<Template>(TEMPLATES_COLLECTION); }
+export async function createTemplateInDb(data: Omit<Template, 'id'>): Promise<Template> { return create<Template>(TEMPLATES_COLLECTION, data); }
+export async function updateTemplateInDb(id: string, updates: Partial<Template>): Promise<Template | null> { return update<Template>(TEMPLATES_COLLECTION, id, updates); }
+export async function deleteTemplateFromDb(id: string): Promise<{ success: boolean }> { return remove(TEMPLATES_COLLECTION, id); }
 
-// --- Employees Service ---
-export const employeesService = {
-  getAll: () => getAll<Employee>(EMPLOYEES_COLLECTION),
-  update: (id: string, updates: Partial<Employee>) => update<Employee>(EMPLOYEES_COLLECTION, id, updates),
-};
+// --- Employees Service Exports ---
+export async function getAllEmployees(): Promise<Employee[]> { return getAll<Employee>(EMPLOYEES_COLLECTION); }
+export async function updateEmployeeInDb(id: string, updates: Partial<Employee>): Promise<Employee | null> { return update<Employee>(EMPLOYEES_COLLECTION, id, updates); }
