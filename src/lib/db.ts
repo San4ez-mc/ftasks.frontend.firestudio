@@ -22,7 +22,6 @@ export let users = [
 // Company table
 export let companies = [
     { id: 'company-1', name: 'Fineko Development', ownerId: 'user-1' },
-    { id: 'company-2', name: 'My Startup Project', ownerId: 'user-1' }
 ];
 
 export let companyEmployees: Employee[] = [
@@ -96,7 +95,6 @@ export let companyEmployees: Employee[] = [
 // Employee join table
 export let employees = [
     { id: 'emp-1', userId: 'user-1', companyId: 'company-1', status: 'active', notes: '' },
-    { id: 'emp-2', userId: 'user-1', companyId: 'company-2', status: 'active', notes: '' }
 ];
 
 export let tasksDb: Task[] = [
