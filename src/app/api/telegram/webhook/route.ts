@@ -128,7 +128,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         const newComment = {
                             id: `comment-${Date.now()}`,
                             text: params.commentText,
-                            author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.photo_url },
+                            author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
                             timestamp: new Date().toLocaleString('uk-UA')
                         };
                         const updatedComments = [...(resultToComment.comments || []), newComment];

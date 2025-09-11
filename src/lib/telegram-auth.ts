@@ -22,7 +22,14 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
         return null;
     }
     const userDoc = userQuery.docs[0];
-    return { id: userDoc.id, ...userDoc.data() } as (User & { id: string });
+    const userData = userDoc.data();
+    
+    // Backward compatibility for old data
+    if (userData.photo_url && !userData.avatar) {
+        userData.avatar = userData.photo_url;
+    }
+
+    return { id: userDoc.id, ...userData } as (User & { id: string });
 }
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
@@ -45,15 +52,15 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
     if (userQuery.empty) {
       const newUserRef = usersCollection.doc();
-      user = {
-        id: newUserRef.id,
+      const newUser = {
         telegramUserId: telegramUserId.toString(),
         firstName: first_name,
         lastName: last_name || '',
         telegramUsername: username || '',
-        photo_url: photo_url || '',
+        avatar: photo_url || '',
       };
-      await newUserRef.set(user);
+      await newUserRef.set(newUser);
+      user = { id: newUserRef.id, ...newUser };
       details = `New user ${first_name} created with ID ${user.id}.`;
     } else {
       const userDoc = userQuery.docs[0];
@@ -80,7 +87,7 @@ export async function generateGroupLinkCode(groupId: string, groupTitle: string)
         const expiresAt = new Date(Date.now() + GROUP_LINK_CODE_EXPIRATION);
 
         await firestore.collection('groupLinkCodes').doc(code).set({
-            tgGroupId: groupId, // FIX: Was 'groupId', now 'tgGroupId' to match reader
+            tgGroupId: groupId,
             groupTitle,
             expiresAt,
         });
