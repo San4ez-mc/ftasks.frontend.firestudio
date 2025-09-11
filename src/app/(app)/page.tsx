@@ -20,9 +20,11 @@ import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTasksForDate, createTask, updateTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { companyEmployees } from '@/lib/db';
 
 
-const currentUserId = 'user-2'; // Mock current user
+const currentUserId = 'user-2'; 
+const currentUser = companyEmployees.find(e => e.telegramUserId === 'tg-456'); // Mock current user is Maria S.
 
 // --- TOUR STEPS ---
 
@@ -69,6 +71,8 @@ export default function TasksPage() {
   const taskTitleInputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const containerRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     // Set the date only on the client side to avoid hydration mismatch
@@ -89,6 +93,21 @@ export default function TasksPage() {
         taskTitleInputRef.current.focus();
     }
   }, [selectedTask]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const clickedOnTrigger = (event.target as HTMLElement).closest('.group');
+            if (!clickedOnTrigger) {
+                handleClosePanel();
+            }
+        }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [containerRef]);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
@@ -145,6 +164,7 @@ export default function TasksPage() {
   }
 
   const createNewTask = (title: string, resultName?: string) => {
+    if(!currentUser) return;
     const newTaskData: Omit<Task, 'id'> = {
       title: title,
       dueDate: (currentDate || new Date()).toISOString().split('T')[0],
@@ -153,8 +173,8 @@ export default function TasksPage() {
       expectedTime: 30, // Default time
       description: '',
       expectedResult: 'Очікуваний результат генерується GPT',
-      assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' }, // Placeholder for current user
-      reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40?random=5' }, // Placeholder for current user
+      assignee: { id: currentUserId, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
+      reporter: { id: currentUserId, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
       resultName: resultName,
     };
     handleTaskCreate(newTaskData);
@@ -201,7 +221,8 @@ export default function TasksPage() {
   
   const groupedTasks = useMemo(() => {
     if (activeTab === 'mine') {
-        return { [currentUserId]: { name: 'Мої задачі', results: filteredTasks } };
+        const name = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Мої задачі';
+        return { [currentUserId]: { name, results: filteredTasks } };
     }
     return filteredTasks.reduce((acc, task) => {
         const key = task.assignee.id || 'unassigned';
@@ -250,12 +271,14 @@ export default function TasksPage() {
     return null; // or a loading skeleton
   }
 
+  const panelOpen = !!selectedTask;
+
   return (
-    <div className="flex flex-col md:flex-row h-screen">
+    <div ref={containerRef} className="flex flex-col md:flex-row h-screen">
       <InteractiveTour pageKey="tasks" steps={tasksTourSteps} />
       <main className={cn(
         "flex-1 flex transition-all duration-300 w-full",
-        selectedTask ? "md:w-1/2" : "md:w-3/4"
+        panelOpen ? "md:w-1/2" : "md:w-3/4"
       )}>
         {/* Main Content */}
         <div className="flex flex-col gap-6 p-4 md:p-6 w-full">
@@ -289,10 +312,10 @@ export default function TasksPage() {
                                     <TableRow>
                                         <TableHead className="w-[50px]"></TableHead>
                                         <TableHead>Назва</TableHead>
-                                        <TableHead className="hidden md:table-cell w-[180px]">Тип</TableHead>
-                                        <TableHead className="hidden sm:table-cell w-[100px]">Очік. час</TableHead>
-                                        <TableHead className="hidden sm:table-cell w-[100px]">Факт. час</TableHead>
-                                        <TableHead className="w-[120px] text-right">Дії</TableHead>
+                                        <TableHead className={cn("hidden md:table-cell w-[180px]", panelOpen && "hidden")}>Тип</TableHead>
+                                        <TableHead className={cn("hidden sm:table-cell w-[100px]", panelOpen && "hidden")}>Очік. час</TableHead>
+                                        <TableHead className={cn("hidden sm:table-cell w-[100px]", panelOpen && "hidden")}>Факт. час</TableHead>
+                                        <TableHead className={cn("w-[120px] text-right", panelOpen && "hidden")}>Дії</TableHead>
                                     </TableRow>
                                 </TableHeader>
                             )}
@@ -303,17 +326,18 @@ export default function TasksPage() {
                                         task={task} 
                                         onSelect={() => handleTaskSelect(task)}
                                         onUpdate={handleTaskUpdate}
-                                        showTypeColumn={activeTab === 'mine'}
+                                        showTypeColumn={activeTab === 'mine' && !panelOpen}
+                                        panelOpen={panelOpen}
                                     />
                                 ))}
                             </TableBody>
                              {activeTab === 'mine' && (
                                 <TableFooter>
                                     <TableRow>
-                                        <TableCell colSpan={3} className="font-bold">Всього</TableCell>
-                                        <TableCell className="font-bold text-xs">{formatTime(totalExpectedTime)}</TableCell>
-                                        <TableCell className="font-bold text-xs">{formatTime(tasks.reduce((acc, t) => acc + (t.actualTime || 0), 0))}</TableCell>
-                                        <TableCell></TableCell>
+                                        <TableCell colSpan={ showTypeColumn ? 3 : 2 } className="font-bold">Всього</TableCell>
+                                        <TableCell className={cn("font-bold text-xs", panelOpen && "hidden")}>{formatTime(totalExpectedTime)}</TableCell>
+                                        <TableCell className={cn("font-bold text-xs", panelOpen && "hidden")}>{formatTime(tasks.reduce((acc, t) => acc + (t.actualTime || 0), 0))}</TableCell>
+                                        <TableCell className={cn(panelOpen && "hidden")}></TableCell>
                                     </TableRow>
                                 </TableFooter>
                             )}
@@ -334,7 +358,7 @@ export default function TasksPage() {
         {/* Results Panel */}
         <aside id="results-panel" className={cn(
             "w-full md:w-1/4 p-4 border-l transition-all duration-300",
-            selectedTask ? 'hidden' : 'hidden md:block'
+            panelOpen ? 'hidden' : 'hidden md:block'
         )}>
             <ResultsList onResultClick={handleResultClick} />
         </aside>
@@ -343,7 +367,7 @@ export default function TasksPage() {
        {/* Details Panel */}
       <div id="task-details-panel" className={cn(
           "transition-all duration-300 w-full md:w-0",
-          selectedTask ? "md:w-1/2" : "hidden"
+          panelOpen ? "md:w-1/2" : "hidden"
       )}>
             {selectedTask && (
               <TaskDetailsPanel 

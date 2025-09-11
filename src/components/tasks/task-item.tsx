@@ -22,6 +22,7 @@ type TaskItemProps = {
     onSelect: () => void;
     onUpdate: (task: Task) => void;
     showTypeColumn: boolean;
+    panelOpen: boolean;
 };
 
 const typeColors: Record<TaskType, string> = {
@@ -39,7 +40,7 @@ const typeLabels: Record<TaskType, string> = {
 };
 
 
-export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: TaskItemProps) {
+export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn, panelOpen }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [actualTime, setActualTime] = useState(formatTime(task.actualTime));
@@ -131,8 +132,8 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
                     </Tooltip>
                 </TooltipProvider>
             </TableCell>
-            <TableCell className="hidden sm:table-cell text-xs w-[100px]">{formatTime(task.expectedTime)}</TableCell>
-            <TableCell className="hidden sm:table-cell text-xs w-[100px]">
+            <TableCell className={cn("hidden sm:table-cell text-xs w-[100px]", panelOpen && "hidden")}>{formatTime(task.expectedTime)}</TableCell>
+            <TableCell className={cn("hidden sm:table-cell text-xs w-[100px]", panelOpen && "hidden")}>
                 <Input
                     type="text"
                     value={actualTime}
@@ -142,7 +143,7 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn }: T
                     className="h-7 w-20 text-xs border-none focus-visible:ring-1 bg-transparent"
                 />
             </TableCell>
-             <TableCell className="text-right w-[120px]">
+             <TableCell className={cn("text-right w-[120px]", panelOpen && "hidden")}>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end">
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onSelect} title="Редагувати"><Edit className="h-3 w-3"/></Button>
                     <Button variant="ghost" size="icon" className="h-6 w-6" title="Відкласти"><Clock className="h-3 w-3"/></Button>

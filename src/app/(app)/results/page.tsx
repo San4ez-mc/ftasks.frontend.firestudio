@@ -21,11 +21,11 @@ import type { TourStep } from '@/components/layout/interactive-tour';
 import { getResults, createResult, updateResult, deleteResult } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { companyEmployees } from '@/lib/db';
 
 
-// Assume current user for filtering
 const currentUserId = 'user-4';
-const currentUser = { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' };
+const currentUser = companyEmployees.find(e => e.id === 'emp-4'); // Petro Ivanenko
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
 
@@ -82,6 +82,22 @@ export default function ResultsPage() {
         setResults(fetchedResults);
     });
   }, []);
+  
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+            const clickedOnTrigger = (event.target as HTMLElement).closest('.group/row');
+            if (!clickedOnTrigger) {
+                handleClosePanel();
+            }
+        }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+}, [containerRef]);
+
 
   const handleResultUpdate = (updatedResult: Result) => {
     startTransition(async () => {
@@ -102,6 +118,7 @@ export default function ResultsPage() {
   };
 
   const handleCreateNewResult = (index?: number) => {
+    if (!currentUser) return;
     startTransition(async () => {
         const twoWeeksFromNow = new Date();
         twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
@@ -112,8 +129,8 @@ export default function ResultsPage() {
             completed: false,
             isUrgent: false,
             deadline: twoWeeksFromNow.toISOString().split('T')[0],
-            assignee: currentUser,
-            reporter: currentUser,
+            assignee: { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
+            reporter: { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
             description: '',
             expectedResult: '',
             subResults: [],
