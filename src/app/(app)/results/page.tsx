@@ -75,13 +75,12 @@ export default function ResultsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const newResultInputRef = useRef<HTMLInputElement>(null);
   const [collapsedResults, setCollapsedResults] = useState<string[]>([]);
 
   useEffect(() => {
     const savedMode = localStorage.getItem('resultsViewMode');
     if (savedMode === 'table' || savedMode === 'cards') {
-      setViewMode(savedMode);
+      setViewMode(savedMode as 'table' | 'cards');
     }
   }, []);
 
@@ -111,13 +110,6 @@ export default function ResultsPage() {
         document.removeEventListener("mousedown", handleClickOutside);
     };
 }, [containerRef]);
-
-  useEffect(() => {
-    if (selectedResult?.name === '' && newResultInputRef.current) {
-        newResultInputRef.current.focus();
-    }
-  }, [selectedResult]);
-
 
   const handleResultUpdate = (updatedResult: Result) => {
     startTransition(async () => {
@@ -328,7 +320,7 @@ export default function ResultsPage() {
         </header>
         
         <main id="results-table" className="flex-1 overflow-y-auto px-4 md:px-6">
-          {isPending ? (
+          {isPending && viewMode === 'table' ? (
             <div className="flex justify-center items-center h-full"><p>Завантаження...</p></div>
           ) : viewMode === 'table' ? (
             <ResultsTable 
@@ -356,7 +348,7 @@ export default function ResultsPage() {
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden w-full md:w-0",
         selectedResult ? "md:w-1/2 lg:min-w-[520px]" : "hidden"
       )}>
-        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} onDelete={handleDeleteResult} newResultInputRef={newResultInputRef}/>}
+        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} onDelete={handleDeleteResult} />}
       </div>
        <Button id="create-result-fab" onClick={() => handleCreateNewResult()} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
           <Plus className="h-8 w-8" />
@@ -504,6 +496,7 @@ function ResultsTable({
             panelOpen={panelOpen}
             collapsedResults={collapsedResults}
             toggleCollapse={toggleCollapse}
+            selectedResultId={selectedResultId}
           />
         ))}
       </React.Fragment>
@@ -527,7 +520,7 @@ function ResultsTable({
                   )}
                   <div className="border-y">
                       {group.results.map((result, index) => renderRow(result, index, allResults))}
-                       {!group.results.some(r => r.name === '') && (
+                       {group.results.length === 0 || !group.results.some(r => r.name === '') && (
                            <div className="p-2">
                               <button onClick={() => createNewResult(allResults.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
                                   <Plus className="h-3 w-3" /> Створити результат
@@ -548,7 +541,7 @@ function ResultsTable({
   )
 }
 
-function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, onDeleteSubResult, level, path, panelOpen, collapsedResults, toggleCollapse }: {
+function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, onDeleteSubResult, level, path, panelOpen, collapsedResults, toggleCollapse, selectedResultId }: {
   result: Result;
   subResult: SubResult;
   onResultSelect: (result: Result) => void;
@@ -561,6 +554,7 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
   panelOpen: boolean;
   collapsedResults: string[];
   toggleCollapse: (id: string) => void;
+  selectedResultId?: string;
 }) {
   
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -572,59 +566,83 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
 
   return (
     <React.Fragment>
-      <div className="group/parent text-sm border-b last:border-b-0" style={{ paddingLeft: `${level * 1.5}rem` }} onClick={() => onResultSelect(result)}>
-         <div className="flex items-center gap-2 p-2 relative">
-             <div className="absolute left-[-1rem] top-0 h-full w-px bg-border"></div>
-             <div className="absolute left-[-1rem] top-1/2 -translate-y-1/2 h-px w-4 bg-border"></div>
+      <div 
+        className="group/parent text-sm border-b last:border-b-0 cursor-pointer" 
+        onClick={() => onResultSelect(result)}
+      >
+         <div className={cn(
+            "grid grid-cols-12 p-2 items-start gap-x-2 md:gap-x-4 relative",
+            selectedResultId === result.id && "bg-accent"
+          )}>
             
-            {hasSubResults ? (
-                <button
-                    onClick={(e) => { e.stopPropagation(); toggleCollapse(subResult.id); }}
-                    className="p-0.5 rounded-sm hover:bg-accent -ml-1"
-                >
-                    <ChevronRight className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-90")} />
-                </button>
-            ) : <div className="w-5" />}
-            
-            <Checkbox
-              checked={subResult.completed}
-              onCheckedChange={(checked) => {
-                  onSubResultChange(result, path, 'completed', !!checked)
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <span
-                className={cn(
-                    "h-auto p-0 text-xs flex-1",
-                    subResult.completed && "line-through text-muted-foreground"
-                )}
-            >
-              {subResult.name || <span className="text-muted-foreground">Новий підрезультат...</span>}
-            </span>
-            <div className={cn("items-center gap-2", panelOpen ? "hidden" : "flex")}>
-                {subResult.assignee && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger>
-                                <Avatar className="h-6 w-6"><AvatarImage src={subResult.assignee.avatar} /></Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent><p>{subResult.assignee.name}</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                )}
+            <div className={cn("col-span-11 flex items-start", panelOpen ? "md:col-span-11" : "md:col-span-5" )} style={{ paddingLeft: `${level * 1.5}rem` }}>
+                <div className="absolute top-0 h-full w-px bg-border" style={{ left: `${(level - 1) * 1.5 + 0.75}rem`}}></div>
+                <div className="absolute top-1/2 -translate-y-1/2 h-px w-3 bg-border" style={{ left: `${(level - 1) * 1.5 + 0.75}rem`}}></div>
+                <div className="flex items-center gap-2 flex-1">
+                    {hasSubResults ? (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); toggleCollapse(subResult.id); }}
+                            className="p-0.5 rounded-sm hover:bg-accent -ml-1"
+                        >
+                            <ChevronRight className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-90")} />
+                        </button>
+                    ) : <div className="w-5" />}
+                    
+                    <Checkbox
+                      checked={subResult.completed}
+                      onCheckedChange={(checked) => {
+                          onSubResultChange(result, path, 'completed', !!checked)
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span
+                        className={cn(
+                            "h-auto p-0 text-xs flex-1",
+                            subResult.completed && "line-through text-muted-foreground"
+                        )}
+                    >
+                      {subResult.name || <span className="text-muted-foreground">Новий підрезультат...</span>}
+                    </span>
+                </div>
+            </div>
+
+            <div className={cn("hidden text-xs text-muted-foreground items-start", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
                  {subResult.deadline && (
-                    <span className="text-xs text-muted-foreground">{formatDate(subResult.deadline)}</span>
+                    <div>
+                        <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
+                        {formatDate(subResult.deadline)}
+                    </div>
                  )}
             </div>
-             <div className="flex items-center opacity-0 group-hover/parent:opacity-100 transition-opacity">
-                 {level < 5 && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onAddSubResult(result, path)}} title="Додати підрезультат">
-                        <PlusCircle className="h-3 w-3" />
+             <div className={cn("hidden items-center gap-2", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
+                {subResult.assignee && (
+                    <div>
+                        <p className="uppercase text-muted-foreground/70 text-[10px]">Виконавець</p>
+                        <div className="flex items-center gap-2">
+                             <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <Avatar className="h-6 w-6"><AvatarImage src={subResult.assignee.avatar} /></Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>{subResult.assignee.name}</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                             <span className="text-xs hidden lg:inline">{subResult.assignee.name}</span>
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className={cn("hidden items-center", panelOpen ? "md:hidden" : "md:col-span-2 md:flex justify-end")}>
+                <div className="flex items-center opacity-0 group-hover/parent:opacity-100 transition-opacity">
+                     {level < 5 && (
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onAddSubResult(result, path)}} title="Додати підрезультат">
+                            <PlusCircle className="h-3 w-3" />
+                        </Button>
+                     )}
+                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onDeleteSubResult(result, path)}} title="Видалити">
+                        <Trash2 className="h-3 w-3 text-destructive"/>
                     </Button>
-                 )}
-                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onDeleteSubResult(result, path)}} title="Видалити">
-                    <Trash2 className="h-3 w-3 text-destructive"/>
-                </Button>
+                </div>
             </div>
         </div>
       </div>
@@ -643,6 +661,7 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
           panelOpen={panelOpen}
           collapsedResults={collapsedResults}
           toggleCollapse={toggleCollapse}
+          selectedResultId={selectedResultId}
         />
       ))}
     </React.Fragment>
@@ -654,10 +673,15 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
     const hasSubResults = result.subResults && result.subResults.length > 0;
     const isCollapsed = collapsedResults.includes(result.id);
     
+    const handleNameClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onResultSelect(result);
+    }
+
     return (
       <div 
         className="group/parent text-sm border-b last:border-b-0 cursor-pointer"
-        onClick={() => onResultSelect(result)}
+        onClick={handleNameClick}
       >
         <div className="relative group/row">
             <button
@@ -697,7 +721,7 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                             </span>
                         </div>
                         <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); onResultSelect(result)}} title="Редагувати"><Edit className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNameClick} title="Редагувати"><Edit className="h-3 w-3"/></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); onAddSubResult(result, [])}} title="Додати підрезультат"><PlusCircle className="h-3 w-3"/></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); handlePostponeResult(result)}} title="Відкласти"><Clock className="h-3 w-3"/></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); handleCreateTask(result)}} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
@@ -722,11 +746,13 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                         </div>
                     </div>
                 </div>
-                <div className={cn("hidden text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:block")}>
-                    <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
-                    {formatDate(result.deadline)}
+                <div className={cn("hidden text-xs text-muted-foreground items-start", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
+                    <div>
+                        <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
+                        {formatDate(result.deadline)}
+                    </div>
                 </div>
-                <div className={cn("hidden items-center gap-2 cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
+                <div className={cn("hidden items-center gap-2", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' || activeTab === 'delegated' ? 'Виконавець' : 'Постановник'}</p>
                         <div className="flex items-center gap-2">
@@ -738,7 +764,7 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                         </div>
                     </div>
                 </div>
-                <div className={cn("hidden items-center cursor-pointer", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
+                <div className={cn("hidden items-center", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
                         <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : (result.status === 'В роботі' ? 'default' : 'secondary'))} className={cn("text-xs", {'bg-pink-600 text-white': result.status === 'В роботі'})}>
@@ -754,7 +780,7 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
 
 function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result | null) => void, onResultUpdate: (result: Result) => void }) {
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-sm">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-sm mt-4">
             {results.map(result => (
                 <Card key={result.id} className={cn("hover:shadow-lg transition-shadow", result.completed && "bg-muted/50")}>
                     <CardHeader>
@@ -787,5 +813,7 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
     )
 }
 
+
+    
 
     
