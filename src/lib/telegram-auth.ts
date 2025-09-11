@@ -14,6 +14,16 @@ interface TelegramUser {
   photo_url?: string;
 }
 
+export async function findUserByTelegramId(telegramUserId: string) {
+    const usersCollection = firestore.collection('users');
+    const userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId).limit(1).get();
+    if (userQuery.empty) {
+        return null;
+    }
+    const userDoc = userQuery.docs[0];
+    return { id: userDoc.id, ...userDoc.data() };
+}
+
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
   if (!JWT_SECRET) {
     console.error("JWT_SECRET is not defined.");
@@ -27,8 +37,6 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
   }
 
   try {
-    // --- Database Logic (Mocked) ---
-    // In a real app, this would be a single query to a real database
     const usersCollection = firestore.collection('users');
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
     let user: any;
@@ -51,9 +59,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       user = { id: userDoc.id, ...userDoc.data() };
       details = `Existing user ${first_name} found with ID ${user.id}.`;
     }
-    // --- End Database Logic ---
 
-    // Generate a short-lived temporary token, now including the rememberMe flag
     const tempToken = jwt.sign({ userId: user.id, rememberMe }, JWT_SECRET, { expiresIn: '5m' });
     
     return { tempToken, details };
