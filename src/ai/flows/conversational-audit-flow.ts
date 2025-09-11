@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A conversational AI flow for conducting a business audit.
@@ -28,7 +29,7 @@ const auditPrompt = ai.definePrompt({
   input: {
     schema: z.object({
       conversationHistory: z.array(
-        z.object({role: z.string(), text: z.string()})
+        z.object({role: z.enum(['user', 'model']), text: z.string()})
       ),
       currentSummary: AuditStructureSchema,
     }),
