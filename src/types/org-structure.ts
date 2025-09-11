@@ -6,13 +6,20 @@ export interface Division {
   order: number;
 }
 
+export interface Section {
+  id: string;
+  name: string;
+  ckp: string;
+  managerId: string;
+  employeeIds: string[];
+}
+
 export interface Department {
   id: string;
   name: string;
   divisionId: string;
-  managerId: string;
-  employeeIds: string[];
   ckp: string;
+  sections: Section[];
 }
 
 export interface Employee {

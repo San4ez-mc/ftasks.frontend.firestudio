@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Download, Save, UserPlus, Info, Trash2, Library } from 'lucide-react';
-import { mockDivisions, mockDepartments, mockEmployees, departmentTemplates } from '@/data/org-structure-mock';
-import type { Department, Employee, Division } from '@/types/org-structure';
+import { mockDivisions, mockDepartments, mockEmployees, departmentTemplates, sectionTemplates } from '@/data/org-structure-mock';
+import type { Department, Employee, Division, Section } from '@/types/org-structure';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,28 +20,147 @@ import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 
 
-function DepartmentCard({ department, employees, onUpdate, onDragStart }: { department: Department; employees: Employee[], onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent) => void; }) {
-    const manager = employees.find(e => e.id === department.managerId);
-    
-    const handleFieldChange = (field: keyof Department, value: string | string[]) => {
-        onUpdate({ ...department, [field]: value });
+// --- SectionCard Component ---
+function SectionCard({ section, employees, onUpdate }: { section: Section; employees: Employee[]; onUpdate: (section: Section) => void; }) {
+    const manager = employees.find(e => e.id === section.managerId);
+
+    const handleFieldChange = (field: keyof Section, value: string | string[]) => {
+        onUpdate({ ...section, [field]: value });
     };
-    
+
     const handleEmployeeChange = (index: number, newEmployeeId: string) => {
-        const newEmployeeIds = [...department.employeeIds];
+        const newEmployeeIds = [...section.employeeIds];
         newEmployeeIds[index] = newEmployeeId;
         handleFieldChange('employeeIds', newEmployeeIds);
     };
-    
+
     const handleAddEmployee = () => {
-        const availableEmployee = employees.find(emp => !department.employeeIds.includes(emp.id) && emp.id !== department.managerId);
-        const newEmployeeIds = [...department.employeeIds, availableEmployee ? availableEmployee.id : ''];
+        const availableEmployee = employees.find(emp => !section.employeeIds.includes(emp.id) && emp.id !== section.managerId);
+        if (availableEmployee) {
+            handleFieldChange('employeeIds', [...section.employeeIds, availableEmployee.id]);
+        }
+    };
+
+    const handleRemoveEmployee = (index: number) => {
+        const newEmployeeIds = section.employeeIds.filter((_, i) => i !== index);
         handleFieldChange('employeeIds', newEmployeeIds);
     };
     
-    const handleRemoveEmployee = (index: number) => {
-        const newEmployeeIds = department.employeeIds.filter((_, i) => i !== index);
-        handleFieldChange('employeeIds', newEmployeeIds);
+    return (
+        <Card className="bg-muted/50" id={`section-card-${section.id}`}>
+            <CardHeader className="p-2">
+                <Input 
+                    value={section.name}
+                    onChange={(e) => handleFieldChange('name', e.target.value)}
+                    className="text-sm font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent"
+                />
+            </CardHeader>
+            <CardContent className="p-2 pt-0 text-xs space-y-2">
+                 <div>
+                    <Label htmlFor={`ckp-${section.id}`} className="text-xs font-semibold text-muted-foreground">ЦКП</Label>
+                    <Textarea 
+                        id={`ckp-${section.id}`}
+                        placeholder="Опишіть ЦКП секції..."
+                        value={section.ckp}
+                        onChange={(e) => handleFieldChange('ckp', e.target.value)}
+                        className="text-xs h-auto min-h-[30px] border-dashed"
+                    />
+                </div>
+                 <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground mb-1">Керівник</h4>
+                    <Select value={section.managerId} onValueChange={(value) => handleFieldChange('managerId', value === 'unassigned' ? '' : value)}>
+                        <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Не призначено">
+                                {manager ? (
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-5 w-5"><AvatarImage src={manager.avatar} alt={manager.name} /></Avatar>
+                                        <span className="text-xs">{manager.name}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-muted-foreground text-xs">Не призначено</span>
+                                )}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="unassigned"><span className="text-muted-foreground">Не призначено</span></SelectItem>
+                            {employees.map(emp => (
+                                <SelectItem key={emp.id} value={emp.id}>
+                                    <div className="flex items-center gap-2">
+                                        <Avatar className="h-6 w-6"><AvatarImage src={emp.avatar} alt={emp.name} /></Avatar>
+                                        <span>{emp.name}</span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground mb-2">Співробітники</h4>
+                    <div className="space-y-1">
+                        {section.employeeIds.map((empId, index) => {
+                             const employee = employees.find(e => e.id === empId);
+                             return (
+                                <div key={index} className="flex items-center gap-1">
+                                    <Select value={empId} onValueChange={(value) => handleEmployeeChange(index, value)}>
+                                        <SelectTrigger className="h-8 flex-1">
+                                            <SelectValue placeholder="Обрати...">
+                                                {employee ? (
+                                                     <div className="flex items-center gap-2">
+                                                        <Avatar className="h-5 w-5"><AvatarImage src={employee.avatar} alt={employee.name} /></Avatar>
+                                                        <span className="text-xs">{employee.name}</span>
+                                                    </div>
+                                                ) : <span className="text-muted-foreground text-xs">Обрати...</span>}
+                                            </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {employees.filter(e => e.id !== section.managerId).map(emp => (
+                                                <SelectItem key={emp.id} value={emp.id} disabled={section.employeeIds.includes(emp.id) && emp.id !== empId}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Avatar className="h-6 w-6"><AvatarImage src={emp.avatar} alt={emp.name} /></Avatar>
+                                                        <span>{emp.name}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => handleRemoveEmployee(index)}>
+                                        <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                </div>
+                             )
+                        })}
+                    </div>
+                </div>
+                <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={handleAddEmployee}>
+                    <UserPlus className="mr-2 h-3 w-3" /> Додати співробітника
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+
+// --- DepartmentCard Component ---
+function DepartmentCard({ department, onUpdate, onDragStart, allEmployees }: { department: Department; onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent) => void; allEmployees: Employee[] }) {
+    
+    const handleFieldChange = (field: keyof Department, value: string) => {
+        onUpdate({ ...department, [field]: value });
+    };
+
+    const handleSectionUpdate = (updatedSection: Section) => {
+        const newSections = department.sections.map(s => s.id === updatedSection.id ? updatedSection : s);
+        onUpdate({ ...department, sections: newSections });
+    };
+
+    const handleAddSection = (name: string, ckp: string) => {
+        const newSection: Section = {
+            id: `sec-${Date.now()}`,
+            name,
+            ckp,
+            managerId: '',
+            employeeIds: []
+        };
+        onUpdate({ ...department, sections: [...department.sections, newSection] });
     };
 
     return (
@@ -57,117 +176,43 @@ function DepartmentCard({ department, employees, onUpdate, onDragStart }: { depa
                     onChange={(e) => handleFieldChange('name', e.target.value)}
                     className="text-base font-bold border-none shadow-none p-0 h-auto focus-visible:ring-0"
                 />
+                 <div className="flex items-center gap-1 mt-1">
+                    <Label htmlFor={`ckp-${department.id}`} className="text-xs font-semibold text-muted-foreground">ЦКП відділу</Label>
+                     <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                                <p className="font-bold">Цінний Кінцевий Продукт (ЦКП)</p>
+                                <p>Це результат діяльності, який є корисним для зовнішнього або внутрішнього клієнта.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+                <Textarea 
+                    id={`ckp-${department.id}`}
+                    placeholder="Опишіть ЦКП відділу..."
+                    value={department.ckp}
+                    onChange={(e) => handleFieldChange('ckp', e.target.value)}
+                    className="text-xs h-auto min-h-[40px] border-dashed"
+                />
             </CardHeader>
             <CardContent className="p-3 pt-0 text-sm space-y-3">
-                 <div>
-                    <div className="flex items-center gap-1 mb-1">
-                        <Label htmlFor={`ckp-${department.id}`} className="text-xs font-semibold text-muted-foreground">ЦКП</Label>
-                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-xs">
-                                    <p className="font-bold">Цінний Кінцевий Продукт (ЦКП)</p>
-                                    <p>Це результат діяльності, який є корисним для зовнішнього або внутрішнього клієнта і за який компанія отримує підтримку (гроші, ресурси).</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <Textarea 
-                        id={`ckp-${department.id}`}
-                        placeholder="Опишіть ЦКП відділу..."
-                        value={department.ckp}
-                        onChange={(e) => handleFieldChange('ckp', e.target.value)}
-                        className="text-xs h-auto min-h-[40px] border-dashed"
-                    />
+                <div className="space-y-2">
+                    {department.sections.map(section => (
+                        <SectionCard 
+                            key={section.id}
+                            section={section}
+                            employees={allEmployees}
+                            onUpdate={handleSectionUpdate}
+                        />
+                    ))}
                 </div>
-                <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground mb-1">Керівник</h4>
-                    <Select value={department.managerId} onValueChange={(value) => handleFieldChange('managerId', value === 'unassigned' ? '' : value)}>
-                        <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Не призначено">
-                                {manager ? (
-                                    <div className="flex items-center gap-2">
-                                        <Avatar className="h-6 w-6">
-                                            <AvatarImage src={manager.avatar} alt={manager.name} />
-                                            <AvatarFallback>{manager.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <span>{manager.name}</span>
-                                    </div>
-                                ) : (
-                                    <span className="text-muted-foreground">Не призначено</span>
-                                )}
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                             <SelectItem value="unassigned">
-                                <span className="text-muted-foreground">Не призначено</span>
-                            </SelectItem>
-                            {employees.map(emp => (
-                                <SelectItem key={emp.id} value={emp.id}>
-                                    <div className="flex items-center gap-2">
-                                        <Avatar className="h-6 w-6">
-                                            <AvatarImage src={emp.avatar} alt={emp.name} />
-                                            <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <span>{emp.name}</span>
-                                    </div>
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                 <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground mb-2">Співробітники</h4>
-                    <div className="space-y-2">
-                        {department.employeeIds.map((empId, index) => {
-                             const employee = employees.find(e => e.id === empId);
-                             return (
-                                <div key={index} className="flex items-center gap-2">
-                                    <Select value={empId} onValueChange={(value) => handleEmployeeChange(index, value)}>
-                                        <SelectTrigger className="h-9 flex-1">
-                                            <SelectValue placeholder="Обрати співробітника">
-                                                {employee ? (
-                                                     <div className="flex items-center gap-2">
-                                                        <Avatar className="h-6 w-6">
-                                                            <AvatarImage src={employee.avatar} alt={employee.name} />
-                                                            <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        <span>{employee.name}</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-muted-foreground">Обрати співробітника</span>
-                                                )}
-                                            </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {employees.filter(e => e.id !== department.managerId).map(emp => (
-                                                <SelectItem key={emp.id} value={emp.id} disabled={department.employeeIds.includes(emp.id) && emp.id !== empId}>
-                                                    <div className="flex items-center gap-2">
-                                                        <Avatar className="h-6 w-6">
-                                                            <AvatarImage src={emp.avatar} alt={emp.name} />
-                                                            <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        <span>{emp.name}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => handleRemoveEmployee(index)}>
-                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </div>
-                             )
-                        })}
-                    </div>
-                </div>
-                
-                <Button id={`add-employee-button-${department.id}`} variant="outline" size="sm" className="w-full" onClick={handleAddEmployee}>
-                    <UserPlus className="mr-2 h-4 w-4" /> Додати співробітника
-                </Button>
+                 <AddSectionControl 
+                    departmentId={department.id}
+                    onAddSection={handleAddSection}
+                />
             </CardContent>
         </Card>
     )
@@ -185,7 +230,7 @@ const orgStructureTourSteps: TourStep[] = [
     {
         elementId: 'department-card-dept-1',
         title: 'Картка Відділу',
-        content: 'Кожна картка представляє відділ. Тут ви можете редагувати назву, ЦКП, призначати керівника та співробітників. Перетягуйте картки між відділеннями, щоб змінити структуру.',
+        content: 'Кожна картка представляє відділ. Тут ви можете редагувати назву, ЦКП, та додавати секції. Перетягуйте картки між відділеннями, щоб змінити структуру.',
         placement: 'bottom'
     },
     {
@@ -195,9 +240,9 @@ const orgStructureTourSteps: TourStep[] = [
         placement: 'top'
     },
     {
-        elementId: 'add-employee-button-dept-1',
-        title: 'Керування складом',
-        content: 'Додавайте або видаляйте співробітників з відділу за допомогою цих елементів керування.',
+        elementId: 'section-card-sec-1',
+        title: 'Керування секціями',
+        content: 'Секції - це підрозділи відділу. Тут ви призначаєте керівника та співробітників, а також визначаєте їх ЦКП.',
         placement: 'top'
     },
 ];
@@ -216,9 +261,8 @@ export default function OrgStructurePage() {
         id: `dept-${Date.now()}`,
         name: name || 'Новий відділ',
         divisionId: divisionId,
-        managerId: '',
-        employeeIds: [],
         ckp: ckp || '',
+        sections: [],
     };
     setDepartments(prev => [...prev, newDepartment]);
   };
@@ -259,20 +303,28 @@ export default function OrgStructurePage() {
     setDraggedItemHeight(0);
   };
   
+  // Create a sample department card ID for the tour if none exist
+  const firstDeptId = departments.length > 0 ? departments[0].id : 'dept-1';
+  const firstSectionId = departments.length > 0 && departments[0].sections.length > 0 ? departments[0].sections[0].id : 'sec-1';
+
+
   return (
     <div className="flex-1 flex flex-col h-full bg-muted/40">
-       <InteractiveTour pageKey="org-structure" steps={orgStructureTourSteps} />
+       <InteractiveTour pageKey="org-structure" steps={[
+            ...orgStructureTourSteps,
+            {...orgStructureTourSteps[1], elementId: `department-card-${firstDeptId}`},
+            {...orgStructureTourSteps[3], elementId: `section-card-${firstSectionId}`}
+       ]} />
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline"><Save className="mr-2 h-4 w-4" /> Зберегти</Button>
           <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Експорт</Button>
-          <Button><Plus className="mr-2 h-4 w-4" /> Додати</Button>
         </div>
       </header>
       
       <ScrollArea className="flex-1">
-        <div className="p-4 grid grid-flow-col auto-cols-[320px] gap-4">
+        <div className="p-4 grid grid-flow-col auto-cols-[380px] gap-4">
             {divisions.map(division => {
                 const divisionDepartments = departments.filter(d => d.divisionId === division.id);
                 return (
@@ -293,9 +345,9 @@ export default function OrgStructurePage() {
                                 <DepartmentCard 
                                     key={dept.id} 
                                     department={dept} 
-                                    employees={employees} 
                                     onUpdate={handleDepartmentUpdate}
                                     onDragStart={(e) => handleDragStart(e, dept.id)}
+                                    allEmployees={employees}
                                 />
                             ))}
                         </div>
@@ -335,8 +387,30 @@ function AddDepartmentControl({ id, divisionId, onAddDepartment }: { id: string,
                     ))}
                 </div>
             )}
-            <Button id={id} variant="outline" className="w-full">
+            <Button id={id} variant="outline" className="w-full" onClick={() => onAddDepartment(divisionId)}>
                 <Plus className="mr-2 h-4 w-4" /> Додати свій відділ
+            </Button>
+        </div>
+    )
+}
+
+function AddSectionControl({ departmentId, onAddSection }: { departmentId: string; onAddSection: (name: string, ckp: string) => void }) {
+    const templates = sectionTemplates[departmentId] || [];
+    
+    return (
+        <div className="mt-auto space-y-2">
+            {templates.length > 0 && (
+                 <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground font-semibold">Додати секцію:</p>
+                    {templates.map(template => (
+                        <Button key={template.name} variant="ghost" size="sm" className="w-full justify-start text-xs h-8" onClick={() => onAddSection(template.name, template.ckp)}>
+                           <Plus className="mr-2 h-3 w-3" /> {template.name}
+                        </Button>
+                    ))}
+                </div>
+            )}
+            <Button variant="outline" className="w-full h-8 text-xs" onClick={() => onAddSection('Нова секція', '')}>
+                <Plus className="mr-2 h-3 w-3" /> Додати свою секцію
             </Button>
         </div>
     )
