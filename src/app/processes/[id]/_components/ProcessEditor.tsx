@@ -166,15 +166,15 @@ export default function ProcessEditor({ initialProcess, users }: ProcessEditorPr
       <main ref={containerRef} className="flex-1 overflow-auto p-4 md:p-8 relative">
         <div className="inline-block min-w-full" style={{ width: `${maxOrder * (192 + 24) + 240}px` }}>
             <ProcessArrows allSteps={allSteps} containerRef={containerRef} />
-            <div className="space-y-1">
+            <div className="space-y-px">
                 {process.lanes.map(lane => (
                 <div 
                     key={lane.id} 
-                    className="flex items-start min-h-[10rem] bg-background rounded-lg"
+                    className="flex items-start min-h-[10rem] bg-background rounded-lg border-b"
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, lane.id)}
                 >
-                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-10 h-full">
+                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-10 self-stretch flex items-center">
                     <Input 
                         defaultValue={lane.role}
                         className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
