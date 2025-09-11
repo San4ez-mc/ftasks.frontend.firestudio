@@ -451,7 +451,7 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef,
                                 }}
                             />
                             <Input
-                                ref={el => (inputRefs.current[sr.id] = el)}
+                                ref={el => { inputRefs.current[sr.id] = el }}
                                 value={sr.name}
                                 onChange={(e) => handleChange(sr.id, 'name', e.target.value)}
                                 onKeyDown={(e) => { if(e.key === 'Enter') handleAddSubResult(sr.id)}}
