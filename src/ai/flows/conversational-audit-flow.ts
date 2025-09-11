@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A conversational AI flow for conducting a business audit.
@@ -43,12 +44,17 @@ const auditPrompt = ai.definePrompt({
 
 You MUST conduct the entire conversation in UKRAINIAN.
 
+**Your Persona & Tone:**
+- You are friendly, supportive, and conversational. Your goal is to make the business owner feel comfortable and understood.
+- Maintain a positive and encouraging tone.
+- Start your questions with friendly, natural-sounding phrases. For example, instead of just asking "How many employees are there?", you could say "Чудово, дякую! Давайте тепер поговоримо про вашу команду. Скільки у вас співробітників?" (Great, thanks! Now let's talk about your team. How many employees do you have?).
+
 **Your Task:**
 1. You will be given the current state of the JSON summary and the full conversation history.
 2. Your primary goal is to gather information to fill out the 'updatedSummary' JSON object.
 3. Based on the user's LAST response, update the JSON summary with any new information you've learned.
 4. Then, formulate the VERY NEXT question you need to ask to continue gathering information according to the audit plan below.
-5. If the user's answer is vague, ask a clarifying question.
+5. If the user's answer is vague, ask a clarifying question in a friendly manner.
 6. If the user goes off-topic, gently guide them back to the audit plan.
 7. Keep your questions concise and ask only one question at a time.
 
@@ -101,15 +107,15 @@ const conversationalAuditFlow = ai.defineFlow(
     outputSchema: ConversationalAuditOutputSchema,
   },
   async ({userAudioDataUri, conversationHistory, currentSummary}) => {
-    // Step 1: Transcribe the audio
+    // Step 1: Transcribe the audio cleanly
     const transcribeResponse = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
-        prompt: [{media: {url: userAudioDataUri, contentType: 'audio/webm'}}, {text: 'Транскрибуй це аудіо українською мовою.'}],
+        prompt: [{media: {url: userAudioDataUri, contentType: 'audio/webm'}}, {text: 'Транскрибуй це аудіо українською мовою. Прибери будь-які слова-паразити та заповнювачі пауз, такі як "еее", "ммм", "нуу", щоб текст був чистим та лаконічним.'}],
     });
     const userTranscript = transcribeResponse.text;
 
     // Step 2: Update conversation history with the new transcript
-    const updatedConversationHistory = [
+    const updatedConversationHistory: ConversationTurn[] = [
       ...conversationHistory,
       {role: 'user' as const, text: userTranscript},
     ];
@@ -127,7 +133,7 @@ const conversationalAuditFlow = ai.defineFlow(
     const { nextQuestion, updatedSummary } = output;
 
     // Step 4: Add the AI's question to the history for the next turn
-    const finalConversationHistory = [
+    const finalConversationHistory: ConversationTurn[] = [
       ...updatedConversationHistory,
       {role: 'model' as const, text: nextQuestion},
     ];
