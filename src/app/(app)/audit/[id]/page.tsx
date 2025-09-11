@@ -1,73 +1,18 @@
 
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, ArrowLeft, Loader2, Wand2, AlertTriangle, Mic } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { generateAuditSummary } from '@/ai/flows/audit-summary-flow';
+import { Loader2, Mic, Square, Wand2, AlertTriangle, Send } from 'lucide-react';
+import { continueConversationalAudit, getAudit, updateAudit } from '../actions';
 import { useToast } from '@/hooks/use-toast';
-import { getAudit, updateAudit } from '../actions';
-import type { Audit } from '@/types/audit';
+import type { Audit, ConversationTurn } from '@/types/audit';
+import type { AuditStructure } from '@/ai/types';
+import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
-const auditSections = [
-  {
-    title: 'Загальне бачення та Стратегія',
-    questions: [
-      'Розкажіть, чим займається ваша компанія?',
-      'Опишіть головний бізнес-процес вашої компанії одним реченням: звідки приходять клієнти і який кінцевий продукт вони отримують?',
-      'Яка головна фінансова мета компанії на найближчий рік (наприклад, оборот, прибуток)?',
-      'Хто у компанії відповідальний за досягнення цієї фінансової мети? Чиї рішення на це впливають найбільше?',
-    ],
-  },
-  {
-    title: 'Маркетинг та Залучення клієнтів',
-    questions: [
-      'Перерахуйте 2-3 основні канали, звідки приходять клієнти. Хто відповідає за роботу кожного каналу?',
-      'Які ключові метрики ви використовуєте для оцінки ефективності маркетингу (наприклад, вартість ліда, ROMI)?',
-      'Чи бере власник участь в операційній роботі з маркетингу (наприклад, налаштування реклами, написання текстів)?',
-    ],
-  },
-  {
-    title: 'Продажі та Робота з клієнтами',
-    questions: [
-      'Опишіть коротко процес продажу: від першого контакту до отримання оплати. Хто є ключовою особою на кожному етапі?',
-      'Чи є у відділі продажів скрипти, регламенти або CRM-система? Наскільки системно вони використовуються?',
-      'Хто в компанії є найкращим продавцем? Наскільки сильно впадуть продажі, якщо ця людина піде у відпустку на місяць?',
-    ],
-  },
-  {
-    title: 'Продукт та Виробництво',
-    questions: [
-      'Хто відповідає за якість кінцевого продукту чи послуги? Як ви цю якість вимірюєте?',
-      'Чи є у вас задокументовані процеси або інструкції для створення продукту чи надання послуги?',
-      'Наскільки сильно ви, як власник, залучені у процес виробництва або надання послуг клієнтам?',
-    ],
-  },
-  {
-      title: 'Команда та Найм',
-      questions: [
-          'Хто ухвалює остаточне рішення про найм нового співробітника?',
-          'Чи є у вас програма адаптації (онбордингу) для нових членів команди?',
-          'Які ключові співробітники, крім власника, "незамінні"? Що станеться, якщо вони раптово звільняться?',
-      ]
-  },
-  {
-      title: 'Фінанси та Управління',
-      questions: [
-          'Хто в компанії регулярно веде фінансовий облік (P&L, Cash Flow)? Як часто власник переглядає ці звіти?',
-          'Хто приймає рішення про ключові витрати в компанії?',
-          'Які задачі ви, як власник, виконували протягом останнього тижня? Перерахуйте 5-7 основних.',
-      ]
-  }
-];
-
-const allQuestions = auditSections.flatMap(section =>
-  section.questions.map(q => ({ text: q, section: section.title }))
-);
 
 type AuditPageProps = {
   params: { id: string };
@@ -78,194 +23,208 @@ export default function AuditPage({ params }: AuditPageProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
-  
-  const [isInitialAudit, setIsInitialAudit] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentTranscript, setCurrentTranscript] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const conversationEndRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
       startTransition(async () => {
           const fetchedAudit = await getAudit(params.id);
           if (fetchedAudit) {
               setAudit(fetchedAudit);
-              // Simple logic: if no answers to first question, it's the first audit.
-              setIsInitialAudit(!fetchedAudit.answers?.[0]);
           } else {
               toast({ title: "Помилка", description: "Аудит не знайдено.", variant: "destructive"});
               router.push('/audit');
           }
       });
   }, [params.id, router, toast]);
+  
+  useEffect(() => {
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [audit?.conversationHistory]);
 
-  if (!audit) {
-      return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>;
-  }
+  const startRecording = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
 
-  const currentQuestionIndex = audit.currentQuestionIndex;
-  // Skip first question if it's not the initial audit
-  const questionsToAsk = allQuestions.slice(isInitialAudit ? 0 : 1);
-  const question = questionsToAsk[currentQuestionIndex];
-  const progress = ((currentQuestionIndex) / questionsToAsk.length) * 100;
-
-  const handleAnswerChange = (text: string) => {
-    const questionIndexInDb = isInitialAudit ? currentQuestionIndex : currentQuestionIndex + 1;
-    setAudit(prev => prev ? ({...prev, answers: {...prev.answers, [questionIndexInDb]: text}}) : null);
-  }
-
-  const handleNext = () => {
-    const questionIndexInDb = isInitialAudit ? currentQuestionIndex : currentQuestionIndex + 1;
-    const currentAnswer = audit.answers[questionIndexInDb];
-    if (!currentAnswer || currentAnswer.trim().length < 5) {
-        toast({
-            title: "Будь ласка, дайте відповідь",
-            description: "Надайте більш розгорнуту відповідь на запитання.",
-            variant: "destructive"
-        });
-        return;
-    }
-
-    startTransition(async () => {
-        try {
-            const result = await generateAuditSummary({
-                currentSummary: audit.summary === 'Аудит ще не розпочато.' ? '' : audit.summary,
-                identifiedProblems: audit.problems,
-                question: question.text,
-                answer: currentAnswer,
-            });
-
-            const nextIndex = currentQuestionIndex + 1;
-            const isCompleted = nextIndex >= questionsToAsk.length;
-            
-            const updates: Partial<Audit> = {
-                summary: result.updatedSummary,
-                problems: result.updatedProblems,
-                answers: audit.answers,
-                currentQuestionIndex: isCompleted ? currentQuestionIndex : nextIndex,
-                isCompleted: isCompleted,
-            };
-
-            // If it's the first question of the first audit, save the company description
-            if (isInitialAudit && currentQuestionIndex === 0) {
-                updates.companyDescription = currentAnswer;
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                audioChunksRef.current.push(event.data);
             }
+        };
 
-            const updatedAudit = await updateAudit(audit.id, updates);
-            if (updatedAudit) {
-                setAudit(updatedAudit);
-            }
+        mediaRecorder.onstop = handleRecordingStop;
 
-            if (isCompleted) {
-                 toast({
-                    title: "Аудит завершено!",
-                    description: "Ваш фінальний звіт готовий. Ви можете переглянути його в списку аудитів.",
-                });
-                router.push('/audit');
-            }
+        mediaRecorder.start();
+        setIsRecording(true);
+        timerIntervalRef.current = setInterval(() => {
+            setRecordingSeconds(prev => prev + 1);
+        }, 1000);
 
-        } catch (error) {
-            toast({
-                title: "Помилка ШІ",
-                description: "Не вдалося обробити вашу відповідь. Спробуйте ще раз.",
-                variant: "destructive"
-            });
-        }
-    });
-  };
-
-  const handleBack = () => {
-    if (currentQuestionIndex > 0) {
-      const newIndex = currentQuestionIndex - 1;
-      startTransition(async () => {
-        const updatedAudit = await updateAudit(audit.id, { currentQuestionIndex: newIndex });
-        if (updatedAudit) setAudit(updatedAudit);
-      });
+    } catch (err) {
+        console.error("Error starting recording:", err);
+        toast({ title: "Помилка запису", description: "Не вдалося отримати доступ до мікрофону.", variant: "destructive"});
     }
   };
   
-  const isLastQuestion = currentQuestionIndex >= questionsToAsk.length - 1;
-  const questionIndexInDb = isInitialAudit ? currentQuestionIndex : currentQuestionIndex + 1;
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+    }
+    setRecordingSeconds(0);
+  };
 
-  if (!question) {
-       return <div className="flex items-center justify-center h-full">Аудит завершено або не знайдено запитань.</div>;
+  const handleRecordingStop = () => {
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = () => {
+          const audioDataUri = reader.result as string;
+          handleSubmit(audioDataUri);
+      };
+  };
+
+  const handleSubmit = (audioDataUri: string, textInput?: string) => {
+    if ((!audioDataUri && !textInput) || !audit) return;
+    
+    setIsLoading(true);
+    setCurrentTranscript('');
+
+    startTransition(async () => {
+      try {
+        const result = await continueConversationalAudit({
+          auditId: audit.id,
+          userAudioDataUri: audioDataUri, // The new flow expects audio
+          conversationHistory: audit.conversationHistory,
+          currentSummary: audit.structuredSummary,
+        });
+
+        if (result.userTranscript) {
+          setCurrentTranscript(result.userTranscript);
+        }
+        
+        const updatedAudit = await updateAudit(audit.id, {
+          structuredSummary: result.updatedStructuredSummary,
+          conversationHistory: result.updatedConversationHistory,
+        });
+
+        if (updatedAudit) {
+          setAudit(updatedAudit);
+        }
+
+      } catch (error) {
+        console.error("Error in audit turn:", error);
+        toast({ title: "Помилка AI", description: "Не вдалося обробити вашу відповідь.", variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    });
+  };
+
+  if (isPending || !audit) {
+      return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>;
   }
-
+  
   return (
     <div className="flex flex-col md:flex-row h-full">
-      {/* Left Panel: Questions & Input */}
-      <div className="flex flex-col flex-1 p-4 md:p-8 lg:p-12 space-y-6">
-        <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
-                <span className="text-3xl font-bold font-headline">{currentQuestionIndex + 1}</span>
-            </div>
-            <div>
-                 <p className="text-sm font-semibold text-primary">{question.section}</p>
-                 <h1 className="text-2xl md:text-3xl font-bold font-headline">{question.text}</h1>
-            </div>
+      {/* Left Panel: Conversation */}
+      <div className="flex flex-col flex-1 p-4 md:p-8 space-y-4">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-4">
+           {audit.conversationHistory.map((turn, index) => (
+             <div key={index} className={cn("flex items-start gap-4", turn.role === 'user' && "justify-end")}>
+                {turn.role === 'model' && <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0"><Wand2 className="h-5 w-5"/></div>}
+                <div className={cn("p-3 rounded-lg max-w-lg", turn.role === 'model' ? 'bg-muted' : 'bg-primary text-primary-foreground')}>
+                    <p className="whitespace-pre-wrap">{turn.text}</p>
+                </div>
+             </div>
+           ))}
+           {isLoading && (
+              <div className="flex items-start gap-4">
+                 <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0"><Wand2 className="h-5 w-5"/></div>
+                  <div className="p-3 rounded-lg bg-muted flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin"/>
+                    <span className="text-sm text-muted-foreground">{currentTranscript ? 'Аналізую...' : 'Транскрибую...'}</span>
+                  </div>
+              </div>
+           )}
+           <div ref={conversationEndRef} />
         </div>
         
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Textarea
-                placeholder="Введіть вашу відповідь тут..."
-                className="flex-1 text-base h-full md:col-span-2"
-                value={audit.answers[questionIndexInDb] || ''}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-            />
-            <div className="flex flex-col items-center justify-center text-center p-4 bg-muted/50 rounded-lg">
-                <Button variant="ghost" size="icon" className="h-20 w-20 rounded-full bg-background mb-4">
-                    <Mic className="h-10 w-10 text-primary" />
-                </Button>
-                <h4 className="font-semibold">Запишіть аудіо-відповідь</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                    Рекомендуємо записувати розгорнуті відповіді голосом. Розповідайте з максимальною кількістю деталей — це допоможе ШІ надати вам найточніші рекомендації.
-                </p>
-            </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-4 border-t">
-          <Button variant="outline" onClick={handleBack} disabled={currentQuestionIndex === 0}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад
+        <div className="flex items-center gap-4 pt-4 border-t">
+          <Textarea placeholder="Або введіть відповідь текстом..." className="flex-1" disabled={isRecording || isLoading}/>
+          <Button size="icon" className="h-12 w-12 shrink-0" onClick={isRecording ? stopRecording : startRecording} disabled={isLoading}>
+            {isRecording ? <Square className="h-6 w-6"/> : <Mic className="h-6 w-6" />}
           </Button>
-           <div className="flex-1 text-center px-4">
-             <Progress value={progress} />
-           </div>
-          <Button onClick={handleNext} disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLastQuestion ? 'Завершити' : 'Далі'}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          {isRecording && <span className="text-sm font-mono min-w-[50px] text-center">{recordingSeconds}s</span>}
         </div>
       </div>
 
-      {/* Right Panel: Summary */}
-      <aside className="w-full md:w-1/3 lg:w-1/4 bg-card border-l p-6 flex flex-col">
+      {/* Right Panel: Structured Summary */}
+      <aside className="w-full md:w-1/3 lg:w-2/5 bg-card border-l p-6 flex flex-col">
         <CardHeader className="p-0">
             <CardTitle className="flex items-center gap-2">
                 <Wand2/>
-                Аналітичне резюме
+                Структурована дешифровка
             </CardTitle>
             <CardDescription>Результати оновлюються після кожної вашої відповіді.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0 mt-6 space-y-4 overflow-y-auto">
-           <div className="space-y-1">
-                <h4 className="text-sm font-semibold">Загальне резюме</h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{audit.summary}</p>
-           </div>
-           <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Виявлені проблеми та ризики</h4>
-                {audit.problems.length > 0 ? (
-                    <ul className="space-y-2">
-                        {audit.problems.map((problem, index) => (
-                            <li key={index} className="flex items-start gap-2 text-sm">
-                                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5"/>
-                                <span>{problem}</span>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-sm text-muted-foreground">Проблем поки не виявлено.</p>
-                )}
-           </div>
+        <CardContent className="flex-1 p-0 mt-6 space-y-4 overflow-y-auto">
+           <StructuredSummaryView summary={audit.structuredSummary} />
         </CardContent>
       </aside>
     </div>
   );
+}
+
+
+function StructuredSummaryView({ summary }: { summary: AuditStructure }) {
+    if (!summary || Object.keys(summary).length === 0) {
+        return <p className="text-sm text-muted-foreground">Резюме буде сформовано після вашої першої відповіді.</p>;
+    }
+
+    const renderValue = (value: any, indent = 0) => {
+        if (typeof value === 'string' || typeof value === 'number') {
+            return <span className="text-muted-foreground">{value}</span>;
+        }
+        if (typeof value === 'boolean') {
+            return <span className={value ? "text-green-500" : "text-red-500"}>{value ? 'Так' : 'Ні'}</span>;
+        }
+        if (Array.isArray(value)) {
+            return (
+                <ul className="list-disc pl-5 space-y-1">
+                    {value.map((item, index) => <li key={index}>{renderValue(item, indent + 1)}</li>)}
+                </ul>
+            );
+        }
+        if (typeof value === 'object' && value !== null) {
+            return (
+                <div className="space-y-2 pl-4">
+                    {Object.entries(value).map(([key, val]) => (
+                        val !== undefined && val !== null && (!Array.isArray(val) || val.length > 0) && (
+                             <div key={key}>
+                                <h4 className="font-semibold text-xs capitalize">{key.replace(/([A-Z])/g, ' $1')}</h4>
+                                {renderValue(val, indent + 1)}
+                            </div>
+                        )
+                    ))}
+                </div>
+            );
+        }
+        return null;
+    };
+    
+    return <div className="text-sm space-y-4">{renderValue(summary)}</div>;
 }

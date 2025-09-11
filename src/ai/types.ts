@@ -64,3 +64,76 @@ export const TelegramCommandOutputSchema = z.object({
   reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees") or unknown.'),
 });
 export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
+
+
+// From conversational-audit-flow.ts
+
+export const AuditStructureSchema = z.object({
+  companyProfile: z.object({
+    description: z.string().describe("What the company does."),
+    products: z.array(z.string()).describe("List of products or services."),
+    mainBusinessProcess: z.string().describe("The main business process."),
+  }).optional(),
+  team: z.object({
+    employeeCount: z.number().describe("Total number of employees.").optional(),
+    roles: z.array(z.object({
+      employeeName: z.string(),
+      role: z.string().describe("Role in the main process."),
+      otherDuties: z.string().optional()
+    })).describe("Employee roles.").optional(),
+  }).optional(),
+  ownerAnalysis: z.object({
+    tasks: z.array(z.string()).describe("Detailed list of tasks the owner performs."),
+    delegationAttempts: z.string().describe("Has the owner tried to delegate core product/service tasks?"),
+  }).optional(),
+  marketing: z.object({
+    leadSource: z.string().describe("Main source of leads (e.g., word-of-mouth, ads)."),
+    isLeadFlowManaged: z.boolean().describe("Is the lead flow managed and predictable?"),
+    metrics: z.object({
+      isLeadCostCalculated: z.boolean(),
+      otherMetrics: z.array(z.string()),
+    }),
+    leadTrackingSystem: z.string().describe("CRM, spreadsheet, or none."),
+  }).optional(),
+  sales: z.object({
+    mainSalesperson: z.string().describe("Who makes the main sales (owner, manager, etc.)."),
+    processDescription: z.string(),
+    hasScripts: z.boolean(),
+    crmSystem: z.string().describe("Is a CRM used? If so, which one?"),
+  }).optional(),
+  finance: z.object({
+    profitUnderstanding: z.string().describe("How well do they understand their profit?"),
+    financialReports: z.array(z.enum(["P&L", "Cash Flow", "Balance Sheet"])),
+    isBudgetSeparated: z.boolean().describe("Is the owner's budget separate from the business budget?"),
+    systemsUsed: z.string().describe("Software or systems used for financial tracking."),
+    productProfitability: z.string().describe("Do they calculate profitability for individual products/projects?"),
+  }).optional(),
+  production: z.object({
+    mainProvider: z.string().describe("Who provides the main service or creates the product."),
+  }).optional(),
+}).describe("A structured summary of the business audit.");
+export type AuditStructure = z.infer<typeof AuditStructureSchema>;
+
+
+export const ConversationalAuditInputSchema = z.object({
+    userAudioDataUri: z.string().describe("A chunk of the user's spoken answer, as a data URI that must include a MIME type and use Base64 encoding."),
+    conversationHistory: z.array(z.object({
+        role: z.enum(['user', 'model']),
+        text: z.string(),
+    })),
+    currentSummary: AuditStructureSchema,
+    auditId: z.string(),
+});
+export type ConversationalAuditInput = z.infer<typeof ConversationalAuditInputSchema>;
+
+export const ConversationalAuditOutputSchema = z.object({
+    aiResponseText: z.string().describe("The AI's next question or statement to the user."),
+    userTranscript: z.string().describe("The transcription of the user's audio."),
+    updatedStructuredSummary: AuditStructureSchema,
+    updatedConversationHistory: z.array(z.object({
+        role: z.enum(['user', 'model']),
+        text: z.string(),
+    })),
+    isAuditComplete: z.boolean(),
+});
+export type ConversationalAuditOutput = z.infer<typeof ConversationalAuditOutputSchema>;

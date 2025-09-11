@@ -1,11 +1,15 @@
+import type { AuditStructure } from "@/ai/types";
+
+export type ConversationTurn = {
+    role: 'user' | 'model';
+    text: string;
+};
 
 export interface Audit {
     id: string;
     createdAt: string; // ISO date string
     isCompleted: boolean;
-    answers: Record<number, string>; // question index -> answer
-    summary: string;
-    problems: string[];
-    currentQuestionIndex: number;
-    companyDescription?: string; // To store the answer to the first question
+    structuredSummary: AuditStructure;
+    conversationHistory: ConversationTurn[];
+    companyDescription?: string; 
 }
