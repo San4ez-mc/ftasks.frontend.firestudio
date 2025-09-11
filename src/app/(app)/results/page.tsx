@@ -25,6 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 // Assume current user for filtering
 const currentUserId = 'user-4';
+const currentUser = { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' };
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
 
@@ -111,8 +112,8 @@ export default function ResultsPage() {
             completed: false,
             isUrgent: false,
             deadline: twoWeeksFromNow.toISOString().split('T')[0],
-            assignee: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
-            reporter: { id: currentUserId, name: 'Поточний користувач', avatar: 'https://picsum.photos/40/40' },
+            assignee: currentUser,
+            reporter: currentUser,
             description: '',
             expectedResult: '',
             subResults: [],
@@ -475,10 +476,12 @@ function ResultsTable({
                 </div>
             </div>
         </div>
-        {(result.subResults.length > 0 || (selectedResultId === result.id && !isCreating)) && (
-            <div className="pl-8 md:pl-12 py-1 pr-2 space-y-1">
-                 {result.subResults.map((sr) => (
-                    <div key={sr.id} className="flex items-center gap-2 text-xs group/sub-result">
+        {(result.subResults.length > 0) && (
+             <div className="pl-8 md:pl-12 py-1 pr-2 space-y-1">
+                 {result.subResults.map((sr, idx, arr) => (
+                    <div key={sr.id} className="flex items-start gap-2 text-xs group/sub-result relative">
+                        <div className="absolute left-[-1rem] top-0 h-full w-px bg-border"></div>
+                        <div className="absolute left-[-1rem] top-2 h-px w-4 bg-border"></div>
                         <Checkbox 
                             checked={sr.completed}
                             onCheckedChange={(checked) => handleSubResultChange(result, sr.id, 'completed', !!checked)}
@@ -497,9 +500,6 @@ function ResultsTable({
                         </Button>
                     </div>
                  ))}
-                 <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => handleAddSubResult(result)}>
-                    <Plus className="mr-1 h-3 w-3"/> Додати підрезультат
-                 </Button>
             </div>
         )}
       </div>
