@@ -15,6 +15,7 @@ import {
   ConversationalAuditInputSchema,
   ConversationalAuditOutputSchema,
   AuditStructureSchema,
+  ConversationTurnSchema,
 } from '@/ai/types';
 import {z} from 'zod';
 
@@ -28,9 +29,7 @@ const auditPrompt = ai.definePrompt({
   name: 'conversationalAuditPrompt',
   input: {
     schema: z.object({
-      conversationHistory: z.array(
-        z.object({role: z.enum(['user', 'model']), text: z.string()})
-      ),
+      conversationHistory: z.array(ConversationTurnSchema),
       currentSummary: AuditStructureSchema,
     }),
   },
@@ -140,6 +139,6 @@ const conversationalAuditFlow = ai.defineFlow(
       userTranscript: userTranscript,
       updatedConversationHistory: finalConversationHistory,
       isAuditComplete: false, // Logic for completion can be added later
-    };
+    } as any;
   }
 );

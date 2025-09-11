@@ -68,6 +68,13 @@ export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
 
 // From conversational-audit-flow.ts
 
+export const ConversationTurnSchema = z.object({
+    role: z.enum(['user', 'model']),
+    text: z.string()
+});
+export type ConversationTurn = z.infer<typeof ConversationTurnSchema>;
+
+
 export const AuditStructureSchema = z.object({
   companyProfile: z.object({
     description: z.string().describe("What the company does."),
@@ -117,10 +124,7 @@ export type AuditStructure = z.infer<typeof AuditStructureSchema>;
 
 export const ConversationalAuditInputSchema = z.object({
     userAudioDataUri: z.string().describe("A chunk of the user's spoken answer, as a data URI that must include a MIME type and use Base64 encoding."),
-    conversationHistory: z.array(z.object({
-        role: z.enum(['user', 'model']),
-        text: z.string(),
-    })),
+    conversationHistory: z.array(ConversationTurnSchema),
     currentSummary: AuditStructureSchema,
     auditId: z.string(),
 });
@@ -130,10 +134,7 @@ export const ConversationalAuditOutputSchema = z.object({
     aiResponseText: z.string().describe("The AI's next question or statement to the user."),
     userTranscript: z.string().describe("The transcription of the user's audio."),
     updatedStructuredSummary: AuditStructureSchema,
-    updatedConversationHistory: z.array(z.object({
-        role: z.enum(['user', 'model']),
-        text: z.string(),
-    })),
+    updatedConversationHistory: z.array(ConversationTurnSchema),
     isAuditComplete: z.boolean(),
 });
 export type ConversationalAuditOutput = z.infer<typeof ConversationalAuditOutputSchema>;
