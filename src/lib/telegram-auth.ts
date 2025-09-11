@@ -2,6 +2,7 @@
 import jwt from 'jsonwebtoken';
 import { db, users, companies, employees as employeeLinks } from '@/lib/db'; // Mock DB
 import { firestore } from './firebase-admin';
+import type { User } from '@/types/user';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const GROUP_LINK_CODE_EXPIRATION = 10 * 60 * 1000; // 10 minutes
@@ -14,14 +15,14 @@ interface TelegramUser {
   photo_url?: string;
 }
 
-export async function findUserByTelegramId(telegramUserId: string) {
+export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
     const usersCollection = firestore.collection('users');
     const userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId).limit(1).get();
     if (userQuery.empty) {
         return null;
     }
     const userDoc = userQuery.docs[0];
-    return { id: userDoc.id, ...userDoc.data() };
+    return { id: userDoc.id, ...userDoc.data() } as (User & { id: string });
 }
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
