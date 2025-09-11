@@ -11,20 +11,23 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import ProcessArrows from '@/components/processes/process-arrows';
 import type { Process, Lane, Step, User, StepStatus } from '@/types/process';
+import type { Section, Employee } from '@/types/org-structure';
 
 
 type ProcessEditorProps = {
     initialProcess: Process;
     users: User[];
+    allSections: (Section & { departmentName: string })[];
+    allEmployees: Employee[];
 }
 
 // --- Main Page Component ---
 
-export default function ProcessEditor({ initialProcess, users }: ProcessEditorProps) {
+export default function ProcessEditor({ initialProcess, users, allSections, allEmployees }: ProcessEditorProps) {
   const router = useRouter();
   const [process, setProcess] = useState<Process>(initialProcess);
   const [editingStep, setEditingStep] = useState<Step | null>(null);
@@ -131,6 +134,23 @@ export default function ProcessEditor({ initialProcess, users }: ProcessEditorPr
     setIsDataSavePointChecked(editingStep?.isDataSavePoint || false);
   }, [editingStep]);
 
+  const handleLaneChange = (laneId: string, newSectionId: string) => {
+    const section = allSections.find(s => s.id === newSectionId);
+    if (!section) return;
+
+    setProcess(prev => ({
+        ...prev,
+        lanes: prev.lanes.map(lane => 
+            lane.id === laneId ? { ...lane, sectionId: newSectionId, role: section.name } : lane
+        )
+    }));
+  }
+  
+  const groupedSections = allSections.reduce((acc, section) => {
+      (acc[section.departmentName] = acc[section.departmentName] || []).push(section);
+      return acc;
+  }, {} as Record<string, (Section & { departmentName: string })[]>);
+
 
   return (
     <div className="flex flex-col h-full bg-muted/40">
@@ -167,39 +187,56 @@ export default function ProcessEditor({ initialProcess, users }: ProcessEditorPr
         <div className="inline-block min-w-full" style={{ width: `${maxOrder * (192 + 24) + 240}px` }}>
             <ProcessArrows allSteps={allSteps} containerRef={containerRef} />
             <div className="space-y-px">
-                {process.lanes.map(lane => (
-                <div 
-                    key={lane.id} 
-                    className="flex items-start min-h-[10rem] bg-background rounded-lg border-b"
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, lane.id)}
-                >
-                    <div className="sticky left-0 bg-background p-4 w-48 border-r z-10 self-stretch flex items-center">
-                    <Input 
-                        defaultValue={lane.role}
-                        className="font-semibold text-md h-auto p-0 border-none shadow-none focus-visible:ring-0"
-                    />
-                    </div>
-                    <div className="flex-1 flex items-center p-4 min-h-[10rem] relative">
-                    {lane.steps.map(step => (
+                {process.lanes.map(lane => {
+                    const laneSection = allSections.find(s => s.id === lane.sectionId);
+                    const sectionEmployees = laneSection ? [laneSection.managerId, ...laneSection.employeeIds].map(id => allEmployees.find(e => e.id === id)).filter(Boolean) as Employee[] : allEmployees;
+                    const sectionUsers = sectionEmployees.map(e => ({id: e.id, name: e.name, avatar: e.avatar || ''}));
+
+                    return (
                         <div 
-                            key={step.id} 
-                            id={`step-${step.id}`}
-                            style={{ position: 'absolute', left: `${(step.order - 1) * (192 + 24) + 16}px`}}
+                            key={lane.id} 
+                            className="flex items-start min-h-[10rem] bg-background rounded-lg border-b"
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, lane.id)}
                         >
-                            <StepCard 
-                                step={step} 
-                                users={users}
-                                onDragStart={(e) => handleDragStart(e, step, lane.id)}
-                                onEditClick={() => setEditingStep(step)} 
-                                onAddClick={() => addNewStep(step)}
-                                onUpdate={handleStepUpdate}
-                            />
+                            <div className="sticky left-0 bg-background p-4 w-48 border-r z-10 self-stretch flex items-center">
+                            <Select value={lane.sectionId} onValueChange={(newSectionId) => handleLaneChange(lane.id, newSectionId)}>
+                                <SelectTrigger className="font-semibold text-md h-auto p-0 border-none shadow-none focus:ring-0 w-full text-left [&>svg]:ml-auto">
+                                    <SelectValue placeholder="Обрати секцію..." >
+                                        {lane.role || 'Обрати секцію...'}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Object.entries(groupedSections).map(([deptName, sections]) => (
+                                        <SelectGroup key={deptName}>
+                                            <Label className="px-2 py-1.5 text-xs font-semibold">{deptName}</Label>
+                                            {sections.map(sec => <SelectItem key={sec.id} value={sec.id}>{sec.name}</SelectItem>)}
+                                        </SelectGroup>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            </div>
+                            <div className="flex-1 flex items-center p-4 min-h-[10rem] relative">
+                            {lane.steps.map(step => (
+                                <div 
+                                    key={step.id} 
+                                    id={`step-${step.id}`}
+                                    style={{ position: 'absolute', left: `${(step.order - 1) * (192 + 24) + 16}px`}}
+                                >
+                                    <StepCard 
+                                        step={step} 
+                                        users={sectionUsers}
+                                        onDragStart={(e) => handleDragStart(e, step, lane.id)}
+                                        onEditClick={() => setEditingStep(step)} 
+                                        onAddClick={() => addNewStep(step)}
+                                        onUpdate={handleStepUpdate}
+                                    />
+                                </div>
+                            ))}
+                            </div>
                         </div>
-                    ))}
-                    </div>
-                </div>
-                ))}
+                    )
+                })}
             </div>
         </div>
       </main>

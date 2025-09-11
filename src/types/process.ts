@@ -16,7 +16,8 @@ export type Step = {
 
 export type Lane = {
     id: string;
-    role: string;
+    role: string; // This will now store the Section Name
+    sectionId: string; // Link to the Section from org-structure
     steps: Step[];
 }
 
