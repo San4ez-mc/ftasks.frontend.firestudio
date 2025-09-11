@@ -300,6 +300,14 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                             <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} className="h-8 text-sm"/>
                         </div>
                          <div className="space-y-1">
+                            <Label htmlFor="email" className="text-xs">Пошта</Label>
+                            <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} className="h-8 text-sm"/>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="birthDate" className="text-xs">День народження</Label>
+                            <Input id="birthDate" name="birthDate" type="date" value={formData.birthDate || ''} onChange={handleInputChange} className="h-8 text-sm"/>
+                        </div>
+                         <div className="space-y-1">
                             <Label htmlFor="status" className="text-xs">Статус</Label>
                             <Select name="status" value={formData.status} onValueChange={handleStatusChange}>
                                 <SelectTrigger id="status" className="h-8 text-sm">

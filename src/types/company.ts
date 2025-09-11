@@ -13,4 +13,6 @@ export interface Employee {
     positions: string[];
     groups: string[];
     synonyms: string[];
+    email?: string;
+    birthDate?: string;
 }

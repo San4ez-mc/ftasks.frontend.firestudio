@@ -37,6 +37,8 @@ export let companyEmployees: Employee[] = [
         positions: ['pos-1', 'pos-7'],
         groups: ['grp-1'],
         synonyms: ['Alex', 'O.M.'],
+        email: 'alex@fineko.dev',
+        birthDate: '1990-05-15',
     },
     {
         id: 'emp-2',
@@ -50,6 +52,8 @@ export let companyEmployees: Employee[] = [
         positions: ['pos-3'],
         groups: ['grp-1', 'grp-2'],
         synonyms: ['Маша'],
+        email: 'maria.s@fineko.dev',
+        birthDate: '1992-11-20',
     },
      {
         id: 'emp-3',
@@ -63,6 +67,8 @@ export let companyEmployees: Employee[] = [
         positions: ['pos-5'],
         groups: ['grp-1'],
         synonyms: [],
+        email: 'olena.k@fineko.dev',
+        birthDate: '1995-03-10',
     },
     {
         id: 'emp-4',
@@ -76,6 +82,8 @@ export let companyEmployees: Employee[] = [
         positions: ['pos-6'],
         groups: ['grp-2'],
         synonyms: ['Петя'],
+        email: 'petro@fineko.dev',
+        birthDate: '1985-01-01',
     },
      {
         id: 'emp-5',
@@ -89,6 +97,8 @@ export let companyEmployees: Employee[] = [
         positions: ['pos-4'],
         groups: ['grp-3'],
         synonyms: [],
+        email: 'andriy.b@fineko.dev',
+        birthDate: '1993-08-25',
     },
 ];
 

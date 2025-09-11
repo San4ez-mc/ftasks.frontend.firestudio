@@ -1,4 +1,5 @@
 
+import type { TaskStatus } from './task';
 
 export type User = {
     id: string;
@@ -17,7 +18,7 @@ export type SubResult = {
 export type ResultTask = {
     id: string;
     title: string;
-    status: 'todo' | 'done';
+    status: TaskStatus;
 }
 
 export type ResultTemplate = {
