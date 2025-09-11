@@ -3,7 +3,7 @@
 'use server';
 
 import { firestore } from '@/lib/firebase-admin';
-import { resultsDb, tasksDb, templatesDb, companyEmployees as employeesDb } from '@/lib/db';
+import { resultsDb, tasksDb, templatesDb, companyEmployees as employeesDb, companies } from '@/lib/db';
 import { mockInitialProcess } from '@/data/process-mock';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
@@ -11,6 +11,7 @@ import type { Template } from '@/types/template';
 import type { Employee } from '@/types/company';
 import type { Process } from '@/types/process';
 import type { Instruction } from '@/types/instruction';
+import type { CompanyProfile } from '@/types/company-profile';
 
 const RESULTS_COLLECTION = 'results';
 const TASKS_COLLECTION = 'tasks';
@@ -20,6 +21,7 @@ const PROCESSES_COLLECTION = 'processes';
 const INSTRUCTIONS_COLLECTION = 'instructions';
 const GROUPS_COLLECTION = 'telegramGroups';
 const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
+const COMPANY_PROFILES_COLLECTION = 'company_profiles';
 
 const initialInstructions: Omit<Instruction, 'id'>[] = [
   { title: 'Як користуватися CRM', department: 'Відділ продажів', summary: 'Загальні правила та процедури роботи з клієнтською базою.', content: '<h1>Загальні правила</h1><p>Завжди заповнюйте всі поля...</p>', accessList: [] },
@@ -32,7 +34,7 @@ export async function seedDatabase() {
   const seedStatusRef = firestore.collection('internal').doc('seedStatus');
   const seedStatusDoc = await seedStatusRef.get();
 
-  if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded_v2) { // Use a new seed version flag
+  if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded_v3) { // Use a new seed version flag
     return { success: true, message: 'Database already seeded.' };
   }
 
@@ -43,6 +45,13 @@ export async function seedDatabase() {
   tasksDb.forEach(task => { batch.set(firestore.collection(TASKS_COLLECTION).doc(task.id), task); });
   templatesDb.forEach(template => { batch.set(firestore.collection(TEMPLATES_COLLECTION).doc(template.id), template); });
   employeesDb.forEach(employee => { batch.set(firestore.collection(EMPLOYEES_COLLECTION).doc(employee.id), employee); });
+
+  // Seed company profile
+  const companyProfile: Omit<CompanyProfile, 'id'> = {
+      name: companies[0].name,
+      description: 'Інноваційні рішення для вашого бізнесу.',
+  };
+  batch.set(firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companies[0].id), companyProfile);
 
   // Seed new collections
   const processRef = firestore.collection(PROCESSES_COLLECTION).doc(mockInitialProcess.id);
@@ -55,7 +64,7 @@ export async function seedDatabase() {
 
 
   await batch.commit();
-  await seedStatusRef.set({ seeded_v2: true });
+  await seedStatusRef.set({ seeded_v3: true });
 
   return { success: true, message: 'Database seeded successfully.' };
 }
@@ -146,6 +155,11 @@ export const deleteTemplateFromDb = (id: string) => remove(TEMPLATES_COLLECTION,
 // --- Employees ---
 export const getAllEmployees = () => getAll<Employee>(EMPLOYEES_COLLECTION);
 export const updateEmployeeInDb = (id: string, updates: Partial<Employee>) => update<Employee>(EMPLOYEES_COLLECTION, id, updates);
+
+// --- Company Profile ---
+export const getCompanyProfileFromDb = (id: string) => getById<CompanyProfile>(COMPANY_PROFILES_COLLECTION, id);
+export const updateCompanyProfileInDb = (id: string, updates: Partial<CompanyProfile>) => update<CompanyProfile>(COMPANY_PROFILES_COLLECTION, id, updates);
+
 
 // --- Processes ---
 export const getAllProcesses = () => getAll<Process>(PROCESSES_COLLECTION);

@@ -17,7 +17,8 @@ import Link from 'next/link';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import type { Employee } from '@/types/company';
-import { getEmployees, updateEmployee } from './actions';
+import type { CompanyProfile } from '@/types/company-profile';
+import { getEmployees, updateEmployee, getCompanyProfile, updateCompanyProfile } from './actions';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -76,16 +77,22 @@ export default function CompanyPage() {
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
-    const [companyName, setCompanyName] = useState('Fineko Development');
-    const [companyDescription, setCompanyDescription] = useState('Інноваційні рішення для вашого бізнесу.');
+    const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+
+    // Hardcoded company ID for now
+    const companyId = 'company-1';
 
     useEffect(() => {
         startTransition(async () => {
-            const fetchedEmployees = await getEmployees();
+            const [fetchedEmployees, fetchedProfile] = await Promise.all([
+                getEmployees(),
+                getCompanyProfile(companyId)
+            ]);
             setEmployees(fetchedEmployees);
             if (fetchedEmployees.length > 0) {
                 setSelectedEmployee(fetchedEmployees[0]);
             }
+            setCompanyProfile(fetchedProfile);
         });
     }, []);
 
@@ -114,8 +121,18 @@ export default function CompanyPage() {
     }
     
     const handleCompanyInfoSave = () => {
-        // In a real app, you would call an action to save this data
-        toast({ title: "Успіх", description: "Інформацію про компанію оновлено." });
+        if (!companyProfile) return;
+        startTransition(async () => {
+            try {
+                await updateCompanyProfile(companyId, {
+                    name: companyProfile.name,
+                    description: companyProfile.description,
+                });
+                toast({ title: "Успіх", description: "Інформацію про компанію оновлено." });
+            } catch (error) {
+                 toast({ title: "Помилка", description: "Не вдалося оновити інформацію про компанію.", variant: "destructive" });
+            }
+        });
     }
 
     return (
@@ -139,26 +156,36 @@ export default function CompanyPage() {
                     </div>
                 </header>
                 <div className="flex-1 overflow-y-auto" id="employee-list-table">
-                     <Card className="m-4">
-                        <CardHeader>
-                            <CardTitle>Інформація про компанію</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                             <div>
-                                <Label htmlFor="companyName">Назва компанії</Label>
-                                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
-                            </div>
-                             <div>
-                                <Label htmlFor="companyDescription">Опис</Label>
-                                <Textarea id="companyDescription" value={companyDescription} onChange={(e) => setCompanyDescription(e.target.value)} />
-                            </div>
-                            <Button size="sm" onClick={handleCompanyInfoSave}>
-                                <Save className="mr-2 h-4 w-4" />
-                                Зберегти
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    {isPending ? <p className="p-4">Завантаження...</p> : (
+                     {companyProfile && (
+                        <Card className="m-4">
+                            <CardHeader>
+                                <CardTitle>Інформація про компанію</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <Label htmlFor="companyName">Назва компанії</Label>
+                                    <Input 
+                                        id="companyName" 
+                                        value={companyProfile.name} 
+                                        onChange={(e) => setCompanyProfile({...companyProfile, name: e.target.value})} 
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="companyDescription">Опис</Label>
+                                    <Textarea 
+                                        id="companyDescription" 
+                                        value={companyProfile.description} 
+                                        onChange={(e) => setCompanyProfile({...companyProfile, description: e.target.value})} 
+                                    />
+                                </div>
+                                <Button size="sm" onClick={handleCompanyInfoSave} disabled={isPending}>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Зберегти
+                                </Button>
+                            </CardContent>
+                        </Card>
+                     )}
+                    {isPending && !employees.length ? <p className="p-4">Завантаження...</p> : (
                     <Table>
                         <TableHeader>
                             <TableRow>
