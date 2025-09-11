@@ -1,5 +1,5 @@
 
-import ProcessEditor from '@/app/(app)/processes/[id]/_components/ProcessEditor';
+import ProcessEditor from './_components/ProcessEditor';
 import { getProcess } from '../actions';
 import { mockUsers } from '@/data/process-mock';
 import { notFound } from 'next/navigation';

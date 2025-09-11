@@ -1,6 +1,6 @@
 
 import { getInstructionById } from '@/lib/firestore-service';
-import InstructionEditor from '@/app/(app)/instructions/[id]/_components/InstructionEditor';
+import InstructionEditor from './_components/InstructionEditor';
 import { notFound } from 'next/navigation';
 
 type InstructionsPageProps = {
