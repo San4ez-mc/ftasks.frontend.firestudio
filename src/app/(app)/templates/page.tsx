@@ -374,3 +374,5 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
         </div>
     )
 }
+
+    

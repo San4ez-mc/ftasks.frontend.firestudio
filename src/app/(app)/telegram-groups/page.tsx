@@ -113,7 +113,6 @@ const telegramTourSteps: TourStep[] = [
 export default function TelegramGroupsPage() {
   const [groups, setGroups] = useState(mockGroups);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(groups[0]);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleClosePanel = () => {
     setSelectedGroup(null);
@@ -126,21 +125,8 @@ export default function TelegramGroupsPage() {
     }
   }
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-            handleClosePanel();
-        }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-
   return (
-    <div ref={containerRef} className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
         <InteractiveTour pageKey="telegram-groups" steps={telegramTourSteps} />
       <div className={cn(
         "flex flex-col transition-all duration-300 w-full",
@@ -444,5 +430,4 @@ function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
     )
 }
 
-    
     

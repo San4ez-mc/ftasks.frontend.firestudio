@@ -5,7 +5,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, Search, Trash2, Upload, Save } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Upload, Save, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -281,7 +281,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                 </div>
                  <div className="flex items-center gap-2">
                     <Button id="save-employee-button" onClick={handleSaveChanges}>Зберегти</Button>
-                    <Button variant="ghost" onClick={onClose}>Скасувати</Button>
+                    <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
                 </div>
             </header>
 
