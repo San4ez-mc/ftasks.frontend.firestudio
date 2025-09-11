@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A conversational AI flow for conducting a business audit.
@@ -51,7 +50,7 @@ You MUST conduct the entire conversation in UKRAINIAN.
 4. Then, formulate the VERY NEXT question you need to ask to continue gathering information according to the audit plan below.
 5. If the user's answer is vague, ask a clarifying question.
 6. If the user goes off-topic, gently guide them back to the audit plan.
-7. Keep your questions concise and conversational. Ask only one question at a time.
+7. Keep your questions concise and ask only one question at a time.
 
 **Audit Plan (Follow this order):**
 1.  **Company Profile:**
@@ -112,7 +111,7 @@ const conversationalAuditFlow = ai.defineFlow(
     // Step 2: Update conversation history with the new transcript
     const updatedConversationHistory = [
       ...conversationHistory,
-      {role: 'user', text: userTranscript},
+      {role: 'user' as const, text: userTranscript},
     ];
 
     // Step 3: Call the main conversational AI
@@ -130,7 +129,7 @@ const conversationalAuditFlow = ai.defineFlow(
     // Step 4: Add the AI's question to the history for the next turn
     const finalConversationHistory = [
       ...updatedConversationHistory,
-      {role: 'model', text: nextQuestion},
+      {role: 'model' as const, text: nextQuestion},
     ];
     
     return {
@@ -138,7 +137,7 @@ const conversationalAuditFlow = ai.defineFlow(
       updatedStructuredSummary: updatedSummary,
       userTranscript: userTranscript,
       updatedConversationHistory: finalConversationHistory,
-      isAuditComplete: false, // Logic for completion can be added later
-    } as any;
+      isAuditComplete: false, 
+    };
   }
 );
