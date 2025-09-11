@@ -144,17 +144,21 @@ export default function AuditPage() {
             </div>
         </div>
         
-        <div className="flex-1 flex flex-col space-y-4">
-            <div className="relative flex-1">
-                <Textarea
-                    placeholder="Введіть вашу відповідь тут..."
-                    className="flex-1 text-base h-full pr-12"
-                    value={answers[currentQuestionIndex] || ''}
-                    onChange={(e) => handleAnswerChange(e.target.value)}
-                />
-                <Button variant="ghost" size="icon" className="absolute right-2 top-2 text-muted-foreground">
-                    <Mic className="h-5 w-5" />
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Textarea
+                placeholder="Введіть вашу відповідь тут..."
+                className="flex-1 text-base h-full md:col-span-2"
+                value={answers[currentQuestionIndex] || ''}
+                onChange={(e) => handleAnswerChange(e.target.value)}
+            />
+            <div className="flex flex-col items-center justify-center text-center p-4 bg-muted/50 rounded-lg">
+                <Button variant="ghost" size="icon" className="h-20 w-20 rounded-full bg-background mb-4">
+                    <Mic className="h-10 w-10 text-primary" />
                 </Button>
+                <h4 className="font-semibold">Запишіть аудіо-відповідь</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                    Рекомендуємо записувати розгорнуті відповіді голосом. Розповідайте з максимальною кількістю деталей — це допоможе ШІ надати вам найточніші рекомендації.
+                </p>
             </div>
         </div>
 
