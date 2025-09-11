@@ -52,7 +52,7 @@ export const TelegramCommandInputSchema = z.object({
 export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
 
 export const TelegramCommandOutputSchema = z.object({
-  command: z.enum(['create_task', 'create_result', 'list_employees', 'view_tasks', 'unknown', 'clarify'])
+  command: z.enum(['create_task', 'create_result', 'list_employees', 'view_tasks', 'show_help', 'unknown', 'clarify'])
     .describe('The recognized command the user wants to execute.'),
   parameters: z.object({
     title: z.string().optional().describe('The title for the task or result.'),
@@ -61,7 +61,7 @@ export const TelegramCommandOutputSchema = z.object({
     // ... other parameters can be added here
   }).optional().describe('The parameters extracted from the command.'),
   missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
-  reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees") or unknown.'),
+  reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees", "show_help") or unknown.'),
 });
 export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
 

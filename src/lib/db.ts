@@ -1,3 +1,4 @@
+
 // --- Mock Database ---
 // In a real application, this would connect to a real database like PostgreSQL or Firestore.
 
@@ -54,7 +55,7 @@ export let companyEmployees: Employee[] = [
         synonyms: ['Маша'],
         email: 'maria.s@fineko.dev',
         birthDate: '1992-11-20',
-        telegramPermissions: ['create_task', 'view_tasks'],
+        telegramPermissions: ['create_task', 'create_result', 'view_tasks', 'list_employees'],
     },
      {
         id: 'emp-3',
@@ -70,7 +71,7 @@ export let companyEmployees: Employee[] = [
         synonyms: [],
         email: 'olena.k@fineko.dev',
         birthDate: '1995-03-10',
-        telegramPermissions: ['create_task', 'view_tasks'],
+        telegramPermissions: ['create_task', 'create_result', 'view_tasks', 'list_employees'],
     },
     {
         id: 'emp-4',
@@ -86,7 +87,7 @@ export let companyEmployees: Employee[] = [
         synonyms: ['Петя'],
         email: 'petro@fineko.dev',
         birthDate: '1985-01-01',
-        telegramPermissions: ['create_task', 'view_tasks'],
+        telegramPermissions: ['create_task', 'create_result', 'view_tasks', 'list_employees'],
     },
      {
         id: 'emp-5',
@@ -102,7 +103,7 @@ export let companyEmployees: Employee[] = [
         synonyms: [],
         email: 'andriy.b@fineko.dev',
         birthDate: '1993-08-25',
-        telegramPermissions: [],
+        telegramPermissions: ['create_task', 'create_result', 'view_tasks', 'list_employees'],
     },
 ];
 

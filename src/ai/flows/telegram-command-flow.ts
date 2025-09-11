@@ -49,8 +49,9 @@ Command details:
     - Optional parameters: 'assigneeName', 'dueDate'.
 4.  'list_employees': Lists all employees in the company.
     - No parameters needed.
-5.  'clarify': Use this command if you understand the user's intent but are missing required information.
-6.  'unknown': Use this command if you cannot understand the user's intent at all.
+5.  'show_help': If the user asks "що ти вмієш?", "допомога", "команди" or similar, use this command. Your reply should list the commands they are allowed to use from the 'allowedCommands' list, in Ukrainian.
+6.  'clarify': Use this command if you understand the user's intent but are missing required information.
+7.  'unknown': Use this command if you cannot understand the user's intent at all.
 
 Your task:
 1.  Analyze the user's command in Ukrainian: "{{command}}".
@@ -60,7 +61,8 @@ Your task:
     - Today's date is ${new Date().toISOString().split('T')[0]}. If the user says "завтра" or "сьогодні", calculate the correct date.
 4.  If a required parameter for a command is missing, set the command to 'clarify' and formulate a clear question in the 'missingInfo' field IN UKRAINIAN. Example: "Для кого створити задачу?" or "Яка назва задачі?".
 5.  If you cannot determine the intent, set the command to 'unknown' and provide a helpful message in the 'reply' field IN UKRAINIAN. Example: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'."
-6.  Return the result in the required JSON format.
+6. If the user asks about your capabilities, set the command to 'show_help' and formulate a reply that lists the allowed commands with a brief explanation. For example: "Я вмію:\n- Створювати задачі (/create_task)\n- Створювати результати (/create_result)..."
+7.  Return the result in the required JSON format.
 `,
 });
 

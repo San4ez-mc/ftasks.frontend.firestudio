@@ -139,6 +139,10 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
                 await sendTelegramReply(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
                 break;
+            
+            case 'show_help':
+                await sendTelegramReply(chat.id, { text: aiResult.reply || "Я можу допомогти вам з керуванням завдань та результатів." });
+                break;
 
             case 'clarify':
                 await sendTelegramReply(chat.id, { text: `🤔 ${aiResult.missingInfo}` });

@@ -30,6 +30,8 @@ import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
 import type { Result } from '@/types/result';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 
 // --- TOUR STEPS ---
@@ -294,7 +296,7 @@ export default function TemplatesPage() {
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden w-full md:w-0",
         selectedTemplate ? "md:w-1/2 lg:w-2/5" : "hidden"
       )}>
-        {selectedTemplate && <TemplateDetailsPanel key={selectedTemplate.id} template={selectedTemplate} onUpdate={handleUpdateTemplate} onDelete={handleDeleteTemplate} onClose={handleClosePanel} />}
+        {selectedTemplate && <TemplateDetailsPanel key={selectedTemplate.id} template={selectedTemplate} onUpdate={handleUpdateTemplate} onClose={handleClosePanel} onDelete={handleDeleteTemplate} />}
       </div>
 
 
@@ -321,6 +323,7 @@ function CreateTemplateDialog({isOpen, setIsOpen, results, initialData, onCreate
     const [name, setName] = useState('');
     const [linkedResultId, setLinkedResultId] = useState<string | undefined>(initialData.resultId);
     const [expectedResult, setExpectedResult] = useState('');
+    const [startDate, setStartDate] = useState<Date | undefined>(new Date());
     const [recurrence, setRecurrence] = useState<Recurrence>({
         type: 'daily',
         interval: 1,
@@ -340,7 +343,7 @@ function CreateTemplateDialog({isOpen, setIsOpen, results, initialData, onCreate
         onCreate({
             name,
             repeatability: formatRepeatability(recurrence),
-            startDate: new Date().toISOString().split('T')[0],
+            startDate: (startDate || new Date()).toISOString().split('T')[0],
             tasksGenerated: [],
             expectedResult,
             resultId: linkedResultId,
@@ -387,6 +390,20 @@ function CreateTemplateDialog({isOpen, setIsOpen, results, initialData, onCreate
                                 ))}
                             </SelectContent>
                          </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="startDate" className="flex items-center gap-2"><CalendarDays className="h-4 w-4"/>Дата старту</Label>
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                    <span>{startDate ? formatDate(startDate) : "Обрати дату"}</span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus/>
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     <div className="space-y-2">
@@ -473,6 +490,25 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
                             <Label htmlFor="template-name">Назва шаблону</Label>
                             <Input id="template-name" value={template.name} onChange={e => handleFieldChange('name', e.target.value)} />
                         </div>
+                         <div>
+                            <Label htmlFor="startDate">Дата старту</Label>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="w-full justify-start text-left font-normal mt-1">
+                                        <CalendarDays className="mr-2 h-4 w-4"/>
+                                        <span>{template.startDate ? formatDate(template.startDate) : "Обрати дату"}</span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar 
+                                        mode="single" 
+                                        selected={new Date(template.startDate)} 
+                                        onSelect={(date) => handleFieldChange('startDate', date?.toISOString().split('T')[0] || '')}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                         <div>
                             <Label htmlFor="template-repeatability">Повторюваність</Label>
                             <Input id="template-repeatability" value={template.repeatability} onChange={e => handleFieldChange('repeatability', e.target.value)} />
@@ -497,6 +533,9 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
                                 </Badge>
                             </div>
                         ))}
+                         {template.tasksGenerated.length === 0 && (
+                            <p className="text-xs text-muted-foreground text-center py-4">Задачі ще не генерувалися.</p>
+                        )}
                     </CardContent>
                 </Card>
                  <Separator />
@@ -508,7 +547,3 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
         </div>
     )
 }
-
-    
-
-    
