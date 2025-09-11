@@ -118,7 +118,8 @@ export default function ResultsPage() {
             subResults: [],
             tasks: [],
             templates: [],
-            comments: []
+            comments: [],
+            accessList: [],
         };
         try {
             const createdResult = await createResult(newResultData);
@@ -205,7 +206,7 @@ export default function ResultsPage() {
             break;
         case 'mine':
         default:
-            filtered = filtered.filter(r => r.assignee.id === currentUserId && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => (r.assignee.id === currentUserId || r.accessList?.some(user => user.id === currentUserId)) && r.status !== 'Відкладено');
             break;
     }
 
@@ -250,7 +251,7 @@ export default function ResultsPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
               <Tabs id="results-tabs" value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
-                      <TabsTrigger value="mine">Мої</TabsTrigger>
+                      <TabsTrigger value="mine">Мої та доступні мені</TabsTrigger>
                       <TabsTrigger value="delegated">Делеговані</TabsTrigger>
                       <TabsTrigger value="subordinates">Підлеглих</TabsTrigger>
                       <TabsTrigger value="postponed">Відкладені</TabsTrigger>
@@ -575,3 +576,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    

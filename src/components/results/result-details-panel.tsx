@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Paperclip, Send, Calendar as CalendarIcon, Edit, PlusCircle, Trash2, X, FilePlus } from 'lucide-react';
+import { MoreVertical, Paperclip, Send, Calendar as CalendarIcon, Edit, PlusCircle, Trash2, X, FilePlus, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +29,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { createTask as createTaskAction } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
 
 type ResultDetailsPanelProps = {
@@ -60,6 +61,8 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     const nameInputRef = React.useRef<HTMLInputElement>(null);
     const subResultContainerRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
+    const lastFocusedSubResult = useRef<string | null>(null);
+
 
     useEffect(() => {
         const previousSubResultsLength = subResultContainerRef.current?.dataset.subresultsCount || '0';
@@ -110,6 +113,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
             deadline: result.deadline, // Default to main result deadline
         };
         const updatedSubResults = [...subResults, newSubResult];
+        setSubResults(updatedSubResults);
         onUpdate({ ...result, subResults: updatedSubResults });
     };
 
@@ -117,11 +121,25 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
         const updatedSubResults = subResults.map(sr => 
             sr.id === id ? { ...sr, [field]: value } : sr
         );
+         setSubResults(updatedSubResults);
         onUpdate({ ...result, subResults: updatedSubResults });
     };
+    
+    const handleSubResultBlur = (id: string) => {
+        const subResult = subResults.find(sr => sr.id === id);
+        if (subResult && subResult.name.trim() === '') {
+            // If the name is empty on blur, remove it, unless it's the only one
+            if (subResults.length > 1) {
+                handleSubResultDelete(id);
+            }
+        } else {
+             onUpdate({ ...result, subResults });
+        }
+    }
 
     const handleSubResultDelete = (id: string) => {
         const updatedSubResults = subResults.filter(sr => sr.id !== id);
+        setSubResults(updatedSubResults);
         onUpdate({ ...result, subResults: updatedSubResults });
     };
      
@@ -159,6 +177,10 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
             repeatability: 'Щоденно',
         };
         onUpdate({ ...result, templates: [...result.templates, newTemplate] });
+    }
+    
+    const handleAccessListChange = (selectedUsers: User[]) => {
+        onUpdate({ ...result, accessList: selectedUsers });
     }
 
     return (
@@ -294,6 +316,17 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                         placeholder="Опишіть, що має бути зроблено..."
                     />
                 </div>
+                
+                {/* Access List */}
+                <div>
+                    <Label className="text-xs text-muted-foreground flex items-center gap-2 mb-2"><Users className="h-4 w-4"/> Доступи</Label>
+                    <AccessListCombobox
+                        allUsers={mockUsers}
+                        selectedUsers={result.accessList || []}
+                        onSelectionChange={handleAccessListChange}
+                    />
+                </div>
+
 
                 {/* File attachments */}
                 <div>
@@ -323,6 +356,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                                         value={sr.name}
                                         onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
                                         onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
+                                        onBlur={() => handleSubResultBlur(sr.id)}
                                         placeholder="Новий підрезультат..."
                                         className="h-7 text-xs border-none focus-visible:ring-1 flex-1"
                                         autoFocus={!sr.name && index === subResults.length - 1}
@@ -550,3 +584,55 @@ function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result
         </Dialog>
     )
 }
+
+function AccessListCombobox({ allUsers, selectedUsers, onSelectionChange }: { allUsers: User[], selectedUsers: User[], onSelectionChange: (users: User[]) => void }) {
+    const [open, setOpen] = useState(false);
+    
+    const handleSelect = (user: User) => {
+        const isSelected = selectedUsers.some(su => su.id === user.id);
+        if (isSelected) {
+            onSelectionChange(selectedUsers.filter(su => su.id !== user.id));
+        } else {
+            onSelectionChange([...selectedUsers, user]);
+        }
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start h-auto min-h-10">
+                    <div className="flex flex-wrap gap-1">
+                        {selectedUsers.length > 0 ? selectedUsers.map(user => (
+                            <Badge key={user.id} variant="secondary" className="gap-1">
+                                <Avatar className="h-5 w-5"><AvatarImage src={user.avatar} /></Avatar>
+                                {user.name}
+                                <button onClick={(e) => { e.stopPropagation(); handleSelect(user);}} className="rounded-full hover:bg-muted-foreground/20 p-0.5">
+                                    <X className="h-3 w-3"/>
+                                </button>
+                            </Badge>
+                        )) : "Надати доступ..."}
+                    </div>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Пошук співробітника..." />
+                    <CommandList>
+                        <CommandEmpty>Не знайдено.</CommandEmpty>
+                        <CommandGroup>
+                            {allUsers.map(user => (
+                                <CommandItem key={user.id} onSelect={() => handleSelect(user)} value={user.name}>
+                                    <Checkbox className="mr-2" checked={selectedUsers.some(su => su.id === user.id)} />
+                                    <Avatar className="h-6 w-6 mr-2"><AvatarImage src={user.avatar} /></Avatar>
+                                    <span>{user.name}</span>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
+}
+
+    

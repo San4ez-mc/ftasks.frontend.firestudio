@@ -49,4 +49,7 @@ export interface Result {
   tasks: ResultTask[];
   templates: ResultTemplate[];
   comments: ResultComment[];
+  accessList: User[];
 }
+
+    
