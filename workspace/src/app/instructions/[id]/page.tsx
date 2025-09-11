@@ -1,19 +1,29 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getInstructionById } from '@/lib/firestore-service';
+import InstructionEditor from './_components/InstructionEditor';
+import { notFound } from 'next/navigation';
 
-export default function InstructionDetailPage() {
+type InstructionsPageProps = {
+  params: { id: string };
+};
+
+export default async function Page({ params }: InstructionsPageProps) {
+  const { id } = params;
+  const instruction = await getInstructionById(id);
+
+  if (!instruction) {
+    notFound();
+  }
+
   return (
-    <div className="flex h-full items-center justify-center p-8">
-        <Card className="w-full max-w-lg text-center">
-            <CardHeader>
-                <CardTitle>Розділ "Інструкції" тимчасово вимкнено</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground">
-                    Цей функціонал знаходиться на технічному обслуговуванні. Ми повернемо його найближчим часом.
-                </p>
-            </CardContent>
-        </Card>
-    </div>
+    <InstructionEditor
+      instruction={instruction}
+    />
   );
+}
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const instruction = await getInstructionById(id);
+  return { title: instruction ? instruction.title : 'Інструкція' };
 }

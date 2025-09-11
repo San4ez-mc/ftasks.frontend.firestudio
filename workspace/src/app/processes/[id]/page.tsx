@@ -1,19 +1,33 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import ProcessEditor from '@/app/processes/[id]/_components/ProcessEditor';
+import { getProcess } from '../actions';
+import { mockUsers } from '@/data/process-mock';
+import { notFound } from 'next/navigation';
 
-export default function ProcessDetailPage() {
+type ProcessesPageProps = {
+  params: { id: string };
+};
+
+export default async function Page({ params }: ProcessesPageProps) {
+  const { id } = params;
+
+  const process = await getProcess(id);
+  const users = mockUsers; // TODO: Replace with real user data fetch
+
+  if (!process) {
+    notFound();
+  }
+
   return (
-    <div className="flex h-full items-center justify-center p-8">
-        <Card className="w-full max-w-lg text-center">
-            <CardHeader>
-                <CardTitle>Розділ "Бізнес-процеси" тимчасово вимкнено</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <p className="text-muted-foreground">
-                    Цей функціонал знаходиться на технічному обслуговуванні. Ми повернемо його найближчим часом.
-                </p>
-            </CardContent>
-        </Card>
-    </div>
+    <ProcessEditor 
+        initialProcess={process} 
+        users={users} 
+    />
   );
+}
+
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const process = await getProcess(id);
+  return { title: process ? process.name : 'Бізнес-процес' };
 }
