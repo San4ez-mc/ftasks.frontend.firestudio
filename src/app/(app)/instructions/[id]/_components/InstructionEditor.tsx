@@ -1,38 +1,48 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Users, Settings, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Users, Settings, Eye, Trash2, X, Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import type { Instruction } from '@/types/instruction';
+import { updateInstruction } from '../../actions';
+import { useToast } from '@/hooks/use-toast';
 
-// This is a mock data structure. In a real app, you'd fetch this.
-const mockInstruction = {
-  id: '1',
-  title: 'Як користуватися CRM',
-  department: 'Відділ продажів',
-  content: '<h1>Загальні правила</h1><p>Завжди заповнюйте всі поля...</p>',
-  accessList: [
-    { userId: 'user-1', access: 'edit' },
-    { userId: 'user-2', access: 'view' },
-  ],
-};
 
 type InstructionEditorProps = {
-  id: string;
-  // initialData?: YourType;
+  instruction: Instruction;
 };
 
-export default function InstructionEditor({ id }: InstructionEditorProps) {
+export default function InstructionEditor({ instruction: initialInstruction }: InstructionEditorProps) {
   const router = useRouter();
-  const instruction = mockInstruction; // Use mock data
+  const [instruction, setInstruction] = useState<Instruction>(initialInstruction);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
 
-  if (!instruction) {
-    return <div>Instruction not found</div>;
+  useEffect(() => {
+    setInstruction(initialInstruction);
+  }, [initialInstruction]);
+
+  const handleFieldChange = (field: keyof Instruction, value: any) => {
+      setInstruction(prev => ({...prev, [field]: value}));
   }
+
+  const handleSave = async () => {
+      setIsSaving(true);
+      try {
+        await updateInstruction(instruction.id, instruction);
+        toast({ title: "Успіх", description: "Інструкцію збережено." });
+      } catch (error) {
+        toast({ title: "Помилка", description: "Не вдалося зберегти інструкцію.", variant: "destructive" });
+      } finally {
+        setIsSaving(false);
+      }
+  }
+
 
   return (
     <div className="flex flex-col md:flex-row h-full">
@@ -44,19 +54,26 @@ export default function InstructionEditor({ id }: InstructionEditorProps) {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Input
-              defaultValue={instruction.title}
+              value={instruction.title}
+              onChange={(e) => handleFieldChange('title', e.target.value)}
               className="text-lg font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
             />
           </div>
-          <Button>
-            <Save className="mr-2 h-4 w-4" /> Зберегти
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+              <Save className="mr-2 h-4 w-4" /> Зберегти
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => router.push('/instructions')}><X className="h-4 w-4" /></Button>
+          </div>
         </header>
         <div className="flex-1 p-4 md:p-8">
             {/* This is a placeholder for a rich text editor like Tiptap or TinyMCE */}
             <Textarea 
                 className="w-full h-full min-h-[60vh] text-base"
-                defaultValue={instruction.content.replace(/<[^>]+>/g, '')} // Simple HTML strip for textarea
+                value={instruction.content}
+                onChange={(e) => handleFieldChange('content', e.target.value)}
+                placeholder="Почніть писати інструкцію тут..."
             />
         </div>
       </div>
@@ -73,7 +90,7 @@ export default function InstructionEditor({ id }: InstructionEditorProps) {
             <CardContent className="space-y-4">
                  <div>
                     <label htmlFor="department" className="text-sm font-medium">Відділ</label>
-                    <Input id="department" defaultValue={instruction.department} />
+                    <Input id="department" value={instruction.department} onChange={(e) => handleFieldChange('department', e.target.value)} />
                  </div>
                  <Button variant="destructive" className="w-full">
                     <Trash2 className="mr-2 h-4 w-4"/> Видалити інструкцію

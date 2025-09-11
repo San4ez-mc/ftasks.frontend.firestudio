@@ -1,19 +1,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { PlusCircle, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,15 +15,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
+import type { Process } from '@/types/process';
+import { getProcesses, createProcess, updateProcess, deleteProcess } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
-
-const initialProcesses = [
-  { id: '1', name: 'Onboarding нового співробітника', description: 'Процес адаптації та навчання нових членів команди.' },
-  { id: '2', name: 'Запуск маркетингової кампанії', description: 'Від ідеї до аналізу результатів.' },
-  { id: '3', name: 'Обробка запиту від клієнта', description: 'Стандартизований процес комунікації з клієнтами.' },
-];
-
-type Process = typeof initialProcesses[0];
 
 // --- TOUR STEPS ---
 
@@ -56,21 +44,42 @@ const processesTourSteps: TourStep[] = [
 ];
 
 export default function ProcessesPage() {
-  const [processes, setProcesses] = useState(initialProcesses);
+  const [processes, setProcesses] = useState<Process[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingProcess, setEditingProcess] = useState<Process | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    startTransition(async () => {
+        const fetchedProcesses = await getProcesses();
+        setProcesses(fetchedProcesses);
+    });
+  }, []);
+
 
   const handleCreateProcess = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const newProcess = {
-        id: `proc-${Date.now()}`,
-        name: formData.get('procName') as string,
-        description: formData.get('procDesc') as string,
-    }
-    if (newProcess.name) {
-        setProcesses(prev => [newProcess, ...prev]);
-        setIsCreateDialogOpen(false);
+    const name = formData.get('procName') as string;
+    
+    if (name) {
+        const newProcessData: Omit<Process, 'id'> = {
+            name,
+            description: formData.get('procDesc') as string,
+            lanes: [], // Start with empty lanes
+        };
+        startTransition(async () => {
+            try {
+                const createdProcess = await createProcess(newProcessData);
+                setProcesses(prev => [createdProcess, ...prev]);
+                setIsCreateDialogOpen(false);
+                router.push(`/processes/${createdProcess.id}`); // Redirect to the new process editor
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося створити процес.", variant: "destructive" });
+            }
+        });
     }
   };
 
@@ -79,18 +88,33 @@ export default function ProcessesPage() {
     if (!editingProcess) return;
 
     const formData = new FormData(event.currentTarget);
-    const updatedProcess = {
-      ...editingProcess,
+    const updatedData: Partial<Process> = {
       name: formData.get('procName') as string,
       description: formData.get('procDesc') as string,
     };
 
-    setProcesses(processes.map(p => p.id === updatedProcess.id ? updatedProcess : p));
-    setEditingProcess(null);
+    startTransition(async () => {
+        try {
+            const updated = await updateProcess(editingProcess.id, updatedData);
+            if (updated) {
+                setProcesses(processes.map(p => p.id === updated.id ? updated : p));
+            }
+            setEditingProcess(null);
+        } catch (error) {
+             toast({ title: "Помилка", description: "Не вдалося оновити процес.", variant: "destructive" });
+        }
+    });
   }
 
   const handleDeleteProcess = (processId: string) => {
-    setProcesses(processes.filter(p => p.id !== processId));
+    startTransition(async () => {
+        try {
+            await deleteProcess(processId);
+            setProcesses(processes.filter(p => p.id !== processId));
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося видалити процес.", variant: "destructive" });
+        }
+    });
   }
   
   return (
@@ -107,23 +131,27 @@ export default function ProcessesPage() {
             <DialogContent>
                  <DialogHeader>
                     <DialogTitle>Створити новий бізнес-процес</DialogTitle>
+                    <DialogDescription>Після створення ви перейдете на сторінку редагування.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateProcess}>
                     <div className="grid gap-4 py-4">
                         <Label htmlFor="procName">Назва процесу</Label>
-                        <Input id="procName" name="procName" />
+                        <Input id="procName" name="procName" required/>
                         <Label htmlFor="procDesc">Опис</Label>
                         <Textarea id="procDesc" name="procDesc" />
                     </div>
                     <DialogFooter>
-                        <Button type="submit">Створити</Button>
+                        <Button type="submit" disabled={isPending}>
+                          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                          Створити та перейти
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
       </div>
-
-        {processes.length > 0 ? (
+        {isPending ? (<div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div>) :
+        processes.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {processes.map((process, index) => (
                     <Card key={process.id} id={`process-card-${process.id}`} className="h-full flex flex-col hover:shadow-lg transition-shadow">
@@ -191,13 +219,16 @@ export default function ProcessesPage() {
                 <form onSubmit={handleUpdateProcess}>
                     <div className="grid gap-4 py-4">
                         <Label htmlFor="procNameEdit">Назва процесу</Label>
-                        <Input id="procNameEdit" name="procName" defaultValue={editingProcess?.name} />
+                        <Input id="procNameEdit" name="procName" defaultValue={editingProcess?.name} required />
                         <Label htmlFor="procDescEdit">Опис</Label>
                         <Textarea id="procDescEdit" name="procDesc" defaultValue={editingProcess?.description} />
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setEditingProcess(null)}>Скасувати</Button>
-                        <Button type="submit">Зберегти</Button>
+                        <Button type="submit" disabled={isPending}>
+                           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                           Зберегти
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

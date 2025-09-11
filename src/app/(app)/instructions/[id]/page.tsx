@@ -1,27 +1,29 @@
 
-// SERVER component (за замовчуванням у app/)
+import { getInstructionById } from '@/lib/firestore-service';
 import InstructionEditor from './_components/InstructionEditor';
+import { notFound } from 'next/navigation';
 
 type InstructionsPageProps = {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 };
 
 export default async function Page({ params }: InstructionsPageProps) {
-  const { id } = await params;
+  const { id } = params;
+  const instruction = await getInstructionById(id);
 
-  // Завантаження даних на сервері (приклад — заміни на свою функцію)
-  // const instruction = await getInstructionById(id);
+  if (!instruction) {
+    notFound();
+  }
 
-  // Передаємо дані у клієнтський компонент
   return (
     <InstructionEditor
-      id={id}
-      // initialData={instruction}
+      instruction={instruction}
     />
   );
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  return { title: `Instruction ${id}` };
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const { id } = params;
+  const instruction = await getInstructionById(id);
+  return { title: instruction ? instruction.title : 'Інструкція' };
 }

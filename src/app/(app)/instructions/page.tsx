@@ -1,19 +1,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { PlusCircle, MoreVertical, Edit, Trash2, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,15 +15,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
+import type { Instruction } from '@/types/instruction';
+import { getInstructions, createInstruction, updateInstruction, deleteInstruction } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
-
-const initialInstructions = [
-  { id: '1', title: 'Як користуватися CRM', department: 'Відділ продажів', summary: 'Загальні правила та процедури роботи з клієнтською базою.' },
-  { id: '2', title: 'Процес онбордингу', department: 'HR', summary: 'Кроки для успішної адаптації нового співробітника.' },
-  { id: '3', title: 'Політика відпусток', department: 'Загальні', summary: 'Правила подання та затвердження заяв на відпустку.' },
-];
-
-type Instruction = typeof initialInstructions[0];
 
 // --- TOUR STEPS ---
 
@@ -56,22 +44,44 @@ const instructionsTourSteps: TourStep[] = [
 ];
 
 export default function InstructionsPage() {
-  const [instructions, setInstructions] = useState(initialInstructions);
+  const [instructions, setInstructions] = useState<Instruction[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingInstruction, setEditingInstruction] = useState<Instruction | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  useEffect(() => {
+    startTransition(async () => {
+        const fetched = await getInstructions();
+        setInstructions(fetched);
+    });
+  }, []);
 
   const handleCreateInstruction = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const newInstruction = {
-        id: `instr-${Date.now()}`,
-        title: formData.get('instrTitle') as string,
-        department: formData.get('instrDept') as string,
-        summary: formData.get('instrSummary') as string,
-    }
-    if (newInstruction.title) {
-        setInstructions(prev => [newInstruction, ...prev]);
-        setIsCreateDialogOpen(false);
+    const title = formData.get('instrTitle') as string;
+    
+    if (title) {
+        const newInstructionData: Omit<Instruction, 'id'> = {
+            title,
+            department: formData.get('instrDept') as string,
+            summary: formData.get('instrSummary') as string,
+            content: '', // Start with empty content
+            accessList: [], // Start with empty access list
+        };
+        
+        startTransition(async () => {
+            try {
+                const created = await createInstruction(newInstructionData);
+                setInstructions(prev => [created, ...prev]);
+                setIsCreateDialogOpen(false);
+                router.push(`/instructions/${created.id}`); // Redirect to edit page
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося створити інструкцію.", variant: "destructive" });
+            }
+        });
     }
   };
 
@@ -80,19 +90,34 @@ export default function InstructionsPage() {
     if (!editingInstruction) return;
 
     const formData = new FormData(event.currentTarget);
-    const updatedInstruction = {
-      ...editingInstruction,
+    const updatedInstructionData: Partial<Instruction> = {
       title: formData.get('instrTitle') as string,
       department: formData.get('instrDept') as string,
       summary: formData.get('instrSummary') as string,
     };
 
-    setInstructions(instructions.map(p => p.id === updatedInstruction.id ? updatedInstruction : p));
-    setEditingInstruction(null);
+    startTransition(async () => {
+        try {
+            const updated = await updateInstruction(editingInstruction.id, updatedInstructionData);
+            if(updated) {
+                setInstructions(instructions.map(p => p.id === updated.id ? updated : p));
+            }
+            setEditingInstruction(null);
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося оновити інструкцію.", variant: "destructive" });
+        }
+    });
   }
 
   const handleDeleteInstruction = (instructionId: string) => {
-    setInstructions(instructions.filter(p => p.id !== instructionId));
+    startTransition(async () => {
+        try {
+            await deleteInstruction(instructionId);
+            setInstructions(instructions.filter(p => p.id !== instructionId));
+        } catch (error) {
+             toast({ title: "Помилка", description: "Не вдалося видалити інструкцію.", variant: "destructive" });
+        }
+    });
   }
   
   return (
@@ -109,25 +134,30 @@ export default function InstructionsPage() {
             <DialogContent>
                  <DialogHeader>
                     <DialogTitle>Створити нову інструкцію</DialogTitle>
+                    <DialogDescription>Після створення ви перейдете на сторінку редагування.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateInstruction}>
                     <div className="grid gap-4 py-4">
                         <Label htmlFor="instrTitle">Назва</Label>
-                        <Input id="instrTitle" name="instrTitle" />
+                        <Input id="instrTitle" name="instrTitle" required/>
                         <Label htmlFor="instrDept">Відділ</Label>
                         <Input id="instrDept" name="instrDept" />
                         <Label htmlFor="instrSummary">Короткий опис</Label>
                         <Textarea id="instrSummary" name="instrSummary" />
                     </div>
                     <DialogFooter>
-                        <Button type="submit">Створити</Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Створити
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
       </div>
 
-        {instructions.length > 0 ? (
+        {isPending ? (<div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div>) :
+        instructions.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {instructions.map((instruction, index) => (
                     <Card key={instruction.id} id={`instruction-card-${instruction.id}`} className="h-full flex flex-col hover:shadow-lg transition-shadow">
@@ -195,7 +225,7 @@ export default function InstructionsPage() {
                 <form onSubmit={handleUpdateInstruction}>
                     <div className="grid gap-4 py-4">
                         <Label htmlFor="instrTitleEdit">Назва</Label>
-                        <Input id="instrTitleEdit" name="instrTitle" defaultValue={editingInstruction?.title} />
+                        <Input id="instrTitleEdit" name="instrTitle" defaultValue={editingInstruction?.title} required />
                         <Label htmlFor="instrDeptEdit">Відділ</Label>
                         <Input id="instrDeptEdit" name="instrDept" defaultValue={editingInstruction?.department} />
                          <Label htmlFor="instrSummaryEdit">Короткий опис</Label>
@@ -203,7 +233,10 @@ export default function InstructionsPage() {
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="secondary" onClick={() => setEditingInstruction(null)}>Скасувати</Button>
-                        <Button type="submit">Зберегти</Button>
+                        <Button type="submit" disabled={isPending}>
+                            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                            Зберегти
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
