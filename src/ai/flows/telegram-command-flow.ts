@@ -9,32 +9,12 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-const EmployeeSchema = z.object({
-  id: z.string(),
-  name: z.string().describe('The full name of the employee.'),
-});
-
-export const TelegramCommandInputSchema = z.object({
-  command: z.string().describe('The natural language command from the user.'),
-  employees: z.array(EmployeeSchema).describe('A list of available employees to assign tasks/results to.'),
-});
-export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
-
-export const TelegramCommandOutputSchema = z.object({
-  command: z.enum(['create_task', 'create_result', 'list_employees', 'unknown', 'clarify'])
-    .describe('The recognized command the user wants to execute.'),
-  parameters: z.object({
-    title: z.string().optional().describe('The title for the task or result.'),
-    assigneeName: z.string().optional().describe("The name of the employee to whom the task or result is assigned. Must be one of the names from the input employees list."),
-    dueDate: z.string().optional().describe("The due date in 'YYYY-MM-DD' format."),
-    // ... other parameters can be added here
-  }).optional().describe('The parameters extracted from the command.'),
-  missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
-  reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees") or unknown.'),
-});
-export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
+import {
+  TelegramCommandInput,
+  TelegramCommandOutput,
+  TelegramCommandInputSchema,
+  TelegramCommandOutputSchema,
+} from '@/ai/types';
 
 
 export async function parseTelegramCommand(input: TelegramCommandInput): Promise<TelegramCommandOutput> {

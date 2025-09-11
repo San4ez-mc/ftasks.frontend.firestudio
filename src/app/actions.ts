@@ -1,6 +1,6 @@
 'use server';
 
-import type { Task, TaskPrioritizationInput, TaskPrioritizationOutput } from '@/ai/flows/ai-task-prioritization';
+import type { Task, TaskPrioritizationInput, TaskPrioritizationOutput } from '@/ai/types';
 import { suggestTaskPriorities } from '@/ai/flows/ai-task-prioritization';
 
 

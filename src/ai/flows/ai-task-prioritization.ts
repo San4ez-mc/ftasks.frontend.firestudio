@@ -11,29 +11,12 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-const TaskSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  deadline: z.string().optional(), // Expects date as a string, e.g., '2024-12-31'
-  isGoal: z.boolean().optional(),
-});
-export type Task = z.infer<typeof TaskSchema>;
-
-const TaskPrioritizationInputSchema = z.object({
-  tasks: z.array(TaskSchema).describe('A list of tasks with descriptions and optional deadlines.'),
-  overallGoal: z.string().describe('The user\u2019s overall goal.'),
-});
-export type TaskPrioritizationInput = z.infer<typeof TaskPrioritizationInputSchema>;
-
-const TaskPrioritizationOutputSchema = z.array(
-  z.object({
-    taskId: z.string().describe('The ID of the task.'),
-    priorityReason: z.string().describe('The reason for the suggested priority.'),
-  })
-);
-export type TaskPrioritizationOutput = z.infer<typeof TaskPrioritizationOutputSchema>;
+import {
+  TaskPrioritizationInput,
+  TaskPrioritizationOutput,
+  TaskPrioritizationInputSchema,
+  TaskPrioritizationOutputSchema,
+} from '@/ai/types';
 
 export async function suggestTaskPriorities(input: TaskPrioritizationInput): Promise<TaskPrioritizationOutput> {
   return taskPrioritizationFlow(input);

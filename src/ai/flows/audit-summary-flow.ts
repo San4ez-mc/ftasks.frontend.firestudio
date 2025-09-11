@@ -8,21 +8,12 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-export const AuditSummaryInputSchema = z.object({
-  currentSummary: z.string().describe('The summary generated so far from previous questions and answers.'),
-  identifiedProblems: z.array(z.string()).describe('The list of problems identified so far.'),
-  question: z.string().describe('The latest question that was asked.'),
-  answer: z.string().describe('The answer provided by the user to the latest question.'),
-});
-export type AuditSummaryInput = z.infer<typeof AuditSummaryInputSchema>;
-
-export const AuditSummaryOutputSchema = z.object({
-  updatedSummary: z.string().describe('The updated, concise summary incorporating the new answer. It should be in Ukrainian.'),
-  updatedProblems: z.array(z.string()).describe('The updated list of potential business problems or weaknesses identified. These should be actionable and clear. Formulate them in Ukrainian.'),
-});
-export type AuditSummaryOutput = z.infer<typeof AuditSummaryOutputSchema>;
+import {
+  AuditSummaryInput,
+  AuditSummaryOutput,
+  AuditSummaryInputSchema,
+  AuditSummaryOutputSchema,
+} from '@/ai/types';
 
 export async function generateAuditSummary(input: AuditSummaryInput): Promise<AuditSummaryOutput> {
   return auditSummaryFlow(input);
