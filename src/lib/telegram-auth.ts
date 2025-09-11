@@ -80,7 +80,7 @@ export async function generateGroupLinkCode(groupId: string, groupTitle: string)
         const expiresAt = new Date(Date.now() + GROUP_LINK_CODE_EXPIRATION);
 
         await firestore.collection('groupLinkCodes').doc(code).set({
-            groupId,
+            tgGroupId: groupId, // FIX: Was 'groupId', now 'tgGroupId' to match reader
             groupTitle,
             expiresAt,
         });
