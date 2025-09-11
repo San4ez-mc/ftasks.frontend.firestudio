@@ -30,11 +30,13 @@ import {
 import { parseTime, formatTime } from '@/lib/timeUtils';
 import { deleteTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
+import { companyEmployees } from '@/lib/db';
 
 type TaskDetailsPanelProps = {
   task: Task;
   onUpdate: (task: Task) => void;
   onClose: () => void;
+  onDelete: (taskId: string) => void;
 };
 
 const typeOptions: { value: TaskType; label: string; color: string }[] = [
@@ -44,19 +46,14 @@ const typeOptions: { value: TaskType; label: string; color: string }[] = [
   { value: 'not-important-not-urgent', label: 'Неважлива, нетермінова', color: 'bg-yellow-600' },
 ];
 
-const mockUsers = [
-  { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-  { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-  { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-  { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-];
+const mockUsers = companyEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
 
 const mockResults = [
     { id: 'res-1', name: 'Запустити рекламну кампанію в Google Ads' },
     { id: 'res-2', name: 'Розробити новий модуль аналітики' },
 ]
 
-export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetailsPanelProps) {
+export default function TaskDetailsPanel({ task, onUpdate, onClose, onDelete }: TaskDetailsPanelProps) {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -119,7 +116,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
       try {
           await deleteTask(task.id);
           toast({ title: "Успіх", description: "Задачу видалено." });
-          onClose(); // Close panel after deletion
+          onDelete(task.id); // Use the callback to update parent state
       } catch (error) {
           toast({ title: "Помилка", description: "Не вдалося видалити задачу.", variant: "destructive" });
       }
@@ -180,7 +177,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
                     value={task.assignee.id} 
                     onValueChange={(userId) => {
                         const user = mockUsers.find(u => u.id === userId);
-                        if (user) onUpdate({...task, assignee: user})
+                        if (user) onUpdate({...task, assignee: { id: user.id, name: user.name, avatar: user.avatar }})
                     }}
                  >
                     <SelectTrigger>
@@ -370,5 +367,3 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose }: TaskDetail
     </div>
   );
 }
-
-    

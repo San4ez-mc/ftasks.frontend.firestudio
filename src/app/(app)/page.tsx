@@ -162,6 +162,13 @@ export default function TasksPage() {
     });
   }
 
+  const handleTaskDelete = (taskId: string) => {
+    // Optimistically remove the task from the UI
+    setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
+    // Close the panel
+    setSelectedTask(null);
+  };
+
   const createNewTask = (title: string, resultName?: string) => {
     if(!currentUser) return;
     const newTaskData: Omit<Task, 'id'> = {
@@ -377,6 +384,7 @@ export default function TasksPage() {
                   task={selectedTask}
                   onUpdate={handleTaskUpdate}
                   onClose={handleClosePanel}
+                  onDelete={handleTaskDelete}
               />
           )}
       </div>
