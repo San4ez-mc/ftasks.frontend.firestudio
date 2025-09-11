@@ -24,6 +24,12 @@ interface TelegramChat {
     type: 'private' | 'group' | 'supergroup';
 }
 
+interface TelegramVoice {
+    file_id: string;
+    duration: number;
+    // ... other voice fields
+}
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 
@@ -175,8 +181,16 @@ export async function POST(request: NextRequest) {
         const chat: TelegramChat = message.chat;
         const fromUser: TelegramUser = message.from;
         const text = (message.text || '') as string;
+        const voice = message.voice as TelegramVoice | undefined;
         const isReplyToBot = message.reply_to_message?.from?.username === BOT_USERNAME;
         const isBotMentioned = text.includes(`@${BOT_USERNAME}`);
+
+        // --- Voice Message Handler (Placeholder) ---
+        if (voice) {
+             await sendTelegramReply(chat.id, { text: "Обробка голосових команд ще в розробці. Будь ласка, використовуйте текстові команди." });
+             return NextResponse.json({ status: 'ok', message: 'Voice command placeholder sent.' });
+        }
+
 
         // --- /start command handler ---
         if (text.startsWith('/start')) {
@@ -224,8 +238,8 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
             }
         } 
-        // --- Natural Language Command Handler ---
-        else if (chat.type === 'private' || ( (chat.type === 'group' || chat.type === 'supergroup') && (isBotMentioned || isReplyToBot) )) {
+        // --- Natural Language Command Handler (Text only) ---
+        else if (text && (chat.type === 'private' || ( (chat.type === 'group' || chat.type === 'supergroup') && (isBotMentioned || isReplyToBot) ))) {
             const commandText = text.replace(`@${BOT_USERNAME}`, '').trim();
             await handleNaturalLanguageCommand(chat, fromUser, commandText);
             return NextResponse.json({ status: 'ok', message: 'Command processed.' });

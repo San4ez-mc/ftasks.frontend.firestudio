@@ -154,7 +154,7 @@ export async function linkTelegramGroup(code: string, companyId: string): Promis
         throw new Error("Невірний або застарілий код.");
     }
     
-    const codeData = codeDoc.data() as { tgGroupId: string, groupTitle: string, expiresAt: { toDate: () => Date } };
+    const codeData = codeDoc.data() as { groupId: string, groupTitle: string, expiresAt: { toDate: () => Date } };
     
     if (new Date() > codeData.expiresAt.toDate()) {
         await codeRef.delete();
@@ -162,7 +162,7 @@ export async function linkTelegramGroup(code: string, companyId: string): Promis
     }
 
     const groupData: Omit<TelegramGroup, 'id'> = {
-        tgGroupId: codeData.tgGroupId,
+        tgGroupId: codeData.groupId,
         title: codeData.groupTitle,
         companyId: companyId,
         linkedAt: new Date().toISOString(),
