@@ -72,7 +72,6 @@ export default function ResultsPage() {
   const [results, setResults] = useState<Result[]>([]);
   const [activeTab, setActiveTab] = useState('mine');
   const [statusFilter, setStatusFilter] = useState<string[]>(allStatuses);
-  const newResultInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -194,12 +193,6 @@ export default function ResultsPage() {
         handleResultUpdate({ ...result, status: 'Відкладено' });
     }
 
-  useEffect(() => {
-    if (selectedResult?.name === '' && newResultInputRef.current) {
-      newResultInputRef.current.focus();
-    }
-  }, [selectedResult]);
-
   const handleClosePanel = () => {
     const resultToClose = selectedResult;
     setSelectedResult(null);
@@ -309,15 +302,15 @@ export default function ResultsPage() {
         </header>
         
         <main id="results-table" className="flex-1 overflow-y-auto px-4 md:px-6">
-          {isPending && <p>Завантаження...</p>}
-          {!isPending && viewMode === 'table' ? (
+          {isPending ? (
+            <div className="flex justify-center items-center h-full"><p>Завантаження...</p></div>
+          ) : viewMode === 'table' ? (
             <ResultsTable 
               groupedResults={groupedResults}
               onResultSelect={setSelectedResult} 
               onResultUpdate={handleResultUpdate}
               createNewResult={handleCreateNewResult}
               selectedResultId={selectedResult?.id}
-              newResultInputRef={newResultInputRef}
               activeTab={activeTab}
               panelOpen={!!selectedResult}
               handleCreateTask={handleCreateTask}
@@ -326,7 +319,7 @@ export default function ResultsPage() {
               handlePostponeResult={handlePostponeResult}
             />
           ) : (
-            <ResultsCards results={filteredResults.filter(r => r.name !== '')} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
+            <ResultsCards results={filteredResults} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
           )}
         </main>
       </div>
@@ -353,7 +346,6 @@ type ResultsTableProps = {
   onResultUpdate: (result: Result) => void;
   createNewResult: (index?: number) => void;
   selectedResultId?: string;
-  newResultInputRef: React.RefObject<HTMLInputElement>;
   activeTab: string;
   panelOpen: boolean;
   handleCreateTask: (result: Result) => void;
@@ -369,7 +361,6 @@ function ResultsTable({
   onResultUpdate,
   createNewResult,
   selectedResultId,
-  newResultInputRef,
   activeTab,
   panelOpen,
   handleCreateTask,
@@ -456,7 +447,6 @@ function ResultsTable({
           onResultUpdate={onResultUpdate}
           createNewResult={() => createNewResult(globalIndex)}
           selectedResultId={selectedResultId}
-          newResultInputRef={newResultInputRef}
           activeTab={activeTab}
           panelOpen={panelOpen}
           onAddSubResult={handleAddSubResult}
@@ -534,38 +524,32 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
   path: string[];
   panelOpen: boolean;
 }) {
-  const [name, setName] = useState(subResult.name);
-
-  useEffect(() => {
-    setName(subResult.name);
-  }, [subResult.name]);
-
-  const handleNameBlur = () => {
-    if (name !== subResult.name) {
-      onSubResultChange(result, path, 'name', name);
-    }
-  };
+  
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      onSubResultChange(result, path, 'name', e.target.value);
+  }
 
   return (
     <React.Fragment>
-      <div className="group/parent text-sm border-b last:border-b-0" style={{ paddingLeft: `${level * 1.5}rem` }}>
+      <div className="group/parent text-sm border-b last:border-b-0" style={{ paddingLeft: `${level * 1.5}rem` }} onClick={() => onResultSelect(result)}>
          <div className="flex items-center gap-2 p-2 relative">
              <div className="absolute left-[-1rem] top-0 h-full w-px bg-border"></div>
              <div className="absolute left-[-1rem] top-1/2 -translate-y-1/2 h-px w-4 bg-border"></div>
             <Checkbox
               checked={subResult.completed}
-              onCheckedChange={(checked) => onSubResultChange(result, path, 'completed', !!checked)}
+              onCheckedChange={(checked) => {
+                  onSubResultChange(result, path, 'completed', !!checked)
+              }}
+              onClick={(e) => e.stopPropagation()}
             />
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={handleNameBlur}
-              placeholder="Підрезультат..."
-              className={cn(
-                "h-auto p-0 border-none focus-visible:ring-0 shadow-none text-xs bg-transparent flex-1",
-                subResult.completed && "line-through text-muted-foreground"
-              )}
-            />
+            <span
+                className={cn(
+                    "h-auto p-0 text-xs flex-1",
+                    subResult.completed && "line-through text-muted-foreground"
+                )}
+            >
+              {subResult.name || <span className="text-muted-foreground">Новий підрезультат...</span>}
+            </span>
             <div className={cn("items-center gap-2", panelOpen ? "hidden" : "flex")}>
                 {subResult.assignee && (
                     <TooltipProvider>
@@ -583,11 +567,11 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
             </div>
              <div className="flex items-center opacity-0 group-hover/parent:opacity-100 transition-opacity">
                  {level < 5 && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAddSubResult(result, path)} title="Додати підрезультат">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onAddSubResult(result, path)}} title="Додати підрезультат">
                         <PlusCircle className="h-3 w-3" />
                     </Button>
                  )}
-                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDeleteSubResult(result, path)} title="Видалити">
+                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); onDeleteSubResult(result, path)}} title="Видалити">
                     <Trash2 className="h-3 w-3 text-destructive"/>
                 </Button>
             </div>
@@ -613,11 +597,13 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
 }
 
 
-function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, newResultInputRef, activeTab, panelOpen, onAddSubResult, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult}: any) {
-    const isCreating = result.name === '';
+function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, activeTab, panelOpen, onAddSubResult, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult}: any) {
     
     return (
-      <div className="group/parent text-sm border-b last:border-b-0">
+      <div 
+        className="group/parent text-sm border-b last:border-b-0 cursor-pointer"
+        onClick={() => onResultSelect(result)}
+      >
         <div className="relative group/row">
             <button
             onClick={(e) => { e.stopPropagation(); createNewResult(); }}
@@ -631,38 +617,26 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                 )}>
                 <div className="col-span-1 flex justify-center pt-1">
                     <Checkbox
-                    checked={result.completed}
-                    onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+                        checked={result.completed}
+                        onCheckedChange={(checked) => onResultUpdate({ ...result, completed: !!checked })}
+                        onClick={(e) => e.stopPropagation()}
                     />
                 </div>
                 <div className={cn("col-span-11", panelOpen ? "md:col-span-11" : "md:col-span-5" )}>
                     <div className="font-medium flex items-center gap-2">
                         <div className="flex-1">
-                            {isCreating ? (
-                                <Input
-                                    ref={newResultInputRef}
-                                    placeholder="Назва нового результату..."
-                                    value={result.name}
-                                    onChange={(e) => onResultUpdate({ ...result, name: e.target.value })}
-                                    onBlur={() => { if (result.name.trim() !== '') { onResultUpdate(result) } else { handleDeleteResult(result.id) } }}
-                                    onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-                                    className="border-none focus-visible:ring-0 shadow-none h-auto p-0 text-sm bg-transparent"
-                                />
-                            ) : (
-                                <span
-                                    onClick={() => onResultSelect(result)}
-                                    className={cn("cursor-pointer text-sm", result.completed && "line-through text-muted-foreground")}
-                                    >
-                                    {result.name || <span className="text-muted-foreground">Без назви</span>}
-                                </span>
-                            )}
+                            <span
+                                className={cn("text-sm", result.completed && "line-through text-muted-foreground")}
+                            >
+                                {result.name || <span className="text-muted-foreground">Новий результат...</span>}
+                            </span>
                         </div>
                         <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)} title="Редагувати"><Edit className="h-3 w-3"/></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAddSubResult(result, [])} title="Додати підрезультат"><PlusCircle className="h-3 w-3"/></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePostponeResult(result)} title="Відкласти"><Clock className="h-3 w-3"/></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)} title="Створити шаблон"><FileText className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); onResultSelect(result)}} title="Редагувати"><Edit className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); onAddSubResult(result, [])}} title="Додати підрезультат"><PlusCircle className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); handlePostponeResult(result)}} title="Відкласти"><Clock className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); handleCreateTask(result)}} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => {e.stopPropagation(); handleCreateTemplate(result)}} title="Створити шаблон"><FileText className="h-3 w-3"/></Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()} title="Видалити"><Trash2 className="h-3 w-3 text-destructive"/></Button>
@@ -683,11 +657,11 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                         </div>
                     </div>
                 </div>
-                <div className={cn("hidden text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:block")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden text-xs text-muted-foreground cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:block")}>
                     <p className="uppercase text-muted-foreground/70 text-[10px]">Дедлайн</p>
                     {formatDate(result.deadline)}
                 </div>
-                <div className={cn("hidden items-center gap-2 cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden items-center gap-2 cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' || activeTab === 'delegated' ? 'Виконавець' : 'Постановник'}</p>
                         <div className="flex items-center gap-2">
@@ -699,7 +673,7 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                         </div>
                     </div>
                 </div>
-                <div className={cn("hidden items-center cursor-pointer", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")} onClick={() => onResultSelect(result)}>
+                <div className={cn("hidden items-center cursor-pointer", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")}>
                     <div>
                         <p className="uppercase text-muted-foreground/70 text-[10px]">Статус</p>
                         <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : (result.status === 'В роботі' ? 'default' : 'secondary'))} className={cn("text-xs", {'bg-pink-600 text-white': result.status === 'В роботі'})}>
@@ -747,10 +721,3 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-    
-
-
-
-
-    

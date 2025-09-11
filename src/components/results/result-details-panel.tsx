@@ -59,8 +59,17 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     const subResultInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
     useEffect(() => {
-        setLocalResult(result)
-    }, [result])
+        setLocalResult(result);
+        // Focus the input when the panel opens for a new result or a different result.
+        // Use a timeout to ensure the element is rendered and visible before focusing.
+        setTimeout(() => {
+            nameInputRef.current?.focus();
+            // If it's a new result, select the text for easy replacement
+            if (result.name === '') {
+                nameInputRef.current?.select();
+            }
+        }, 100); 
+    }, [result]);
     
     useEffect(() => {
         if (lastAddedSubResultId.current && subResultInputRefs.current[lastAddedSubResultId.current]) {
