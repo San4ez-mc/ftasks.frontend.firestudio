@@ -24,8 +24,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { companyEmployees } from '@/lib/db';
 
 
-const currentUserId = 'user-4';
-const currentUser = companyEmployees.find(e => e.id === 'emp-4'); // Petro Ivanenko
+const currentUserId = 'emp-4'; 
+const currentUser = companyEmployees.find(e => e.id === currentUserId); 
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
 
@@ -86,7 +86,7 @@ export default function ResultsPage() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
         if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-            const clickedOnTrigger = (event.target as HTMLElement).closest('.group/row');
+            const clickedOnTrigger = (event.target as HTMLElement).closest('.group/parent');
             if (!clickedOnTrigger) {
                 handleClosePanel();
             }
@@ -237,7 +237,7 @@ export default function ResultsPage() {
   }, [results, activeTab, statusFilter]);
 
   const groupedResults = activeTab === 'mine' 
-    ? { [currentUserId]: {id: currentUserId, name: 'Мої результати', results: filteredResults } } 
+    ? { [currentUserId]: {id: currentUserId, name: `${currentUser?.firstName} ${currentUser?.lastName}`, results: filteredResults } } 
     : filteredResults.reduce((acc, result) => {
         const key = result.assignee.id;
         if (!acc[key]) {
@@ -254,7 +254,7 @@ export default function ResultsPage() {
         "flex flex-col transition-all duration-300 w-full",
         selectedResult ? "md:w-1/2" : "w-full"
       )}>
-        <header className="p-4 md:p-6 space-y-4">
+        <header className="p-4 md:p-6 space-y-4 border-b">
           <div className="flex items-center justify-center relative">
             <h1 className="text-xl font-bold tracking-tight font-headline text-center">Результати</h1>
             <div id="results-view-toggle" className="absolute right-0 flex items-center gap-2">
@@ -376,36 +376,202 @@ function ResultsTable({
   handlePostponeResult,
 }: ResultsTableProps) {
   
-  const handleNewResultUpdate = (result: Result, name: string) => {
-    onResultUpdate({ ...result, name });
-  };
   
-  const handleSubResultChange = (result: Result, subResultId: string, field: 'name' | 'completed', value: string | boolean) => {
-    const updatedSubResults = result.subResults.map(sr => 
-        sr.id === subResultId ? { ...sr, [field]: value } : sr
-    );
+  const handleSubResultChange = (result: Result, subResultPath: string[], field: 'name' | 'completed', value: string | boolean) => {
+    
+    const updateRecursively = (subResults: SubResult[], path: string[]): SubResult[] => {
+      if (!path.length) return subResults;
+      
+      const [currentId, ...restPath] = path;
+
+      return subResults.map(sr => {
+        if (sr.id === currentId) {
+          if (restPath.length === 0) {
+            return { ...sr, [field]: value };
+          }
+          return { ...sr, subResults: updateRecursively(sr.subResults || [], restPath) };
+        }
+        return sr;
+      });
+    };
+
+    const updatedSubResults = updateRecursively(result.subResults, subResultPath);
     onResultUpdate({ ...result, subResults: updatedSubResults });
   };
 
-  const handleAddSubResult = (result: Result) => {
+  const handleAddSubResult = (result: Result, parentSubResultPath: string[]) => {
     const newSubResult: SubResult = {
         id: `sub-${Date.now()}`,
         name: '',
         completed: false,
     };
-    const updatedSubResults = [...result.subResults, newSubResult];
+    
+    const addRecursively = (subResults: SubResult[], path: string[]): SubResult[] => {
+       if (!path.length) {
+            return [...(subResults || []), newSubResult];
+       }
+       const [currentId, ...restPath] = path;
+       return subResults.map(sr => {
+           if(sr.id === currentId) {
+               return {...sr, subResults: addRecursively(sr.subResults || [], restPath)}
+           }
+           return sr;
+       });
+    }
+
+    const updatedSubResults = addRecursively(result.subResults, parentSubResultPath);
     onResultUpdate({ ...result, subResults: updatedSubResults });
   };
 
   const renderRow = (result: Result, index: number, allResults: Result[]) => {
-    const isCreating = result.name === '';
     const globalIndex = allResults.findIndex(r => r.id === result.id);
     
     return (
-      <div key={result.id} className="group/parent text-sm border-b last:border-b-0">
+      <React.Fragment key={result.id}>
+        <ResultRow 
+          result={result}
+          onResultSelect={onResultSelect}
+          onResultUpdate={onResultUpdate}
+          createNewResult={() => createNewResult(globalIndex)}
+          selectedResultId={selectedResultId}
+          newResultInputRef={newResultInputRef}
+          activeTab={activeTab}
+          panelOpen={panelOpen}
+          handleCreateTask={handleCreateTask}
+          handleCreateTemplate={handleCreateTemplate}
+          handleDeleteResult={handleDeleteResult}
+          handlePostponeResult={handlePostponeResult}
+        />
+        {(result.subResults || []).map((sr) => (
+          <SubResultRows 
+            key={sr.id}
+            result={result}
+            subResult={sr}
+            onResultSelect={() => onResultSelect(result)}
+            onResultUpdate={onResultUpdate}
+            onSubResultChange={handleSubResultChange}
+            onAddSubResult={handleAddSubResult}
+            level={1}
+            path={[sr.id]}
+          />
+        ))}
+      </React.Fragment>
+    );
+  };
+
+  const allResults = Object.values(groupedResults).flatMap(g => g.results);
+  
+  return (
+      <div className="text-sm">
+           {Object.values(groupedResults).map(group => (
+              <div key={group.id} className="mb-6">
+                  {activeTab !== 'mine' && (
+                      <div className="flex items-center gap-3 p-2 border-b">
+                          <Avatar>
+                              <AvatarImage src={group.avatar} />
+                              <AvatarFallback>{group.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          <h3 className="font-semibold text-base">{group.name}</h3>
+                      </div>
+                  )}
+                  <div className="border-y">
+                      {group.results.map((result, index) => renderRow(result, index, allResults))}
+                       {!group.results.some(r => r.name === '') && (
+                           <div className="p-2">
+                              <button onClick={() => createNewResult(allResults.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+                                  <Plus className="h-3 w-3" /> Створити результат
+                              </button>
+                          </div>
+                       )}
+                  </div>
+              </div>
+           ))}
+            {Object.keys(groupedResults).length === 0 && (
+               <div className="p-2">
+                  <button onClick={() => createNewResult()} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
+                      <Plus className="h-3 w-3" /> Створити результат
+                  </button>
+              </div>
+            )}
+      </div>
+  )
+}
+
+function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, level, path }: {
+  result: Result;
+  subResult: SubResult;
+  onResultSelect: (result: Result) => void;
+  onResultUpdate: (result: Result) => void;
+  onSubResultChange: (result: Result, path: string[], field: 'name' | 'completed', value: string | boolean) => void;
+  onAddSubResult: (result: Result, path: string[]) => void;
+  level: number;
+  path: string[];
+}) {
+  const [name, setName] = useState(subResult.name);
+
+  useEffect(() => {
+    setName(subResult.name);
+  }, [subResult.name]);
+
+  const handleNameBlur = () => {
+    if (name !== subResult.name) {
+      onSubResultChange(result, path, 'name', name);
+    }
+  };
+
+  return (
+    <React.Fragment>
+      <div className="group/parent text-sm border-b last:border-b-0" style={{ paddingLeft: `${level * 1.5}rem` }}>
+         <div className="flex items-center gap-2 p-2 relative">
+             <div className="absolute left-[-1rem] top-0 h-full w-px bg-border"></div>
+             <div className="absolute left-[-1rem] top-1/2 -translate-y-1/2 h-px w-4 bg-border"></div>
+            <Checkbox
+              checked={subResult.completed}
+              onCheckedChange={(checked) => onSubResultChange(result, path, 'completed', !!checked)}
+            />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={handleNameBlur}
+              placeholder="Підрезультат..."
+              className={cn(
+                "h-auto p-0 border-none focus-visible:ring-0 shadow-none text-xs bg-transparent flex-1",
+                subResult.completed && "line-through text-muted-foreground"
+              )}
+            />
+             {level < 5 && (
+                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/parent:opacity-100" onClick={() => onAddSubResult(result, path)}>
+                    <Plus className="h-3 w-3" />
+                </Button>
+             )}
+        </div>
+      </div>
+      {(subResult.subResults || []).map(sr => (
+        <SubResultRows 
+          key={sr.id}
+          result={result}
+          subResult={sr}
+          onResultSelect={onResultSelect}
+          onResultUpdate={onResultUpdate}
+          onSubResultChange={onSubResultChange}
+          onAddSubResult={onAddSubResult}
+          level={level + 1}
+          path={[...path, sr.id]}
+        />
+      ))}
+    </React.Fragment>
+  )
+}
+
+
+function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, newResultInputRef, activeTab, panelOpen, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult}: any) {
+    const isCreating = result.name === '';
+    
+    return (
+      <div className="group/parent text-sm border-b last:border-b-0">
         <div className="relative group/row">
             <button
-            onClick={(e) => { e.stopPropagation(); createNewResult(globalIndex); }}
+            onClick={(e) => { e.stopPropagation(); createNewResult(); }}
             className="absolute z-10 -left-4 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary text-primary-foreground items-center justify-center opacity-0 group-hover/row:opacity-100 transition-opacity hidden sm:flex"
             >
                 <Plus className="h-4 w-4" />
@@ -493,70 +659,8 @@ function ResultsTable({
                 </div>
             </div>
         </div>
-        {(result.subResults.length > 0) && (
-             <div className="pl-8 md:pl-12 py-1 pr-2 space-y-1">
-                 {result.subResults.map((sr, idx, arr) => (
-                    <div key={sr.id} className="flex items-start gap-2 text-xs group/sub-result relative">
-                        <div className="absolute left-[-1rem] top-0 h-full w-px bg-border"></div>
-                        <div className="absolute left-[-1rem] top-2 h-px w-4 bg-border"></div>
-                        <Checkbox 
-                            checked={sr.completed}
-                            onCheckedChange={(checked) => handleSubResultChange(result, sr.id, 'completed', !!checked)}
-                        />
-                        <Input 
-                            value={sr.name}
-                            onChange={(e) => handleSubResultChange(result, sr.id, 'name', e.target.value)}
-                            placeholder="Підрезультат..."
-                            className={cn(
-                                "h-auto p-0 border-none focus-visible:ring-0 shadow-none text-xs bg-transparent",
-                                sr.completed && "line-through text-muted-foreground"
-                            )}
-                        />
-                         <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => onResultUpdate({...result, subResults: result.subResults.filter(s => s.id !== sr.id)})}>
-                            <Trash2 className="h-3 w-3" />
-                        </Button>
-                    </div>
-                 ))}
-            </div>
-        )}
       </div>
     );
-  };
-    const allResults = Object.values(groupedResults).flatMap(g => g.results);
-    return (
-        <div className="text-sm">
-             {Object.values(groupedResults).map(group => (
-                <div key={group.id} className="mb-6">
-                    {activeTab !== 'mine' && (
-                        <div className="flex items-center gap-3 p-2 border-b">
-                            <Avatar>
-                                <AvatarImage src={group.avatar} />
-                                <AvatarFallback>{group.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <h3 className="font-semibold text-base">{group.name}</h3>
-                        </div>
-                    )}
-                    <div className="border-y">
-                        {group.results.map((result, index) => renderRow(result, index, allResults))}
-                         {!group.results.some(r => r.name === '') && (
-                             <div className="p-2">
-                                <button onClick={() => createNewResult(allResults.length - 1)} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
-                                    <Plus className="h-3 w-3" /> Створити результат
-                                </button>
-                            </div>
-                         )}
-                    </div>
-                </div>
-             ))}
-              {Object.keys(groupedResults).length === 0 && (
-                 <div className="p-2">
-                    <button onClick={() => createNewResult()} className="text-muted-foreground hover:text-foreground text-xs flex items-center gap-2 p-1">
-                        <Plus className="h-3 w-3" /> Створити результат
-                    </button>
-                </div>
-              )}
-        </div>
-    )
 }
 
 function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Result[], onResultSelect: (result: Result | null) => void, onResultUpdate: (result: Result) => void }) {

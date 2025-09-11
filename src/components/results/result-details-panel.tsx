@@ -55,26 +55,12 @@ const typeOptions: { value: TaskType; label: string; color: string }[] = [
 
 
 export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete }: ResultDetailsPanelProps) {
-    const [name, setName] = useState(result.name);
-    const [description, setDescription] = useState(result.description);
-    const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
+    const [localResult, setLocalResult] = useState(result);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
-    const [lastAddedSubResultId, setLastAddedSubResultId] = useState<string | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
-        if (lastAddedSubResultId) {
-            const lastInput = document.querySelector(`input[data-subresult-id="${lastAddedSubResultId}"]`) as HTMLInputElement;
-            lastInput?.focus();
-            setLastAddedSubResultId(null);
-        }
-    }, [subResults, lastAddedSubResultId]);
-
-
-    useEffect(() => {
-        setName(result.name)
-        setDescription(result.description);
-        setSubResults(result.subResults || []);
+        setLocalResult(result)
     }, [result])
     
     useEffect(() => {
@@ -83,72 +69,25 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
         }
     }, [result.id]);
 
-    const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setName(e.target.value);
+    const handleFieldChange = (field: keyof Result, value: any) => {
+        const updatedResult = { ...localResult, [field]: value };
+        setLocalResult(updatedResult);
     }
     
-    const handleNameBlur = () => {
-        if(name !== result.name){
-            onUpdate({...result, name: name});
+    const handleBlur = (field: keyof Result) => {
+        if(localResult[field] !== result[field]){
+            onUpdate(localResult);
         }
     }
 
-    const handleDescriptionBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-        if(e.target.value !== result.description) {
-            onUpdate({...result, description: e.target.value});
-        }
+    const handleSubResultsChange = (updatedSubResults: SubResult[]) => {
+        setLocalResult(prev => ({...prev, subResults: updatedSubResults}));
     }
 
-    const handleAddSubResult = () => {
-        const newSubResult: SubResult = {
-            id: `sub-${Date.now()}`,
-            name: '',
-            completed: false,
-            assignee: result.assignee, // Default to main result assignee
-            deadline: result.deadline, // Default to main result deadline
-        };
-        setLastAddedSubResultId(newSubResult.id);
-        const updatedSubResults = [...subResults, newSubResult];
-        setSubResults(updatedSubResults);
-        onUpdate({ ...result, subResults: updatedSubResults });
-    };
-
-    const handleSubResultChange = (id: string, field: keyof SubResult, value: any) => {
-        const updatedSubResults = subResults.map(sr => 
-            sr.id === id ? { ...sr, [field]: value } : sr
-        );
-        setSubResults(updatedSubResults);
-        // Do not call onUpdate on every keystroke to prevent table jump
-    };
-    
-    const handleSubResultBlur = (id: string) => {
-        const subResult = subResults.find(sr => sr.id === id);
-        if (subResult && subResult.name.trim() === '') {
-            if (subResults.length > 1) {
-                handleSubResultDelete(id);
-            } else {
-                onUpdate({ ...result, subResults }); // Save even if empty if it's the only one
-            }
-        } else {
-             onUpdate({ ...result, subResults });
-        }
+    const handleSubResultsBlur = () => {
+        onUpdate(localResult);
     }
-
-    const handleSubResultDelete = (id: string) => {
-        const updatedSubResults = subResults.filter(sr => sr.id !== id);
-        setSubResults(updatedSubResults);
-        onUpdate({ ...result, subResults: updatedSubResults });
-    };
      
-    const handleSubResultKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, id: string) => {
-        if (e.key === 'Enter') {
-            const currentSubResult = subResults.find(sr => sr.id === id);
-            if(currentSubResult?.name.trim() !== '') {
-                handleAddSubResult();
-            }
-        }
-    };
-    
     const handleCreateTask = async (taskData: Omit<Task, 'id'>) => {
         try {
             const newTask = await createTaskAction(taskData);
@@ -185,9 +124,9 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
             <header className="p-4 border-b flex items-center gap-2 sticky top-0 bg-card z-10">
                 <Input 
                     ref={nameInputRef}
-                    value={name}
-                    onChange={handleNameChange}
-                    onBlur={handleNameBlur}
+                    value={localResult.name}
+                    onChange={(e) => handleFieldChange('name', e.target.value)}
+                    onBlur={() => handleBlur('name')}
                     onKeyDown={(e) => { if(e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
                     placeholder="Назва результату"
                     className={cn(
@@ -306,9 +245,9 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                     <p className="text-xs text-muted-foreground/70 mb-1">Той результат детально, який постановник хоче отримати</p>
                     <Textarea 
                         id="description" 
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        onBlur={handleDescriptionBlur} 
+                        value={localResult.description}
+                        onChange={(e) => handleFieldChange('description', e.target.value)}
+                        onBlur={() => handleBlur('description')} 
                         className="mt-1 bg-transparent border-dashed text-xs min-h-[60px]"
                         placeholder="Опишіть, що має бути зроблено..."
                     />
@@ -340,73 +279,11 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                 {/* Sub-results */}
                 <div>
                     <h3 className="font-semibold text-xs mb-2">Підрезультати</h3>
-                    <div className="space-y-2">
-                        {subResults.map((sr) => (
-                            <div key={sr.id} className="flex flex-col gap-2 p-2 border rounded-md group/sub-result">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox 
-                                        checked={sr.completed} 
-                                        onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
-                                    />
-                                    <Input 
-                                        data-subresult-id={sr.id}
-                                        value={sr.name}
-                                        onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
-                                        onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
-                                        onBlur={() => handleSubResultBlur(sr.id)}
-                                        placeholder="Новий підрезультат..."
-                                        className="h-7 text-xs border-none focus-visible:ring-1 flex-1"
-                                    />
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleSubResultDelete(sr.id)}>
-                                        <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 pl-6">
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-7 text-xs font-normal w-full justify-start">
-                                                <CalendarIcon className="mr-2 h-3 w-3"/>
-                                                {sr.deadline ? formatDate(sr.deadline) : 'Дедлайн'}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                            <Calendar
-                                                mode="single"
-                                                selected={sr.deadline ? new Date(sr.deadline) : undefined}
-                                                onSelect={(date) => handleSubResultChange(sr.id, 'deadline', date?.toISOString().split('T')[0])}
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                     <Select 
-                                        value={sr.assignee?.id} 
-                                        onValueChange={(userId) => {
-                                            const user = mockUsers.find(u => u.id === userId);
-                                            if (user) handleSubResultChange(sr.id, 'assignee', user)
-                                        }}>
-                                        <SelectTrigger className="h-7 text-xs">
-                                             <div className="flex items-center gap-2 truncate">
-                                                {sr.assignee?.avatar && <Avatar className="h-5 w-5"><AvatarImage src={sr.assignee.avatar} /></Avatar>}
-                                                <span className="truncate"><SelectValue placeholder="Відповідальний..."/></span>
-                                            </div>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {mockUsers.map(user => (
-                                                <SelectItem key={user.id} value={user.id}>
-                                                     <div className="flex items-center gap-2">
-                                                        <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
-                                                        <span>{user.name}</span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        ))}
-                        <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-7" onClick={handleAddSubResult}>
-                            <PlusCircle className="mr-2 h-3 w-3"/> Додати підрезультат
-                        </Button>
-                    </div>
+                    <SubResultList 
+                        subResults={localResult.subResults}
+                        onSubResultsChange={handleSubResultsChange}
+                        onBlur={handleSubResultsBlur}
+                    />
                 </div>
 
                  {/* Tasks */}
@@ -487,6 +364,117 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
         </div>
     );
 }
+
+// --- SubResult Components ---
+
+type SubResultListProps = {
+    subResults: SubResult[];
+    onSubResultsChange: (subResults: SubResult[]) => void;
+    onBlur: () => void;
+    level?: number;
+}
+
+function SubResultList({ subResults, onSubResultsChange, onBlur, level = 0 }: SubResultListProps) {
+    const handleAddSubResult = (parentSubResultId?: string) => {
+        const newSubResult: SubResult = {
+            id: `sub-${Date.now()}`,
+            name: '',
+            completed: false,
+        };
+
+        const addRecursively = (items: SubResult[]): SubResult[] => {
+            if (!parentSubResultId) return [...items, newSubResult];
+            return items.map(item => {
+                if (item.id === parentSubResultId) {
+                    return { ...item, subResults: [...(item.subResults || []), newSubResult] };
+                }
+                if (item.subResults) {
+                    return { ...item, subResults: addRecursively(item.subResults) };
+                }
+                return item;
+            });
+        };
+
+        onSubResultsChange(addRecursively(subResults));
+    };
+
+    const handleChange = (id: string, field: keyof SubResult, value: any) => {
+        const changeRecursively = (items: SubResult[]): SubResult[] => {
+            return items.map(item => {
+                if (item.id === id) {
+                    return { ...item, [field]: value };
+                }
+                if (item.subResults) {
+                    return { ...item, subResults: changeRecursively(item.subResults) };
+                }
+                return item;
+            });
+        };
+        onSubResultsChange(changeRecursively(subResults));
+    };
+    
+    const handleDelete = (id: string) => {
+        const deleteRecursively = (items: SubResult[]): SubResult[] => {
+            return items.filter(item => {
+                if(item.id === id) return false;
+                if(item.subResults) {
+                    item.subResults = deleteRecursively(item.subResults);
+                }
+                return true;
+            })
+        }
+        onSubResultsChange(deleteRecursively(subResults));
+        onBlur();
+    }
+
+
+    return (
+        <div className="space-y-2">
+            {subResults.map(sr => (
+                <div key={sr.id} style={{ paddingLeft: `${level > 0 ? 1 : 0}rem` }}>
+                    <div className="flex flex-col gap-2 p-2 border rounded-md group/sub-result">
+                        <div className="flex items-center gap-2">
+                            <Checkbox
+                                checked={sr.completed}
+                                onCheckedChange={(checked) => handleChange(sr.id, 'completed', !!checked)}
+                            />
+                            <Input
+                                value={sr.name}
+                                onChange={(e) => handleChange(sr.id, 'name', e.target.value)}
+                                onKeyDown={(e) => { if(e.key === 'Enter') handleAddSubResult(sr.id)}}
+                                onBlur={onBlur}
+                                placeholder="Новий підрезультат..."
+                                className="h-7 text-xs border-none focus-visible:ring-1 flex-1"
+                            />
+                             {level < 4 && (
+                                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleAddSubResult(sr.id)}>
+                                    <PlusCircle className="h-3 w-3" />
+                                </Button>
+                             )}
+                            <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleDelete(sr.id)}>
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    </div>
+                    {sr.subResults && sr.subResults.length > 0 && (
+                        <SubResultList 
+                            subResults={sr.subResults}
+                            onSubResultsChange={(updated) => handleChange(sr.id, 'subResults', updated)}
+                            onBlur={onBlur}
+                            level={level + 1}
+                        />
+                    )}
+                </div>
+            ))}
+            {level === 0 && (
+                 <Button variant="ghost" size="sm" className="w-full justify-start text-xs h-7" onClick={() => handleAddSubResult()}>
+                    <PlusCircle className="mr-2 h-3 w-3"/> Додати підрезультат
+                </Button>
+            )}
+        </div>
+    )
+}
+
 
 // Helper component for Add Task Dialog
 function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result: Result; onTaskCreate: (taskData: Omit<Task, 'id'>) => void, triggerButton?: boolean }) {

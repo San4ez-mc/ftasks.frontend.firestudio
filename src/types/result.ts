@@ -7,12 +7,13 @@ export type User = {
     avatar?: string;
 };
 
-export type SubResult = {
+export interface SubResult {
     id: string;
     name: string;
     completed: boolean;
     assignee?: User;
     deadline?: string;
+    subResults?: SubResult[];
 }
 
 export type ResultTask = {
