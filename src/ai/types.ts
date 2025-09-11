@@ -126,10 +126,13 @@ export type AuditStructure = z.infer<typeof AuditStructureSchema>;
 
 
 export const ConversationalAuditInputSchema = z.object({
-    userAudioDataUri: z.string().describe("A chunk of the user's spoken answer, as a data URI that must include a MIME type and use Base64 encoding."),
+    userAudioDataUri: z.string().describe("A chunk of the user's spoken answer, as a data URI that must include a MIME type and use Base64 encoding.").optional(),
+    userText: z.string().describe("The user's answer as text.").optional(),
     conversationHistory: z.array(ConversationTurnSchema),
     currentSummary: AuditStructureSchema,
     auditId: z.string(),
+}).refine(data => !!data.userAudioDataUri || !!data.userText, {
+    message: "Either userAudioDataUri or userText must be provided.",
 });
 export type ConversationalAuditInput = z.infer<typeof ConversationalAuditInputSchema>;
 

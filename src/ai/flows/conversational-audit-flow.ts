@@ -108,13 +108,22 @@ const conversationalAuditFlow = ai.defineFlow(
     inputSchema: ConversationalAuditInputSchema,
     outputSchema: ConversationalAuditOutputSchema,
   },
-  async ({userAudioDataUri, conversationHistory, currentSummary}) => {
-    // Step 1: Transcribe the audio cleanly
-    const transcribeResponse = await ai.generate({
-        model: 'googleai/gemini-1.5-flash-latest',
-        prompt: [{media: {url: userAudioDataUri, contentType: 'audio/webm'}}, {text: 'Транскрибуй це аудіо українською мовою. Прибери будь-які слова-паразити та заповнювачі пауз, такі як "еее", "ммм", "нуу", щоб текст був чистим та лаконічним.'}],
-    });
-    const userTranscript = transcribeResponse.text;
+  async ({userAudioDataUri, userText, conversationHistory, currentSummary}) => {
+    let userTranscript: string;
+
+    // Step 1: Get user's transcript from either audio or text
+    if (userAudioDataUri) {
+        const transcribeResponse = await ai.generate({
+            model: 'googleai/gemini-1.5-flash-latest',
+            prompt: [{media: {url: userAudioDataUri, contentType: 'audio/webm'}}, {text: 'Транскрибуй це аудіо українською мовою. Прибери будь-які слова-паразити та заповнювачі пауз, такі як "еее", "ммм", "нуу", щоб текст був чистим та лаконічним.'}],
+        });
+        userTranscript = transcribeResponse.text;
+    } else if (userText) {
+        userTranscript = userText;
+    } else {
+        throw new Error("No user input provided (either audio or text).");
+    }
+
 
     // Step 2: Update conversation history with the new transcript
     const updatedConversationHistory: ConversationTurn[] = [
