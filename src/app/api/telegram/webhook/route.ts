@@ -24,6 +24,7 @@ interface TelegramChat {
 }
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
+const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 
 const mainMenu = {
     keyboard: [
@@ -166,10 +167,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("Webhook body:", JSON.stringify(body, null, 2));
 
-    if (body.message && body.message.text) {
-        const chat: TelegramChat = body.message.chat;
-        const fromUser: TelegramUser = body.message.from;
-        const text = body.message.text as string;
+    if (body.message) {
+        const message = body.message;
+        const chat: TelegramChat = message.chat;
+        const fromUser: TelegramUser = message.from;
+        const text = (message.text || '') as string;
+        const isReplyToBot = message.reply_to_message?.from?.username === BOT_USERNAME;
+        const isBotMentioned = text.includes(`@${BOT_USERNAME}`);
 
         // --- /start command handler ---
         if (text.startsWith('/start')) {
@@ -219,7 +223,7 @@ export async function POST(request: NextRequest) {
             }
         } 
         // --- Natural Language Command Handler ---
-        else if (chat.type === 'private') {
+        else if (chat.type === 'private' || ( (chat.type === 'group' || chat.type === 'supergroup') && (isBotMentioned || isReplyToBot) )) {
             await handleNaturalLanguageCommand(chat, fromUser, text);
             return NextResponse.json({ status: 'ok', message: 'Command processed.' });
         }

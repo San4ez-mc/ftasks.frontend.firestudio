@@ -12,6 +12,8 @@ import type { Employee } from '@/types/company';
 import type { Process } from '@/types/process';
 import type { Instruction } from '@/types/instruction';
 import type { CompanyProfile } from '@/types/company-profile';
+import type { Audit } from '@/types/audit';
+
 
 const RESULTS_COLLECTION = 'results';
 const TASKS_COLLECTION = 'tasks';
@@ -22,6 +24,8 @@ const INSTRUCTIONS_COLLECTION = 'instructions';
 const GROUPS_COLLECTION = 'telegramGroups';
 const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
 const COMPANY_PROFILES_COLLECTION = 'company_profiles';
+const AUDITS_COLLECTION = 'audits';
+
 
 const initialInstructions: Omit<Instruction, 'id'>[] = [
   { 
@@ -202,3 +206,9 @@ export const getInstructionById = (id: string) => getById<Instruction>(INSTRUCTI
 export const createInstructionInDb = (data: Omit<Instruction, 'id'>) => create<Instruction>(INSTRUCTIONS_COLLECTION, data);
 export const updateInstructionInDb = (id: string, updates: Partial<Instruction>) => update<Instruction>(INSTRUCTIONS_COLLECTION, id, updates);
 export const deleteInstructionFromDb = (id: string) => remove(INSTRUCTIONS_COLLECTION, id);
+
+// --- Audits ---
+export const getAllAudits = () => getAll<Audit>(AUDITS_COLLECTION);
+export const getAuditById = (id: string) => getById<Audit>(AUDITS_COLLECTION, id);
+export const createAuditInDb = (data: Omit<Audit, 'id'>) => create<Audit>(AUDITS_COLLECTION, data);
+export const updateAuditInDb = (id: string, updates: Partial<Audit>) => update<Audit>(AUDITS_COLLECTION, id, updates);

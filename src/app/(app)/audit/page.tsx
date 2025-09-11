@@ -1,214 +1,100 @@
 
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, ArrowLeft, Loader2, Wand2, AlertTriangle, Mic } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { generateAuditSummary } from '@/ai/flows/audit-summary-flow';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { PlusCircle, Loader2 } from 'lucide-react';
+import type { Audit } from '@/types/audit';
+import { getAudits, createAudit } from './actions';
 import { useToast } from '@/hooks/use-toast';
+import { formatDate } from '@/lib/utils';
 
-const auditSections = [
-  {
-    title: 'Загальне бачення та Стратегія',
-    questions: [
-      'Розкажіть, чим займається ваша компанія?',
-      'Опишіть головний бізнес-процес вашої компанії одним реченням: звідки приходять клієнти і який кінцевий продукт вони отримують?',
-      'Яка головна фінансова мета компанії на найближчий рік (наприклад, оборот, прибуток)?',
-      'Хто у компанії відповідальний за досягнення цієї фінансової мети? Чиї рішення на це впливають найбільше?',
-    ],
-  },
-  {
-    title: 'Маркетинг та Залучення клієнтів',
-    questions: [
-      'Перерахуйте 2-3 основні канали, звідки приходять клієнти. Хто відповідає за роботу кожного каналу?',
-      'Які ключові метрики ви використовуєте для оцінки ефективності маркетингу (наприклад, вартість ліда, ROMI)?',
-      'Чи бере власник участь в операційній роботі з маркетингу (наприклад, налаштування реклами, написання текстів)?',
-    ],
-  },
-  {
-    title: 'Продажі та Робота з клієнтами',
-    questions: [
-      'Опишіть коротко процес продажу: від першого контакту до отримання оплати. Хто є ключовою особою на кожному етапі?',
-      'Чи є у відділі продажів скрипти, регламенти або CRM-система? Наскільки системно вони використовуються?',
-      'Хто в компанії є найкращим продавцем? Наскільки сильно впадуть продажі, якщо ця людина піде у відпустку на місяць?',
-    ],
-  },
-  {
-    title: 'Продукт та Виробництво',
-    questions: [
-      'Хто відповідає за якість кінцевого продукту чи послуги? Як ви цю якість вимірюєте?',
-      'Чи є у вас задокументовані процеси або інструкції для створення продукту чи надання послуги?',
-      'Наскільки сильно ви, як власник, залучені у процес виробництва або надання послуг клієнтам?',
-    ],
-  },
-  {
-      title: 'Команда та Найм',
-      questions: [
-          'Хто ухвалює остаточне рішення про найм нового співробітника?',
-          'Чи є у вас програма адаптації (онбордингу) для нових членів команди?',
-          'Які ключові співробітники, крім власника, "незамінні"? Що станеться, якщо вони раптово звільняться?',
-      ]
-  },
-  {
-      title: 'Фінанси та Управління',
-      questions: [
-          'Хто в компанії регулярно веде фінансовий облік (P&L, Cash Flow)? Як часто власник переглядає ці звіти?',
-          'Хто приймає рішення про ключові витрати в компанії?',
-          'Які задачі ви, як власник, виконували протягом останнього тижня? Перерахуйте 5-7 основних.',
-      ]
-  }
-];
-
-const allQuestions = auditSections.flatMap(section =>
-  section.questions.map(q => ({ text: q, section: section.title }))
-);
-
-export default function AuditPage() {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [summary, setSummary] = useState('Аудит ще не розпочато.');
-  const [problems, setProblems] = useState<string[]>([]);
+export default function AuditsListPage() {
+  const [audits, setAudits] = useState<Audit[]>([]);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const { toast } = useToast();
-  
-  const currentQuestion = allQuestions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex) / allQuestions.length) * 100;
 
-  const handleAnswerChange = (text: string) => {
-      setAnswers(prev => ({...prev, [currentQuestionIndex]: text}));
-  }
-
-  const handleNext = () => {
-    const currentAnswer = answers[currentQuestionIndex];
-    if (!currentAnswer || currentAnswer.trim().length < 5) {
-        toast({
-            title: "Будь ласка, дайте відповідь",
-            description: "Надайте більш розгорнуту відповідь на запитання.",
-            variant: "destructive"
-        });
-        return;
-    }
-
+  useEffect(() => {
     startTransition(async () => {
-        try {
-            const result = await generateAuditSummary({
-                currentSummary: summary === 'Аудит ще не розпочато.' ? '' : summary,
-                identifiedProblems: problems,
-                question: currentQuestion.text,
-                answer: currentAnswer,
-            });
-            setSummary(result.updatedSummary);
-            setProblems(result.updatedProblems);
+      const fetchedAudits = await getAudits();
+      setAudits(fetchedAudits);
+    });
+  }, []);
 
-            if (currentQuestionIndex < allQuestions.length - 1) {
-                setCurrentQuestionIndex(prev => prev + 1);
-            } else {
-                 toast({
-                    title: "Аудит завершено!",
-                    description: "Ваш фінальний звіт готовий на панелі праворуч.",
-                });
-            }
-
-        } catch (error) {
-            toast({
-                title: "Помилка ШІ",
-                description: "Не вдалося обробити вашу відповідь. Спробуйте ще раз.",
-                variant: "destructive"
-            });
-        }
+  const handleStartNewAudit = () => {
+    startTransition(async () => {
+      try {
+        const newAudit = await createAudit();
+        router.push(`/audit/${newAudit.id}`);
+      } catch (error) {
+        toast({
+          title: "Помилка",
+          description: "Не вдалося розпочати новий аудит.",
+          variant: "destructive",
+        });
+      }
     });
   };
 
-  const handleBack = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-  
-  const isLastQuestion = currentQuestionIndex === allQuestions.length - 1;
-
   return (
-    <div className="flex flex-col md:flex-row h-full">
-      {/* Left Panel: Questions & Input */}
-      <div className="flex flex-col flex-1 p-4 md:p-8 lg:p-12 space-y-6">
-        <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-primary/10 text-primary rounded-lg flex items-center justify-center">
-                <span className="text-3xl font-bold font-headline">{currentQuestionIndex + 1}</span>
-            </div>
-            <div>
-                 <p className="text-sm font-semibold text-primary">{currentQuestion.section}</p>
-                 <h1 className="text-2xl md:text-3xl font-bold font-headline">{currentQuestion.text}</h1>
-            </div>
-        </div>
-        
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Textarea
-                placeholder="Введіть вашу відповідь тут..."
-                className="flex-1 text-base h-full md:col-span-2"
-                value={answers[currentQuestionIndex] || ''}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-            />
-            <div className="flex flex-col items-center justify-center text-center p-4 bg-muted/50 rounded-lg">
-                <Button variant="ghost" size="icon" className="h-20 w-20 rounded-full bg-background mb-4">
-                    <Mic className="h-10 w-10 text-primary" />
-                </Button>
-                <h4 className="font-semibold">Запишіть аудіо-відповідь</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                    Рекомендуємо записувати розгорнуті відповіді голосом. Розповідайте з максимальною кількістю деталей — це допоможе ШІ надати вам найточніші рекомендації.
-                </p>
-            </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-4 border-t">
-          <Button variant="outline" onClick={handleBack} disabled={currentQuestionIndex === 0}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Назад
-          </Button>
-           <div className="flex-1 text-center px-4">
-             <Progress value={progress} />
-           </div>
-          <Button onClick={handleNext} disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLastQuestion ? 'Завершити' : 'Далі'}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-xl font-bold tracking-tight font-headline">Аудити компанії</h1>
+        <Button onClick={handleStartNewAudit} disabled={isPending}>
+          {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+          Розпочати новий аудит
+        </Button>
       </div>
 
-      {/* Right Panel: Summary */}
-      <aside className="w-full md:w-1/3 lg:w-1/4 bg-card border-l p-6 flex flex-col">
-        <CardHeader className="p-0">
-            <CardTitle className="flex items-center gap-2">
-                <Wand2/>
-                Аналітичне резюме
-            </CardTitle>
-            <CardDescription>Результати оновлюються після кожної вашої відповіді.</CardDescription>
+      <Card>
+        <CardHeader>
+          <CardTitle>Історія аудитів</CardTitle>
+          <CardDescription>Переглядайте попередні аудити, щоб відслідковувати динаміку змін.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0 mt-6 space-y-4 overflow-y-auto">
-           <div className="space-y-1">
-                <h4 className="text-sm font-semibold">Загальне резюме</h4>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{summary}</p>
-           </div>
-           <div className="space-y-2">
-                <h4 className="text-sm font-semibold">Виявлені проблеми та ризики</h4>
-                {problems.length > 0 ? (
-                    <ul className="space-y-2">
-                        {problems.map((problem, index) => (
-                            <li key={index} className="flex items-start gap-2 text-sm">
-                                <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5"/>
-                                <span>{problem}</span>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-sm text-muted-foreground">Проблем поки не виявлено.</p>
-                )}
-           </div>
+        <CardContent>
+          {isPending && !audits.length ? <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground"/></div> :
+          audits.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Дата проведення</TableHead>
+                    <TableHead>Кількість виявлених проблем</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {audits.map((audit) => (
+                    <TableRow key={audit.id}>
+                      <TableCell className="font-medium">{formatDate(audit.createdAt)}</TableCell>
+                      <TableCell>{audit.problems?.length || 0}</TableCell>
+                      <TableCell>{audit.isCompleted ? 'Завершено' : 'В процесі'}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/audit/${audit.id}`}>
+                            {audit.isCompleted ? 'Переглянути' : 'Продовжити'}
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Ви ще не проводили жодного аудиту.</p>
+              <p>Натисніть "Розпочати новий аудит", щоб почати.</p>
+            </div>
+          )}
         </CardContent>
-      </aside>
+      </Card>
     </div>
   );
 }
