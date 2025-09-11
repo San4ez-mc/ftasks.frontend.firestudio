@@ -36,8 +36,9 @@ export async function linkGroup(code: string): Promise<{ success: boolean; messa
   
   try {
     // Hardcoded companyId for now
-    const newGroup = await linkTelegramGroup(code, 'company-1');
-    return { success: true, message: 'Групу успішно прив\'язано!', data: newGroup };
+    const { group, wasCreated } = await linkTelegramGroup(code, 'company-1');
+    const message = wasCreated ? 'Групу успішно прив\'язано!' : 'Інформацію про групу оновлено!';
+    return { success: true, message: message, data: group };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Невідома помилка.';
     return { success: false, message: `Помилка прив'язки: ${message}` };

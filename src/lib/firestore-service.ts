@@ -183,16 +183,38 @@ export async function linkTelegramGroup(code: string, companyId: string): Promis
         throw new Error("Невірний або застарілий код.");
     }
 
-    const groupData: Omit<TelegramGroup, 'id'> = {
-        tgGroupId: codeData.tgGroupId,
-        title: codeData.groupTitle,
-        companyId: companyId,
-        linkedAt: new Date().toISOString(),
-    };
-    
-    const newGroup = await create<TelegramGroup>(GROUPS_COLLECTION, groupData);
-    await codeRef.delete();
-    return newGroup;
+    // Check if the group is already linked to this company
+    const groupsRef = firestore.collection(GROUPS_COLLECTION);
+    const existingGroupQuery = await groupsRef
+        .where('tgGroupId', '==', codeData.tgGroupId)
+        .where('companyId', '==', companyId)
+        .limit(1)
+        .get();
+
+    await codeRef.delete(); // Delete the code now that we've used it
+
+    if (!existingGroupQuery.empty) {
+        // Group exists, so update it
+        const existingDoc = existingGroupQuery.docs[0];
+        const updatedData = {
+            title: codeData.groupTitle, // Update title in case it changed
+            linkedAt: new Date().toISOString(), // Update linked timestamp
+        };
+        await existingDoc.ref.update(updatedData);
+        // Combine existing data with new data for the return value
+        const returnedData = { ...existingDoc.data(), ...updatedData, id: existingDoc.id };
+        return returnedData as TelegramGroup;
+    } else {
+        // Group is new, so create it
+        const newGroupData: Omit<TelegramGroup, 'id'> = {
+            tgGroupId: codeData.tgGroupId,
+            title: codeData.groupTitle,
+            companyId: companyId,
+            linkedAt: new Date().toISOString(),
+        };
+        const newGroup = await create<TelegramGroup>(GROUPS_COLLECTION, newGroupData);
+        return newGroup;
+    }
 }
 
 

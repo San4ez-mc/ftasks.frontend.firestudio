@@ -126,7 +126,18 @@ function TelegramGroupsPageContent() {
             toast({ title: "Успіх!", description: result.message });
             setLinkCode('');
             setIsAddGroupOpen(false);
-            setGroups(prev => [result.data!, ...prev]);
+            setGroups(prev => {
+                const existingGroupIndex = prev.findIndex(g => g.id === result.data!.id);
+                if (existingGroupIndex !== -1) {
+                    // Update existing group
+                    const newGroups = [...prev];
+                    newGroups[existingGroupIndex] = result.data!;
+                    return newGroups;
+                } else {
+                    // Add new group
+                    return [result.data!, ...prev];
+                }
+            });
             setSelectedGroup(result.data);
         } else {
             toast({ title: "Помилка", description: result.message, variant: "destructive" });
@@ -442,10 +453,16 @@ function MessageLogCard({ group }: { group: TelegramGroup }) {
     const handleSendMessage = () => {
         if (!messageText.trim()) return;
         startTransition(async () => {
-            await sendMessageToGroup(group.id, messageText);
-            setMessageText('');
-            fetchLogs(); // Refresh the log after sending
-            toast({ title: "Повідомлення надіслано!" });
+            const result = await sendMessageToGroup(group.id, messageText);
+            if(result){
+                setLogs(prev => [result, ...prev]);
+            }
+            if (result.status === 'OK') {
+                setMessageText('');
+                toast({ title: "Повідомлення надіслано!" });
+            } else {
+                toast({ title: "Помилка відправки", description: result.error, variant: 'destructive' });
+            }
         });
     }
 
@@ -474,7 +491,8 @@ function MessageLogCard({ group }: { group: TelegramGroup }) {
                 </div>
                 <Separator />
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {logs.map(log => (
+                    {isPending && logs.length === 0 ? <div className="text-center p-4"><Loader2 className="h-4 w-4 animate-spin mx-auto"/></div> :
+                    logs.map(log => (
                         <div key={log.id} className="text-xs">
                             <div className="flex justify-between items-center mb-1">
                                 <span className="font-medium">{new Date(log.timestamp).toLocaleString()}</span>
@@ -492,3 +510,5 @@ function MessageLogCard({ group }: { group: TelegramGroup }) {
         </Card>
     )
 }
+
+    
