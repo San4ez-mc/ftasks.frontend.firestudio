@@ -293,10 +293,17 @@ export const createTelegramLog = (data: Omit<MessageLog, 'id'>) => create<Messag
 export async function getTelegramLogsByGroupId(groupId: string): Promise<MessageLog[]> {
     firestoreGuard();
     await seedDatabase();
+    
+    // Get all logs for the group, then sort in memory to avoid needing a composite index.
     const snapshot = await firestore.collection(TELEGRAM_LOGS_COLLECTION)
         .where('groupId', '==', groupId)
-        .orderBy('timestamp', 'desc')
-        .limit(20)
         .get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageLog));
+
+    const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageLog));
+    
+    // Sort by timestamp descending
+    logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // Return the most recent 20
+    return logs.slice(0, 20);
 }
