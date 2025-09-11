@@ -12,3 +12,13 @@ export function formatDate(dateString: string | Date): string {
   const year = String(date.getFullYear()).slice(-2);
   return `${day}.${month}.${year}`;
 }
+
+export function formatDateTime(dateString: string | Date): string {
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} о ${hours}:${minutes}`;
+}

@@ -11,7 +11,8 @@ import { PlusCircle, Loader2 } from 'lucide-react';
 import type { Audit } from '@/types/audit';
 import { getAudits, createAudit } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { formatDate } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function AuditsListPage() {
   const [audits, setAudits] = useState<Audit[]>([]);
@@ -41,14 +42,30 @@ export default function AuditsListPage() {
     });
   };
 
+  const today = new Date().toISOString().split('T')[0];
+  const hasAuditToday = audits.some(audit => audit.createdAt.startsWith(today));
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h1 className="text-xl font-bold tracking-tight font-headline">Аудити компанії</h1>
-        <Button onClick={handleStartNewAudit} disabled={isPending}>
-          {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-          Розпочати новий аудит
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div tabIndex={0}> {/* Wrapper div for tooltip on disabled button */}
+                <Button onClick={handleStartNewAudit} disabled={isPending || hasAuditToday}>
+                  {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                  Розпочати новий аудит
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {hasAuditToday && (
+              <TooltipContent>
+                <p>Новий аудит можна розпочинати лише раз на день.</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <Card>
@@ -63,7 +80,7 @@ export default function AuditsListPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Дата проведення</TableHead>
+                    <TableHead>Дата та час</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
@@ -71,7 +88,7 @@ export default function AuditsListPage() {
                 <TableBody>
                   {audits.map((audit) => (
                     <TableRow key={audit.id}>
-                      <TableCell className="font-medium">{formatDate(audit.createdAt)}</TableCell>
+                      <TableCell className="font-medium">{formatDateTime(audit.createdAt)}</TableCell>
                       <TableCell>{audit.isCompleted ? 'Завершено' : 'В процесі'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild>
