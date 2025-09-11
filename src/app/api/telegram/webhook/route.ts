@@ -18,6 +18,15 @@ interface TelegramChat {
     type: 'private' | 'group' | 'supergroup';
 }
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
+
+const mainMenu = {
+    keyboard: [
+        [{ text: "Задачі", web_app: { url: `${APP_URL}/` } }, { text: "Результати", web_app: { url: `${APP_URL}/results` } }],
+        [{ text: "Орг.структура", web_app: { url: `${APP_URL}/org-structure` } }, { text: "Шаблони", web_app: { url: `${APP_URL}/templates` } }]
+    ],
+    resize_keyboard: true,
+};
 
 async function sendTelegramReply(chatId: number, message: {text: string, reply_markup?: any}) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -29,9 +38,13 @@ async function sendTelegramReply(chatId: number, message: {text: string, reply_m
 
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
+  // Combine the specific reply_markup with the main menu, or just use the main menu
+  const finalReplyMarkup = message.reply_markup ? message.reply_markup : mainMenu;
+  
   const payload = {
     chat_id: chatId,
-    ...message
+    text: message.text,
+    reply_markup: finalReplyMarkup
   };
 
   try {
@@ -77,8 +90,7 @@ export async function POST(request: NextRequest) {
                  return NextResponse.json({ status: 'error', message: error }, { status: 500 });
             }
             
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
-            const linkUrl = `${appUrl}/telegram-groups`;
+            const linkUrl = `${APP_URL}/telegram-groups`;
             
             await sendTelegramReply(chat.id, {
                 text: `Для прив'язки цієї групи до FINEKO, адміністратор має ввести цей код на сторінці 'Телеграм групи':\n\n*${code}*\n\nКод дійсний 10 хвилин.`,
@@ -106,19 +118,28 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
             }
             
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
-            const redirectUrl = `${appUrl}/auth/telegram/callback?token=${tempToken}`;
+            const redirectUrl = `${APP_URL}/auth/telegram/callback?token=${tempToken}`;
 
             await sendTelegramReply(chat.id, {
-                text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
+                text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід. Також ви можете використовувати меню для швидкого доступу до основних розділів.",
                 reply_markup: {
-                    inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]]
+                    inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]],
+                    ...mainMenu // Attach the main menu as well
                 }
             });
 
             return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
         }
+    } else if (body.message) {
+        // Handle other messages by showing the menu
+        const chat: TelegramChat = body.message.chat;
+        if (chat.type === 'private') {
+            await sendTelegramReply(chat.id, {
+                text: "Використовуйте меню нижче для навігації по додатку."
+            });
+        }
     }
+
 
     return NextResponse.json({ status: 'ok', message: 'Webhook received, but no action taken.' });
 
@@ -128,4 +149,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
 }
-
