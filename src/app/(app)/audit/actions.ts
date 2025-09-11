@@ -5,7 +5,8 @@ import {
     getAllAudits, 
     getAuditById, 
     createAuditInDb, 
-    updateAuditInDb 
+    updateAuditInDb,
+    deleteAuditFromDb
 } from '@/lib/firestore-service';
 import { continueAudit as continueAuditFlow } from '@/ai/flows/conversational-audit-flow';
 import { generateWorkPlan as generateWorkPlanFlow } from '@/ai/flows/work-plan-flow';
@@ -40,6 +41,10 @@ export async function updateAudit(id: string, updates: Partial<Audit>): Promise<
     return updateAuditInDb(id, updates);
 }
 
+export async function deleteAudit(id: string): Promise<{ success: boolean }> {
+    return deleteAuditFromDb(id);
+}
+
 
 export async function continueAudit(input: ConversationalAuditInput): Promise<ConversationalAuditOutput> {
     // This server action is a simple wrapper around the Genkit flow.
@@ -51,3 +56,5 @@ export async function generateWorkPlan(summary: AuditStructure): Promise<WorkPla
     // The flow now directly returns the array, so we adjust accordingly.
     return plan;
 }
+
+    
