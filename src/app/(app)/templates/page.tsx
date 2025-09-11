@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, Edit, Trash2, X, Clock } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, X, Clock, Link as LinkIcon, CalendarDays, Repeat } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { formatDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -61,6 +61,32 @@ const templatesTourSteps: TourStep[] = [
     },
 ];
 
+type Recurrence = {
+  type: 'daily' | 'weekly' | 'monthly' | 'interval';
+  interval: number; // For "every N days"
+  daysOfWeek: number[]; // 0 for Sunday, 1 for Monday...
+  dayOfMonth: number; // 1-31
+};
+
+const weekDays = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+function formatRepeatability(recurrence: Recurrence): string {
+    switch (recurrence.type) {
+        case 'daily':
+            return 'Щоденно';
+        case 'weekly':
+            if (recurrence.daysOfWeek.length === 7) return 'Щоденно';
+            if (recurrence.daysOfWeek.length === 0) return 'Щотижня';
+            return `Щотижня (${recurrence.daysOfWeek.map(d => weekDays[d]).join(', ')})`;
+        case 'monthly':
+            return `Щомісяця (${recurrence.dayOfMonth} числа)`;
+        case 'interval':
+             return `Кожні ${recurrence.interval} дні`;
+        default:
+            return 'Не налаштовано';
+    }
+}
+
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [results, setResults] = useState<Result[]>([]);
@@ -82,32 +108,18 @@ export default function TemplatesPage() {
   }, []);
 
 
-  const handleCreateTemplate = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const name = formData.get('templateName') as string;
-    if (name) {
-        const newTemplateDataWithForm: Omit<Template, 'id'> = {
-            name,
-            repeatability: formData.get('repeatability') as string,
-            startDate: new Date().toISOString().split('T')[0],
-            tasksGenerated: [],
-            expectedResult: formData.get('expectedResult') as string,
-            resultId: newTemplateData.resultId,
-            resultName: newTemplateData.resultName
-        };
-        startTransition(async () => {
-            try {
-                const created = await createTemplate(newTemplateDataWithForm);
-                setTemplates(prev => [created, ...prev]);
-                setSelectedTemplate(created);
-                setIsCreateDialogOpen(false);
-                setNewTemplateData({name: ''});
-            } catch (error) {
-                toast({ title: "Помилка", description: "Не вдалося створити шаблон.", variant: "destructive" });
-            }
-        });
-    }
+  const handleCreateTemplate = (templateData: Omit<Template, 'id'>) => {
+    startTransition(async () => {
+        try {
+            const created = await createTemplate(templateData);
+            setTemplates(prev => [created, ...prev]);
+            setSelectedTemplate(created);
+            setIsCreateDialogOpen(false);
+            setNewTemplateData({name: ''});
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося створити шаблон.", variant: "destructive" });
+        }
+    });
   };
   
   const handleUpdateTemplate = (updatedTemplate: Template) => {
@@ -145,9 +157,20 @@ export default function TemplatesPage() {
   };
 
   const handleCreateFromRes = (resultId: string) => {
-      const result = results.find(r => r.id === resultId);
-      if(result) {
-        setNewTemplateData({name: result.name, resultId: result.id, resultName: result.name});
+      let linkedResult: {id: string, name: string} | null = null;
+      for (const res of results) {
+          if (res.id === resultId) {
+              linkedResult = {id: res.id, name: res.name};
+              break;
+          }
+          const subRes = res.subResults.find(sr => sr.id === resultId);
+          if (subRes) {
+              linkedResult = {id: subRes.id, name: `${res.name} / ${subRes.name}`};
+              break;
+          }
+      }
+      if(linkedResult) {
+        setNewTemplateData({name: linkedResult.name, resultId: linkedResult.id, resultName: linkedResult.name});
         setIsCreateDialogOpen(true);
       }
   }
@@ -244,9 +267,20 @@ export default function TemplatesPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                        {results.length > 0 ? results.map(result => (
-                            <div key={result.id} onClick={() => handleCreateFromRes(result.id)} className="p-3 rounded-md border hover:bg-accent cursor-pointer">
-                                <p className="font-medium text-sm">{result.name}</p>
-                            </div>
+                           <div key={result.id}>
+                               {result.subResults && result.subResults.length > 0 ? (
+                                   result.subResults.map(subResult => (
+                                     <div key={subResult.id} onClick={() => handleCreateFromRes(subResult.id)} className="p-3 rounded-md border hover:bg-accent cursor-pointer mb-2">
+                                       <p className="font-medium text-sm">{subResult.name}</p>
+                                       <p className="text-xs text-muted-foreground">{result.name}</p>
+                                     </div>
+                                   ))
+                               ) : (
+                                    <div onClick={() => handleCreateFromRes(result.id)} className="p-3 rounded-md border hover:bg-accent cursor-pointer">
+                                        <p className="font-medium text-sm">{result.name}</p>
+                                    </div>
+                               )}
+                           </div>
                         )) : (
                             <p className="text-sm text-muted-foreground text-center p-4">Результати не очікуються</p>
                         )}
@@ -265,7 +299,57 @@ export default function TemplatesPage() {
 
 
       {/* FAB and Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      <CreateTemplateDialog 
+        isOpen={isCreateDialogOpen} 
+        setIsOpen={setIsCreateDialogOpen} 
+        results={results}
+        initialData={newTemplateData}
+        onCreate={handleCreateTemplate}
+      />
+    </div>
+  );
+}
+
+// --- Create Dialog ---
+function CreateTemplateDialog({isOpen, setIsOpen, results, initialData, onCreate}: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    results: Result[];
+    initialData: {name: string, resultId?: string, resultName?: string};
+    onCreate: (templateData: Omit<Template, 'id'>) => void;
+}) {
+    const [name, setName] = useState('');
+    const [linkedResultId, setLinkedResultId] = useState<string | undefined>(initialData.resultId);
+    const [expectedResult, setExpectedResult] = useState('');
+    const [recurrence, setRecurrence] = useState<Recurrence>({
+        type: 'daily',
+        interval: 1,
+        daysOfWeek: [],
+        dayOfMonth: 1,
+    });
+    
+    useEffect(() => {
+        setName(initialData.name || '');
+        setLinkedResultId(initialData.resultId);
+    }, [initialData]);
+
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const selectedResult = results.flatMap(r => [r, ...r.subResults]).find(item => item.id === linkedResultId);
+        
+        onCreate({
+            name,
+            repeatability: formatRepeatability(recurrence),
+            startDate: new Date().toISOString().split('T')[0],
+            tasksGenerated: [],
+            expectedResult,
+            resultId: linkedResultId,
+            resultName: selectedResult?.name
+        });
+    }
+
+    return (
+         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button id="create-template-fab" className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
                     <PlusCircle className="h-8 w-8" />
@@ -279,35 +363,85 @@ export default function TemplatesPage() {
                         Створіть шаблон для автоматичної генерації повторюваних задач.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleCreateTemplate}>
-                    <div className="grid gap-4 py-4">
-                        {newTemplateData.resultName && (
-                            <div className="text-sm">
-                                <span className="text-muted-foreground">Результат: </span>
-                                <span className="font-semibold">{newTemplateData.resultName}</span>
-                            </div>
-                        )}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="templateName" className="text-right">Назва</Label>
-                            <Input id="templateName" name="templateName" className="col-span-3" defaultValue={newTemplateData.name || ''}/>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="repeatability" className="text-right">Повторюваність</Label>
-                            <Input id="repeatability" name="repeatability" className="col-span-3" placeholder="Наприклад, щодня о 9:00"/>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="expectedResult" className="text-right">Очікуваний результат</Label>
-                           <Textarea id="expectedResult" name="expectedResult" className="col-span-3" />
-                        </div>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="templateName" className="flex items-center gap-2"><Edit className="h-4 w-4"/>Назва шаблону</Label>
+                        <Input id="templateName" name="templateName" value={name} onChange={e => setName(e.target.value)} required />
                     </div>
+
+                    <div className="space-y-2">
+                         <Label htmlFor="resultId" className="flex items-center gap-2"><LinkIcon className="h-4 w-4"/>Прив'язка до результату (опціонально)</Label>
+                         <Select value={linkedResultId} onValueChange={setLinkedResultId}>
+                            <SelectTrigger id="resultId"><SelectValue placeholder="Обрати результат..." /></SelectTrigger>
+                            <SelectContent>
+                                 <SelectItem value="none">Без прив'язки</SelectItem>
+                                {results.map(res => (
+                                     <SelectGroup key={res.id}>
+                                        <SelectLabel>{res.name}</SelectLabel>
+                                        {res.subResults && res.subResults.length > 0 ? (
+                                            res.subResults.map(sub => <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>)
+                                        ) : (
+                                            <SelectItem value={res.id}>{res.name}</SelectItem>
+                                        )}
+                                     </SelectGroup>
+                                ))}
+                            </SelectContent>
+                         </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                         <Label htmlFor="recurrenceType" className="flex items-center gap-2"><Repeat className="h-4 w-4"/>Повторюваність</Label>
+                         <Select value={recurrence.type} onValueChange={(v: Recurrence['type']) => setRecurrence(r => ({...r, type: v}))}>
+                            <SelectTrigger id="recurrenceType"><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="daily">Щоденно</SelectItem>
+                                <SelectItem value="weekly">Щотижня</SelectItem>
+                                <SelectItem value="monthly">Щомісяця</SelectItem>
+                                <SelectItem value="interval">Через N днів</SelectItem>
+                            </SelectContent>
+                         </Select>
+                         {recurrence.type === 'weekly' && (
+                             <div className="flex justify-center gap-1 pt-2">
+                                {weekDays.map((day, index) => (
+                                    <Button 
+                                        key={day} 
+                                        type="button"
+                                        variant={recurrence.daysOfWeek.includes(index) ? "secondary" : "ghost"}
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full"
+                                        onClick={() => setRecurrence(r => ({...r, daysOfWeek: r.daysOfWeek.includes(index) ? r.daysOfWeek.filter(d => d !== index) : [...r.daysOfWeek, index]}))}
+                                    >{day}</Button>
+                                ))}
+                             </div>
+                         )}
+                         {recurrence.type === 'interval' && (
+                             <div className="flex items-center gap-2 pt-2">
+                                <span>Повторювати кожні</span>
+                                <Input type="number" value={recurrence.interval} onChange={e => setRecurrence(r => ({...r, interval: parseInt(e.target.value, 10) || 1}))} className="w-20" />
+                                <span>дні(в)</span>
+                             </div>
+                         )}
+                         {recurrence.type === 'monthly' && (
+                              <div className="flex items-center gap-2 pt-2">
+                                <span>Повторювати</span>
+                                <Input type="number" value={recurrence.dayOfMonth} onChange={e => setRecurrence(r => ({...r, dayOfMonth: parseInt(e.target.value, 10) || 1}))} className="w-20" min="1" max="31"/>
+                                <span>числа кожного місяця</span>
+                             </div>
+                         )}
+                    </div>
+                     
+                     <div className="space-y-2">
+                        <Label htmlFor="expectedResult">Очікуваний результат</Label>
+                        <Textarea id="expectedResult" name="expectedResult" value={expectedResult} onChange={e => setExpectedResult(e.target.value)} />
+                    </div>
+
                     <DialogFooter>
                         <Button type="submit">Зберегти шаблон</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
-    </div>
-  );
+    )
 }
 
 // --- Details Panel ---
@@ -374,5 +508,7 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
         </div>
     )
 }
+
+    
 
     
