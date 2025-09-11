@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 // From ai-task-prioritization.ts
@@ -118,7 +119,7 @@ export const AuditStructureSchema = z.object({
   production: z.object({
     mainProvider: z.string().describe("Who provides the main service or creates the product."),
   }).optional(),
-}).describe("A structured summary of the business audit.");
+}).describe("A structured summary of the business audit.").default({});
 export type AuditStructure = z.infer<typeof AuditStructureSchema>;
 
 
@@ -138,3 +139,19 @@ export const ConversationalAuditOutputSchema = z.object({
     isAuditComplete: z.boolean(),
 });
 export type ConversationalAuditOutput = z.infer<typeof ConversationalAuditOutputSchema>;
+
+
+// From work-plan-flow.ts
+export const WorkPlanItemSchema = z.object({
+    problem: z.string().describe("A concise description of the identified problem or weakness. Must be in Ukrainian."),
+    solution: z.string().describe("A concise description of the proposed solution or desired future state. Must be in Ukrainian."),
+});
+export type WorkPlanItem = z.infer<typeof WorkPlanItemSchema>;
+
+export const WorkPlanInputSchema = z.object({
+    structuredSummary: AuditStructureSchema,
+});
+export type WorkPlanInput = z.infer<typeof WorkPlanInputSchema>;
+
+export const WorkPlanOutputSchema = z.array(WorkPlanItemSchema);
+export type WorkPlanOutput = z.infer<typeof WorkPlanOutputSchema>;
