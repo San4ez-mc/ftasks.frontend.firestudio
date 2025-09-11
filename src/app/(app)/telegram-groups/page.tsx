@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, Suspense } from 'react';
+import { useState, useRef, useEffect, Suspense, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus, PlusCircle, X, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus, PlusCircle, X, ChevronsUpDown, Trash2, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -42,26 +42,12 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { getGroups, linkGroup } from './actions';
+import type { TelegramGroup } from '@/types/telegram-group';
 
 
-// --- Mock Data ---
-
-const mockGroups = [
-    {
-        id: 'group-1',
-        linked: true,
-        group_id: '-1001234567890',
-        title: 'Fineko Development Team',
-        username: 'fineko_dev_chat',
-        linked_at: '2024-08-01T10:00:00Z',
-    },
-    {
-        id: 'group-2',
-        linked: false,
-        title: 'Marketing Department',
-    }
-];
-
+// --- Mock Data (for details panel, to be replaced later) ---
 
 const mockTelegramMembers = [
   { tg_user_id: '12345', name: 'Іван Петренко', username: 'ivan_p', status: 'linked', employee_id: 'emp-1' },
@@ -82,7 +68,6 @@ const mockMessageLogs = [
   { id: 'log-3', timestamp: new Date(Date.now() - 7200000), content: 'Test message from admin panel.', status: 'Error', error: '403: Forbidden: bot was kicked from the group' },
 ];
 
-type Group = typeof mockGroups[0];
 
 // --- TOUR STEPS ---
 const telegramTourSteps: TourStep[] = [
@@ -110,22 +95,52 @@ const telegramTourSteps: TourStep[] = [
 
 
 function TelegramGroupsPageContent() {
-  const [groups, setGroups] = useState(mockGroups);
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(groups[0]);
+  const [groups, setGroups] = useState<TelegramGroup[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<TelegramGroup | null>(null);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
+  const [linkCode, setLinkCode] = useState('');
+  const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
+
+  const fetchGroups = () => {
+    startTransition(async () => {
+        const fetchedGroups = await getGroups();
+        setGroups(fetchedGroups);
+        if (fetchedGroups.length > 0 && !selectedGroup) {
+            setSelectedGroup(fetchedGroups[0]);
+        }
+    });
+  }
 
   useEffect(() => {
+    fetchGroups();
     if (searchParams.get('action') === 'add-group') {
       setIsAddGroupOpen(true);
     }
   }, [searchParams]);
+
+  const handleLinkGroup = () => {
+    if (!linkCode) return;
+    startTransition(async () => {
+        const result = await linkGroup(linkCode);
+        if (result.success) {
+            toast({ title: "Успіх!", description: result.message });
+            setLinkCode('');
+            setIsAddGroupOpen(false);
+            fetchGroups(); // Re-fetch the list
+        } else {
+            toast({ title: "Помилка", description: result.message, variant: "destructive" });
+        }
+    });
+  }
 
   const handleClosePanel = () => {
     setSelectedGroup(null);
   }
 
   const handleDeleteGroup = (groupId: string) => {
+    // TODO: Implement delete action
     setGroups(prev => prev.filter(g => g.id !== groupId));
     if (selectedGroup?.id === groupId) {
         setSelectedGroup(null);
@@ -153,11 +168,12 @@ function TelegramGroupsPageContent() {
                     </DialogHeader>
                     <div className="py-4 space-y-2">
                         <Label htmlFor="link-code">Код прив'язки групи</Label>
-                        <Input id="link-code" placeholder="Введіть код..." />
+                        <Input id="link-code" placeholder="Введіть 6-значний код..." value={linkCode} onChange={(e) => setLinkCode(e.target.value)} disabled={isPending} />
                     </div>
                     <DialogFooter>
-                        <Button className="w-full">
-                            <LinkIcon className="mr-2 h-4 w-4" /> Прив'язати
+                        <Button className="w-full" onClick={handleLinkGroup} disabled={isPending}>
+                            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LinkIcon className="mr-2 h-4 w-4" />}
+                            Прив'язати
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -165,7 +181,8 @@ function TelegramGroupsPageContent() {
           </div>
         </header>
         <main id="group-list" className="flex-1 overflow-y-auto px-4 md:px-6 space-y-4">
-           {groups.map(group => (
+           {isPending && !groups.length ? <div className="text-center p-8"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></div> :
+           groups.map(group => (
              <Card 
                 key={group.id} 
                 className={cn(
@@ -176,8 +193,8 @@ function TelegramGroupsPageContent() {
                 <CardContent className="p-4 flex items-center justify-between" onClick={() => setSelectedGroup(group)}>
                     <p className="font-semibold">{group.title}</p>
                     <div className="flex items-center gap-2">
-                        <Badge variant={group.linked ? "secondary" : "outline"}>
-                            {group.linked ? "Прив'язано" : "Не прив'язано"}
+                        <Badge variant={group.id ? "secondary" : "outline"}>
+                            {group.id ? "Прив'язано" : "Не прив'язано"}
                         </Badge>
                          <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -224,7 +241,7 @@ function TelegramGroupsPageContent() {
 // --- Main Page Component Wrapper for Suspense ---
 export default function TelegramGroupsPage() {
   return (
-    <Suspense fallback={<div>Завантаження...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>}>
       <TelegramGroupsPageContent />
     </Suspense>
   )
@@ -233,7 +250,26 @@ export default function TelegramGroupsPage() {
 
 // --- Details Panel Component ---
 
-function TelegramGroupDetails({ group, onClose }: { group: Group, onClose: () => void }) {
+function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClose: () => void }) {
+    const [linkCode, setLinkCode] = useState('');
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+
+    // This is a simplified handler for the details panel only. A real implementation would share state.
+    const handleLinkGroupInPanel = () => {
+        if (!linkCode) return;
+        startTransition(async () => {
+            const result = await linkGroup(linkCode);
+            if (result.success) {
+                toast({ title: "Успіх!", description: result.message });
+                // Here we would ideally refetch or update the group prop
+            } else {
+                toast({ title: "Помилка", description: result.message, variant: "destructive" });
+            }
+        });
+    }
+
+
     return (
         <div className="flex flex-col h-full">
             <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
@@ -241,8 +277,14 @@ function TelegramGroupDetails({ group, onClose }: { group: Group, onClose: () =>
                 <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
             </header>
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                <GroupStatusCard status={group} />
-                {group?.linked ? (
+                <GroupStatusCard 
+                    group={group} 
+                    linkCode={linkCode} 
+                    setLinkCode={setLinkCode} 
+                    onLink={handleLinkGroupInPanel}
+                    isPending={isPending}
+                />
+                {group?.id ? (
                     <>
                         <MemberManagementCard members={mockTelegramMembers}/>
                         <MessageLogCard logs={mockMessageLogs} />
@@ -263,8 +305,14 @@ function TelegramGroupDetails({ group, onClose }: { group: Group, onClose: () =>
 
 // --- Sub-components for Details Panel ---
 
-function GroupStatusCard({ status }: { status: Group | null }) {
-    if (!status?.linked) {
+function GroupStatusCard({ group, linkCode, setLinkCode, onLink, isPending }: { 
+    group: TelegramGroup | null, 
+    linkCode: string,
+    setLinkCode: (code: string) => void,
+    onLink: () => void,
+    isPending: boolean
+}) {
+    if (!group?.id) { // Group is not linked if it doesn't have a database ID
         return (
              <Card>
                 <CardHeader>
@@ -274,10 +322,11 @@ function GroupStatusCard({ status }: { status: Group | null }) {
                 <CardContent className="space-y-4">
                      <div className="space-y-2">
                         <Label htmlFor="link-code-panel">Код прив'язки групи</Label>
-                        <Input id="link-code-panel" placeholder="Введіть код..." />
+                        <Input id="link-code-panel" placeholder="Введіть 6-значний код..." value={linkCode} onChange={e => setLinkCode(e.target.value)} disabled={isPending}/>
                     </div>
-                    <Button className="w-full">
-                        <LinkIcon className="mr-2 h-4 w-4" /> Прив'язати
+                    <Button className="w-full" onClick={onLink} disabled={isPending}>
+                        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LinkIcon className="mr-2 h-4 w-4" />}
+                        Прив'язати
                     </Button>
                 </CardContent>
             </Card>
@@ -295,10 +344,10 @@ function GroupStatusCard({ status }: { status: Group | null }) {
                     <AlertTitle>Групу успішно прив'язано</AlertTitle>
                 </Alert>
                 <div className="space-y-2">
-                    <p><strong>Назва:</strong> {status.title}</p>
-                    {status.username && <p><strong>Юзернейм:</strong> @{status.username}</p>}
-                    <p><strong>Group ID:</strong> <code className="bg-muted px-1.5 py-0.5 rounded">{status.group_id}</code></p>
-                    {status.linked_at && <p><strong>Дата прив'язки:</strong> {new Date(status.linked_at).toLocaleString()}</p>}
+                    <p><strong>Назва:</strong> {group.title}</p>
+                    {group.tgUsername && <p><strong>Юзернейм:</strong> @{group.tgUsername}</p>}
+                    <p><strong>Group ID:</strong> <code className="bg-muted px-1.5 py-0.5 rounded">{group.tgGroupId}</code></p>
+                    {group.linkedAt && <p><strong>Дата прив'язки:</strong> {new Date(group.linkedAt).toLocaleString()}</p>}
                 </div>
                  <div className="flex flex-col gap-2">
                     <Button variant="outline">Перевірити підключення</Button>
@@ -446,5 +495,3 @@ function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
         </Card>
     )
 }
-
-    

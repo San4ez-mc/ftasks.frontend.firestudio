@@ -13,6 +13,7 @@ import type { Process } from '@/types/process';
 import type { Instruction } from '@/types/instruction';
 import type { CompanyProfile } from '@/types/company-profile';
 import type { Audit } from '@/types/audit';
+import type { TelegramGroup } from '@/types/telegram-group';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -109,6 +110,13 @@ async function getAll<T>(collectionName: string): Promise<T[]> {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 }
 
+async function getByQuery<T>(collectionName: string, queryField: string, queryValue: string): Promise<T[]> {
+  await seedDatabase();
+  const snapshot = await firestore.collection(collectionName).where(queryField, '==', queryValue).get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+}
+
+
 async function getById<T>(collectionName: string, id: string): Promise<T | null> {
     await seedDatabase();
     const docRef = firestore.collection(collectionName).doc(id);
@@ -138,31 +146,31 @@ async function remove(collectionName: string, docId: string): Promise<{ success:
 
 // --- Service-Specific Functions ---
 
-export async function linkTelegramGroup(code: string, companyId: string) {
+export async function linkTelegramGroup(code: string, companyId: string): Promise<TelegramGroup> {
     const codeRef = firestore.collection(GROUP_LINK_CODES_COLLECTION).doc(code);
     const codeDoc = await codeRef.get();
 
     if (!codeDoc.exists) {
-        throw new Error("Invalid or expired code.");
+        throw new Error("Невірний або застарілий код.");
     }
     
-    const codeData = codeDoc.data() as { groupId: string, groupTitle: string, expiresAt: { toDate: () => Date } };
+    const codeData = codeDoc.data() as { tgGroupId: string, groupTitle: string, expiresAt: { toDate: () => Date } };
     
     if (new Date() > codeData.expiresAt.toDate()) {
         await codeRef.delete();
-        throw new Error("Invalid or expired code.");
+        throw new Error("Невірний або застарілий код.");
     }
 
-    const groupData = {
-        tgGroupId: codeData.groupId,
+    const groupData: Omit<TelegramGroup, 'id'> = {
+        tgGroupId: codeData.tgGroupId,
         title: codeData.groupTitle,
         companyId: companyId,
-        linkedAt: new Date(),
+        linkedAt: new Date().toISOString(),
     };
     
-    await firestore.collection(GROUPS_COLLECTION).add(groupData);
+    const newGroup = await create<TelegramGroup>(GROUPS_COLLECTION, groupData);
     await codeRef.delete();
-    return groupData;
+    return newGroup;
 }
 
 
@@ -212,3 +220,6 @@ export const getAllAudits = () => getAll<Audit>(AUDITS_COLLECTION);
 export const getAuditById = (id: string) => getById<Audit>(AUDITS_COLLECTION, id);
 export const createAuditInDb = (data: Omit<Audit, 'id'>) => create<Audit>(AUDITS_COLLECTION, data);
 export const updateAuditInDb = (id: string, updates: Partial<Audit>) => update<Audit>(AUDITS_COLLECTION, id, updates);
+
+// --- Telegram Groups ---
+export const getAllTelegramGroups = (companyId: string) => getByQuery<TelegramGroup>(GROUPS_COLLECTION, 'companyId', companyId);
