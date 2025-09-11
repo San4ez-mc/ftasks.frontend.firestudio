@@ -43,8 +43,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getGroups, linkGroup } from './actions';
-import type { TelegramGroup } from '@/types/telegram-group';
+import { getGroups, linkGroup, getLogsForGroup, sendMessageToGroup } from './actions';
+import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 
 
 // --- Mock Data (for details panel, to be replaced later) ---
@@ -60,12 +60,6 @@ const mockCompanyEmployees = [
     { id: 'emp-2', name: 'Марія Сидоренко' },
     { id: 'emp-3', name: 'Олена Ковальчук' },
     { id: 'emp-4', name: 'Петро Іваненко' },
-];
-
-const mockMessageLogs = [
-  { id: 'log-1', timestamp: new Date(), content: 'Weekly report has been generated.', status: 'OK', error: null },
-  { id: 'log-2', timestamp: new Date(Date.now() - 3600000), content: 'New task assigned: "Fix login bug"', status: 'OK', error: null },
-  { id: 'log-3', timestamp: new Date(Date.now() - 7200000), content: 'Test message from admin panel.', status: 'Error', error: '403: Forbidden: bot was kicked from the group' },
 ];
 
 
@@ -115,7 +109,11 @@ function TelegramGroupsPageContent() {
 
   useEffect(() => {
     fetchGroups();
-    if (searchParams.get('action') === 'add-group') {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+     if (searchParams.get('action') === 'add-group') {
       setIsAddGroupOpen(true);
     }
   }, [searchParams]);
@@ -124,11 +122,12 @@ function TelegramGroupsPageContent() {
     if (!linkCode) return;
     startTransition(async () => {
         const result = await linkGroup(linkCode);
-        if (result.success) {
+        if (result.success && result.data) {
             toast({ title: "Успіх!", description: result.message });
             setLinkCode('');
             setIsAddGroupOpen(false);
-            fetchGroups(); // Re-fetch the list
+            setGroups(prev => [result.data!, ...prev]);
+            setSelectedGroup(result.data);
         } else {
             toast({ title: "Помилка", description: result.message, variant: "destructive" });
         }
@@ -251,24 +250,14 @@ export default function TelegramGroupsPage() {
 // --- Details Panel Component ---
 
 function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClose: () => void }) {
-    const [linkCode, setLinkCode] = useState('');
-    const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
-
-    // This is a simplified handler for the details panel only. A real implementation would share state.
-    const handleLinkGroupInPanel = () => {
-        if (!linkCode) return;
-        startTransition(async () => {
-            const result = await linkGroup(linkCode);
-            if (result.success) {
-                toast({ title: "Успіх!", description: result.message });
-                // Here we would ideally refetch or update the group prop
-            } else {
-                toast({ title: "Помилка", description: result.message, variant: "destructive" });
-            }
+    
+    useEffect(() => {
+        toast({
+            title: "Оновлення складу",
+            description: `Автоматично оновлюємо список учасників для групи "${group.title}".`
         });
-    }
-
+    }, [group.id, group.title, toast]);
 
     return (
         <div className="flex flex-col h-full">
@@ -279,15 +268,11 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
             <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 <GroupStatusCard 
                     group={group} 
-                    linkCode={linkCode} 
-                    setLinkCode={setLinkCode} 
-                    onLink={handleLinkGroupInPanel}
-                    isPending={isPending}
                 />
                 {group?.id ? (
                     <>
                         <MemberManagementCard members={mockTelegramMembers}/>
-                        <MessageLogCard logs={mockMessageLogs} />
+                        <MessageLogCard group={group} />
                     </>
                 ) : (
                     <Card className="h-full flex items-center justify-center">
@@ -305,34 +290,7 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
 
 // --- Sub-components for Details Panel ---
 
-function GroupStatusCard({ group, linkCode, setLinkCode, onLink, isPending }: { 
-    group: TelegramGroup | null, 
-    linkCode: string,
-    setLinkCode: (code: string) => void,
-    onLink: () => void,
-    isPending: boolean
-}) {
-    if (!group?.id) { // Group is not linked if it doesn't have a database ID
-        return (
-             <Card>
-                <CardHeader>
-                    <CardTitle>Прив'язка групи</CardTitle>
-                    <CardDescription>Введіть код, який бот надіслав у вашу Telegram-групу.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="space-y-2">
-                        <Label htmlFor="link-code-panel">Код прив'язки групи</Label>
-                        <Input id="link-code-panel" placeholder="Введіть 6-значний код..." value={linkCode} onChange={e => setLinkCode(e.target.value)} disabled={isPending}/>
-                    </div>
-                    <Button className="w-full" onClick={onLink} disabled={isPending}>
-                        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LinkIcon className="mr-2 h-4 w-4" />}
-                        Прив'язати
-                    </Button>
-                </CardContent>
-            </Card>
-        )
-    }
-
+function GroupStatusCard({ group }: { group: TelegramGroup }) {
     return (
         <Card>
             <CardHeader>
@@ -463,7 +421,34 @@ function MemberManagementCard({ members }: { members: typeof mockTelegramMembers
     )
 }
 
-function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
+function MessageLogCard({ group }: { group: TelegramGroup }) {
+    const [logs, setLogs] = useState<MessageLog[]>([]);
+    const [messageText, setMessageText] = useState('');
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+
+    const fetchLogs = () => {
+        startTransition(async () => {
+            const fetchedLogs = await getLogsForGroup(group.id);
+            setLogs(fetchedLogs);
+        });
+    };
+
+    useEffect(() => {
+        fetchLogs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [group.id]);
+
+    const handleSendMessage = () => {
+        if (!messageText.trim()) return;
+        startTransition(async () => {
+            await sendMessageToGroup(group.id, messageText);
+            setMessageText('');
+            fetchLogs(); // Refresh the log after sending
+            toast({ title: "Повідомлення надіслано!" });
+        });
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -474,8 +459,17 @@ function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
                  <div>
                     <Label htmlFor="test-message" className="mb-2 block">Надіслати тестове повідомлення</Label>
                     <div className="flex gap-2">
-                        <Textarea id="test-message" placeholder="Перевірка зв'язку" className="min-h-[40px]"/>
-                        <Button size="icon" className="shrink-0"><Send className="h-4 w-4"/></Button>
+                        <Textarea 
+                            id="test-message" 
+                            placeholder="Перевірка зв'язку" 
+                            className="min-h-[40px]"
+                            value={messageText}
+                            onChange={(e) => setMessageText(e.target.value)}
+                            disabled={isPending}
+                        />
+                        <Button size="icon" className="shrink-0" onClick={handleSendMessage} disabled={isPending}>
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}
+                        </Button>
                     </div>
                 </div>
                 <Separator />
@@ -483,13 +477,16 @@ function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
                     {logs.map(log => (
                         <div key={log.id} className="text-xs">
                             <div className="flex justify-between items-center mb-1">
-                                <span className="font-medium">{log.timestamp.toLocaleString()}</span>
+                                <span className="font-medium">{new Date(log.timestamp).toLocaleString()}</span>
                                 <Badge variant={log.status === 'OK' ? 'secondary' : 'destructive'}>{log.status}</Badge>
                             </div>
                             <p className="p-2 bg-muted rounded-md font-mono text-muted-foreground">'{log.content}'</p>
                             {log.error && <p className="p-2 mt-1 bg-destructive/10 text-destructive rounded-md font-mono">{log.error}</p>}
                         </div>
                     ))}
+                     {logs.length === 0 && !isPending && (
+                        <p className="text-center text-muted-foreground py-4">Журнал повідомлень порожній.</p>
+                    )}
                 </div>
             </CardContent>
         </Card>

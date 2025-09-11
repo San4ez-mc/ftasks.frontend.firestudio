@@ -6,3 +6,12 @@ export interface TelegramGroup {
     tgUsername?: string;
     linkedAt: string; // ISO Date string
 }
+
+export interface MessageLog {
+    id: string;
+    groupId: string;
+    timestamp: string; // ISO Date string
+    content: string;
+    status: 'OK' | 'Error';
+    error?: string | null;
+}

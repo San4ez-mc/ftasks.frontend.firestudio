@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
 import { parseTelegramCommand } from '@/ai/flows/telegram-command-flow';
 import { getAllEmployees, createTaskInDb, createResultInDb, getAllTasks, updateTaskInDb, getAllResults, updateResultInDb } from '@/lib/firestore-service';
+import { sendTelegramMessage } from '@/lib/telegram-service';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
 import type { Employee } from '@/types/company';
@@ -34,50 +35,10 @@ interface TelegramVoice {
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 
-async function sendTelegramReply(chatId: number, message: {text: string, reply_markup?: any}) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-
-  if (!botToken) {
-    console.error("TELEGRAM_BOT_TOKEN is not defined.");
-    return;
-  }
-
-  const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  
-  const payload: any = {
-    chat_id: chatId,
-    text: message.text,
-    parse_mode: 'Markdown'
-  };
-
-  if (message.reply_markup) {
-    payload.reply_markup = message.reply_markup;
-  }
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      console.error(`Failed to send Telegram message:`, responseData);
-    } else {
-        console.log("Successfully sent Telegram message.");
-    }
-  } catch(error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown fetch error";
-      console.error("Failed to execute fetch request to Telegram API.", errorMessage, error);
-  }
-}
-
 async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUser, text: string) {
     const finekoUser = await findUserByTelegramId(user.id.toString());
     if (!finekoUser) {
-        await sendTelegramReply(chat.id, { text: "Вибачте, я не можу знайти ваш профіль в системі. Будь ласка, спочатку увійдіть через додаток." });
+        await sendTelegramMessage(chat.id, { text: "Вибачте, я не можу знайти ваш профіль в системі. Будь ласка, спочатку увійдіть через додаток." });
         return;
     }
 
@@ -113,9 +74,9 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}` },
                     };
                     const createdTask = await createTaskInDb(newTaskData);
-                    await sendTelegramReply(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
+                    await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
                 } else {
-                     await sendTelegramReply(chat.id, { text: "Не вдалося створити задачу. Спробуйте ще раз, вказавши назву." });
+                     await sendTelegramMessage(chat.id, { text: "Не вдалося створити задачу. Спробуйте ще раз, вказавши назву." });
                 }
                 break;
             
@@ -138,9 +99,9 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         subResults: [], tasks: [], templates: [], comments: [], accessList: [],
                     };
                     const createdResult = await createResultInDb(newResultData);
-                    await sendTelegramReply(chat.id, { text: `🎯 Результат створено: "${createdResult.name}" для ${assigneeName}.` });
+                    await sendTelegramMessage(chat.id, { text: `🎯 Результат створено: "${createdResult.name}" для ${assigneeName}.` });
                 } else {
-                     await sendTelegramReply(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
+                     await sendTelegramMessage(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
                 }
                 break;
             
@@ -150,12 +111,12 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     const taskToEdit = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
                     if (taskToEdit) {
                         await updateTaskInDb(taskToEdit.id, { title: params.newTitle });
-                        await sendTelegramReply(chat.id, { text: `✅ Назву задачі оновлено на "${params.newTitle}".` });
+                        await sendTelegramMessage(chat.id, { text: `✅ Назву задачі оновлено на "${params.newTitle}".` });
                     } else {
-                        await sendTelegramReply(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
                     }
                 } else {
-                    await sendTelegramReply(chat.id, { text: `🤔 Для зміни назви задачі, вкажіть поточну та нову назву.` });
+                    await sendTelegramMessage(chat.id, { text: `🤔 Для зміни назви задачі, вкажіть поточну та нову назву.` });
                 }
                 break;
 
@@ -172,36 +133,36 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         };
                         const updatedComments = [...(resultToComment.comments || []), newComment];
                         await updateResultInDb(resultToComment.id, { comments: updatedComments });
-                        await sendTelegramReply(chat.id, { text: `💬 Коментар додано до результату "${params.targetTitle}".` });
+                        await sendTelegramMessage(chat.id, { text: `💬 Коментар додано до результату "${params.targetTitle}".` });
                     } else {
-                        await sendTelegramReply(chat.id, { text: `❌ Не знайдено результат з назвою "${params.targetTitle}".` });
+                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено результат з назвою "${params.targetTitle}".` });
                     }
                 } else {
-                    await sendTelegramReply(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву результату та текст коментаря.` });
+                    await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву результату та текст коментаря.` });
                 }
                 break;
 
             case 'list_employees':
                 const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
-                await sendTelegramReply(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
+                await sendTelegramMessage(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
                 break;
             
             case 'show_help':
-                await sendTelegramReply(chat.id, { text: aiResult.reply || "Я можу допомогти вам з керуванням завдань та результатів." });
+                await sendTelegramMessage(chat.id, { text: aiResult.reply || "Я можу допомогти вам з керуванням завдань та результатів." });
                 break;
 
             case 'clarify':
-                await sendTelegramReply(chat.id, { text: `🤔 ${aiResult.missingInfo}` });
+                await sendTelegramMessage(chat.id, { text: `🤔 ${aiResult.missingInfo}` });
                 break;
 
             case 'unknown':
             default:
-                await sendTelegramReply(chat.id, { text: aiResult.reply || "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
+                await sendTelegramMessage(chat.id, { text: aiResult.reply || "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
                 break;
         }
     } catch (error) {
         console.error("Error processing natural language command:", error);
-        await sendTelegramReply(chat.id, { text: "Виникла помилка під час обробки вашого запиту." });
+        await sendTelegramMessage(chat.id, { text: "Виникла помилка під час обробки вашого запиту." });
     }
 }
 
@@ -257,7 +218,7 @@ export async function POST(request: NextRequest) {
                 const transcribedText = transcribeResponse.text;
 
                 if (!transcribedText) {
-                    await sendTelegramReply(chat.id, { text: "Не вдалося розпізнати аудіо. Спробуйте ще раз." });
+                    await sendTelegramMessage(chat.id, { text: "Не вдалося розпізнати аудіо. Спробуйте ще раз." });
                     return NextResponse.json({ status: 'ok', message: 'Audio transcription failed.' });
                 }
 
@@ -266,7 +227,7 @@ export async function POST(request: NextRequest) {
 
             } catch (error) {
                 console.error("Error processing voice message:", error);
-                await sendTelegramReply(chat.id, { text: "Виникла помилка під час обробки вашого голосового повідомлення." });
+                await sendTelegramMessage(chat.id, { text: "Виникла помилка під час обробки вашого голосового повідомлення." });
                 return NextResponse.json({ status: 'error', message: 'Failed to process voice command.' });
             }
         }
@@ -278,13 +239,13 @@ export async function POST(request: NextRequest) {
             if (chat.type === 'group' || chat.type === 'supergroup') {
                 const { code, error } = await generateGroupLinkCode(chat.id.toString(), chat.title);
                 if (error || !code) {
-                     await sendTelegramReply(chat.id, { text: `Не вдалося згенерувати код для прив'язки: ${error}` });
+                     await sendTelegramMessage(chat.id, { text: `Не вдалося згенерувати код для прив'язки: ${error}` });
                      return NextResponse.json({ status: 'error', message: error }, { status: 500 });
                 }
                 
                 const linkUrl = `${APP_URL}/telegram-groups?action=add-group`;
                 
-                await sendTelegramReply(chat.id, {
+                await sendTelegramMessage(chat.id, {
                     text: `Для прив'язки цієї групи до FINEKO, адміністратор має ввести цей код на сторінці 'Телеграм групи':\n\n*${code}*\n\nКод дійсний 10 хвилин.`,
                     reply_markup: {
                         inline_keyboard: [[{ text: "Перейти до FINEKO", url: linkUrl }]]
@@ -303,13 +264,13 @@ export async function POST(request: NextRequest) {
 
                 if (error || !tempToken) {
                     const errorMessage = error || 'Authentication failed. No token provided.';
-                    await sendTelegramReply(chat.id, { text: `Помилка автентифікації: ${errorMessage}` });
+                    await sendTelegramMessage(chat.id, { text: `Помилка автентифікації: ${errorMessage}` });
                     return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
                 }
                 
                 const redirectUrl = `${APP_URL}/auth/telegram/callback?token=${tempToken}`;
 
-                await sendTelegramReply(chat.id, {
+                await sendTelegramMessage(chat.id, {
                     text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
                     reply_markup: {
                         inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]],

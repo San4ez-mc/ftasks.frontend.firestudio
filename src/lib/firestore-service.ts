@@ -13,7 +13,7 @@ import type { Process } from '@/types/process';
 import type { Instruction } from '@/types/instruction';
 import type { CompanyProfile } from '@/types/company-profile';
 import type { Audit } from '@/types/audit';
-import type { TelegramGroup } from '@/types/telegram-group';
+import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -26,6 +26,7 @@ const GROUPS_COLLECTION = 'telegramGroups';
 const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
 const COMPANY_PROFILES_COLLECTION = 'company_profiles';
 const AUDITS_COLLECTION = 'audits';
+const TELEGRAM_LOGS_COLLECTION = 'telegramMessageLogs';
 
 
 const initialInstructions: Omit<Instruction, 'id'>[] = [
@@ -244,3 +245,18 @@ export const updateAuditInDb = (id: string, updates: Partial<Audit>) => update<A
 
 // --- Telegram Groups ---
 export const getAllTelegramGroups = (companyId: string) => getByQuery<TelegramGroup>(GROUPS_COLLECTION, 'companyId', companyId);
+export const getTelegramGroupById = (id: string) => getById<TelegramGroup>(GROUPS_COLLECTION, id);
+
+
+// --- Telegram Message Logs ---
+export const createTelegramLog = (data: Omit<MessageLog, 'id'>) => create<MessageLog>(TELEGRAM_LOGS_COLLECTION, data);
+
+export async function getTelegramLogsByGroupId(groupId: string): Promise<MessageLog[]> {
+    await seedDatabase();
+    const snapshot = await firestore.collection(TELEGRAM_LOGS_COLLECTION)
+        .where('groupId', '==', groupId)
+        .orderBy('timestamp', 'desc')
+        .limit(20)
+        .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageLog));
+}
