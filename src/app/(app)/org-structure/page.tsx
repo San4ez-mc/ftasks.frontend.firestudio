@@ -324,14 +324,14 @@ export default function OrgStructurePage() {
       </header>
       
       <ScrollArea className="flex-1">
-        <div className="p-4 grid grid-flow-col auto-cols-[380px] gap-4">
+        <div className="p-4 flex flex-row items-start gap-4">
             {divisions.map(division => {
                 const divisionDepartments = departments.filter(d => d.divisionId === division.id);
                 return (
                     <div 
                         key={division.id} 
                         id={`division-column-${division.id}`}
-                        className="flex flex-col gap-4 p-2 rounded-lg"
+                        className="flex flex-col gap-4 p-2 rounded-lg bg-background/50 border self-stretch"
                         onDragOver={(e) => handleDragOver(e, division.id)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, division.id)}
@@ -340,28 +340,33 @@ export default function OrgStructurePage() {
                              <h3 className="font-bold">{division.name}</h3>
                              <p className="text-xs text-muted-foreground">{division.description}</p>
                         </div>
-                        <div className="flex flex-col gap-4">
+
+                        <div className="flex-1 flex flex-row gap-4 items-start">
                             {divisionDepartments.map(dept => (
-                                <DepartmentCard 
-                                    key={dept.id} 
-                                    department={dept} 
-                                    onUpdate={handleDepartmentUpdate}
-                                    onDragStart={(e) => handleDragStart(e, dept.id)}
-                                    allEmployees={employees}
-                                />
+                                <div key={dept.id} className="w-80">
+                                    <DepartmentCard 
+                                        department={dept} 
+                                        onUpdate={handleDepartmentUpdate}
+                                        onDragStart={(e) => handleDragStart(e, dept.id)}
+                                        allEmployees={employees}
+                                    />
+                                </div>
                             ))}
+                            <div className="w-80">
+                                <AddDepartmentControl
+                                    id={`add-department-button-${division.id}`} 
+                                    divisionId={division.id} 
+                                    onAddDepartment={handleAddDepartment} 
+                                 />
+                            </div>
                         </div>
+
                         {isDraggingOver === division.id && (
                              <div 
                                 className="w-full rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-all"
                                 style={{ height: `${draggedItemHeight}px` }}
                              ></div>
                         )}
-                         <AddDepartmentControl
-                            id={`add-department-button-${division.id}`} 
-                            divisionId={division.id} 
-                            onAddDepartment={handleAddDepartment} 
-                         />
                     </div>
                 )
             })}
@@ -377,19 +382,19 @@ function AddDepartmentControl({ id, divisionId, onAddDepartment }: { id: string,
     const templates = departmentTemplates[divisionId] || [];
 
     return (
-        <div className="mt-auto space-y-2">
-            {templates.length > 0 && (
-                <div className="space-y-2">
-                    {templates.map(template => (
-                        <Button key={template.name} variant="secondary" size="sm" className="w-full justify-start" onClick={() => onAddDepartment(divisionId, template.name, template.ckp)}>
-                           <Plus className="mr-2 h-4 w-4" /> {template.name}
-                        </Button>
-                    ))}
-                </div>
-            )}
-            <Button id={id} variant="outline" className="w-full" onClick={() => onAddDepartment(divisionId)}>
-                <Plus className="mr-2 h-4 w-4" /> Додати свій відділ
-            </Button>
+       <div className="p-4 rounded-lg border-2 border-dashed h-full flex flex-col justify-center items-center">
+             <p className="font-semibold mb-4 text-center">Додати новий відділ</p>
+            <div className="w-full space-y-2">
+                 {templates.map(template => (
+                    <Button key={template.name} variant="secondary" size="sm" className="w-full justify-start h-auto py-2" onClick={() => onAddDepartment(divisionId, template.name, template.ckp)}>
+                       <Plus className="mr-2 h-4 w-4" /> 
+                       <span className="whitespace-normal text-left">{template.name}</span>
+                    </Button>
+                ))}
+                <Button id={id} variant="outline" className="w-full" onClick={() => onAddDepartment(divisionId)}>
+                    <Plus className="mr-2 h-4 w-4" /> Створити пустий відділ
+                </Button>
+            </div>
         </div>
     )
 }
