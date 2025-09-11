@@ -1,8 +1,10 @@
 
 import jwt from 'jsonwebtoken';
-import { db, users } from '@/lib/db'; // Mock DB
+import { db, users, companies, employees as employeeLinks } from '@/lib/db'; // Mock DB
+import { firestore } from './firebase-admin';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const GROUP_LINK_CODE_EXPIRATION = 10 * 60 * 1000; // 10 minutes
 
 interface TelegramUser {
   id: number;
@@ -26,22 +28,28 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
   try {
     // --- Database Logic (Mocked) ---
-    let user = users.find(u => u.telegramUserId === telegramUserId.toString());
+    // In a real app, this would be a single query to a real database
+    const usersCollection = firestore.collection('users');
+    let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
+    let user: any;
     let details: string;
 
-    if (!user) {
+    if (userQuery.empty) {
+      const newUserRef = usersCollection.doc();
       user = {
-        id: `user-${Date.now()}`,
+        id: newUserRef.id,
         telegramUserId: telegramUserId.toString(),
         firstName: first_name,
         lastName: last_name || '',
         telegramUsername: username || '',
         photo_url: photo_url || '',
       };
-      users.push(user);
-      details = `Нового користувача ${first_name} створено з ID ${user.id}.`;
+      await newUserRef.set(user);
+      details = `New user ${first_name} created with ID ${user.id}.`;
     } else {
-      details = `Існуючого користувача ${first_name} знайдено з ID ${user.id}.`;
+      const userDoc = userQuery.docs[0];
+      user = { id: userDoc.id, ...userDoc.data() };
+      details = `Existing user ${first_name} found with ID ${user.id}.`;
     }
     // --- End Database Logic ---
 
@@ -54,4 +62,25 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       console.error('Error in handleTelegramLogin:', error);
       return { error: 'An internal error occurred during login.' };
   }
+}
+
+/**
+ * Generates and stores a short-lived code for linking a Telegram group.
+ */
+export async function generateGroupLinkCode(groupId: string, groupTitle: string): Promise<{ code?: string; error?: string }> {
+    try {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const expiresAt = new Date(Date.now() + GROUP_LINK_CODE_EXPIRATION);
+
+        await firestore.collection('groupLinkCodes').doc(code).set({
+            groupId,
+            groupTitle,
+            expiresAt,
+        });
+
+        return { code };
+    } catch (error) {
+        console.error("Error generating group link code:", error);
+        return { error: 'Could not generate a link code.' };
+    }
 }

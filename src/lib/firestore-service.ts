@@ -1,3 +1,4 @@
+
 // src/lib/firestore-service.ts
 'use server';
 
@@ -12,6 +13,8 @@ const RESULTS_COLLECTION = 'results';
 const TASKS_COLLECTION = 'tasks';
 const TEMPLATES_COLLECTION = 'templates';
 const EMPLOYEES_COLLECTION = 'employees';
+const GROUPS_COLLECTION = 'telegramGroups';
+const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
 
 // --- Data Seeding ---
 export async function seedDatabase() {
@@ -61,13 +64,12 @@ async function getAll<T>(collectionName: string): Promise<T[]> {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
 }
 
-async function create<T extends { id: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
+async function create<T extends { id?: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
   const docRef = firestore.collection(collectionName).doc();
-  const newDocData = { ...data, id: docRef.id }; // Add id to the data object
+  const newDocData = { ...data, id: docRef.id };
   await docRef.set(newDocData);
-  return { ...newDocData } as T; // Return the full object including id
+  return newDocData as T;
 }
-
 
 async function update<T>(collectionName: string, docId: string, updates: Partial<T>): Promise<T | null> {
   const docRef = firestore.collection(collectionName).doc(docId);
@@ -80,6 +82,40 @@ async function remove(collectionName: string, docId: string): Promise<{ success:
   await firestore.collection(collectionName).doc(docId).delete();
   return { success: true };
 }
+
+// --- Service-Specific Functions ---
+
+export async function linkTelegramGroup(code: string, companyId: string) {
+    const codeRef = firestore.collection(GROUP_LINK_CODES_COLLECTION).doc(code);
+    const codeDoc = await codeRef.get();
+
+    if (!codeDoc.exists) {
+        throw new Error("Invalid or expired code.");
+    }
+    
+    const codeData = codeDoc.data() as { groupId: string, groupTitle: string, expiresAt: { toDate: () => Date } };
+    
+    if (new Date() > codeData.expiresAt.toDate()) {
+        await codeRef.delete();
+        throw new Error("Invalid or expired code.");
+    }
+
+    const groupData = {
+        tgGroupId: codeData.groupId,
+        title: codeData.groupTitle,
+        companyId: companyId,
+        linkedAt: new Date(),
+    };
+    
+    await firestore.collection(GROUPS_COLLECTION).add(groupData);
+    await codeRef.delete();
+
+    // Here you would add logic to fetch group members from Telegram API
+    // and create/link them as employees. This is a placeholder for that logic.
+    // For now, we return the group data.
+    return groupData;
+}
+
 
 // --- Tasks Service Exports ---
 export async function getAllTasks(): Promise<Task[]> { return getAll<Task>(TASKS_COLLECTION); }

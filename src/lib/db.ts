@@ -181,7 +181,8 @@ export let resultsDb: Result[] = [
     ],
     comments: [
         { id: 'comment-1', text: 'Не забудьте перевірити бюджети перед запуском.', author: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4'}, timestamp: '2 години тому' }
-    ]
+    ],
+    accessList: []
   },
   {
     id: 'res-2',
@@ -197,7 +198,8 @@ export let resultsDb: Result[] = [
     subResults: [],
     tasks: [],
     templates: [],
-    comments: []
+    comments: [],
+    accessList: []
   },
   {
     id: 'res-3',
@@ -217,7 +219,8 @@ export let resultsDb: Result[] = [
     ],
     tasks: [],
     templates: [],
-    comments: []
+    comments: [],
+    accessList: []
   },
    {
     id: 'res-4',
@@ -233,7 +236,8 @@ export let resultsDb: Result[] = [
     subResults: [],
     tasks: [],
     templates: [],
-    comments: []
+    comments: [],
+    accessList: []
   },
   {
     id: 'res-5',
@@ -249,7 +253,8 @@ export let resultsDb: Result[] = [
     subResults: [],
     tasks: [],
     templates: [],
-    comments: []
+    comments: [],
+    accessList: []
   },
 ];
 
@@ -264,7 +269,9 @@ export let templatesDb: Template[] = [
         { id: 't1-1', date: '2024-08-01', status: 'done'},
         { id: 't1-2', date: '2024-08-02', status: 'done'},
         { id: 't1-3', date: '2024-08-03', status: 'todo'},
-    ]
+    ],
+    resultId: 'res-3',
+    resultName: 'Підготувати квартальний звіт для інвесторів',
   },
   { 
     id: '2', 
@@ -275,7 +282,9 @@ export let templatesDb: Template[] = [
     tasksGenerated: [
         { id: 't2-1', date: '2024-07-29', status: 'done'},
         { id: 't2-2', date: '2024-08-05', status: 'todo'},
-    ]
+    ],
+    resultId: 'res-1',
+    resultName: 'Запустити рекламну кампанію в Google Ads',
   },
   { 
     id: '3', 
@@ -286,7 +295,7 @@ export let templatesDb: Template[] = [
     tasksGenerated: [
         { id: 't3-1', date: '2024-06-25', status: 'done'},
         { id: 't3-2', date: '2024-07-25', status: 'done'},
-    ]
+    ],
   },
 ];
 

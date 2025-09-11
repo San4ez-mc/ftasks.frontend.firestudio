@@ -29,6 +29,7 @@ import { getResults } from '../results/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
 import type { Result } from '@/types/result';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 // --- TOUR STEPS ---
@@ -64,7 +65,7 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [results, setResults] = useState<Result[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateData, setNewTemplateData] = useState<{name: string, resultId?: string, resultName?: string}>({name: ''});
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -86,20 +87,22 @@ export default function TemplatesPage() {
     const formData = new FormData(event.currentTarget);
     const name = formData.get('templateName') as string;
     if (name) {
-        const newTemplateData: Omit<Template, 'id'> = {
+        const newTemplateDataWithForm: Omit<Template, 'id'> = {
             name,
             repeatability: formData.get('repeatability') as string,
             startDate: new Date().toISOString().split('T')[0],
             tasksGenerated: [],
-            expectedResult: formData.get('expectedResult') as string
+            expectedResult: formData.get('expectedResult') as string,
+            resultId: newTemplateData.resultId,
+            resultName: newTemplateData.resultName
         };
         startTransition(async () => {
             try {
-                const created = await createTemplate(newTemplateData);
+                const created = await createTemplate(newTemplateDataWithForm);
                 setTemplates(prev => [created, ...prev]);
                 setSelectedTemplate(created);
                 setIsCreateDialogOpen(false);
-                setNewTemplateName('');
+                setNewTemplateData({name: ''});
             } catch (error) {
                 toast({ title: "Помилка", description: "Не вдалося створити шаблон.", variant: "destructive" });
             }
@@ -144,7 +147,7 @@ export default function TemplatesPage() {
   const handleCreateFromRes = (resultId: string) => {
       const result = results.find(r => r.id === resultId);
       if(result) {
-        setNewTemplateName(result.name);
+        setNewTemplateData({name: result.name, resultId: result.id, resultName: result.name});
         setIsCreateDialogOpen(true);
       }
   }
@@ -201,14 +204,34 @@ export default function TemplatesPage() {
                              <Card 
                                 key={template.id} 
                                 className={cn(
-                                    "cursor-pointer hover:shadow-md transition-shadow",
+                                    "cursor-pointer hover:shadow-md transition-shadow group/item",
                                     selectedTemplate?.id === template.id && "ring-2 ring-primary"
                                 )}
                                 onClick={() => setSelectedTemplate(template)}
                             >
-                                <CardContent className="p-3 flex justify-between items-center">
-                                    <span className="font-medium text-sm">{template.name}</span>
-                                    <Badge variant="outline" className="text-xs">{template.repeatability}</Badge>
+                                <CardContent className="p-3">
+                                    {template.resultName && <p className="text-xs text-muted-foreground mb-1">{template.resultName}</p>}
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-medium text-sm">{template.name}</span>
+                                        <div className="flex items-center">
+                                            <Badge variant="outline" className="text-xs">{template.repeatability}</Badge>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover/item:opacity-100" onClick={e => e.stopPropagation()}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader><AlertDialogTitle>Ви впевнені?</AlertDialogTitle></AlertDialogHeader>
+                                                    <AlertDialogDescription>Це назавжди видалить шаблон "{template.name}".</AlertDialogDescription>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteTemplate(template.id)}>Видалити</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </div>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}
@@ -258,9 +281,15 @@ export default function TemplatesPage() {
                 </DialogHeader>
                 <form onSubmit={handleCreateTemplate}>
                     <div className="grid gap-4 py-4">
+                        {newTemplateData.resultName && (
+                            <div className="text-sm">
+                                <span className="text-muted-foreground">Результат: </span>
+                                <span className="font-semibold">{newTemplateData.resultName}</span>
+                            </div>
+                        )}
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="templateName" className="text-right">Назва</Label>
-                            <Input id="templateName" name="templateName" className="col-span-3" defaultValue={newTemplateName || ''}/>
+                            <Input id="templateName" name="templateName" className="col-span-3" defaultValue={newTemplateData.name || ''}/>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="repeatability" className="text-right">Повторюваність</Label>
@@ -292,7 +321,10 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
     return (
         <div className="flex flex-col h-full">
              <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
-                <h2 className="text-lg font-semibold font-headline">{template.name}</h2>
+                <div>
+                    {template.resultName && <p className="text-xs text-muted-foreground">{template.resultName}</p>}
+                    <h2 className="text-lg font-semibold font-headline">{template.name}</h2>
+                </div>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
                 </div>

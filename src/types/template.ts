@@ -12,4 +12,6 @@ export type Template = {
   startDate: string;
   tasksGenerated: TaskGenerated[];
   expectedResult?: string;
+  resultId?: string;
+  resultName?: string;
 };

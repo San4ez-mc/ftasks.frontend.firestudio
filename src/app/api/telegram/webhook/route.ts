@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { handleTelegramLogin } from '@/lib/telegram-auth';
+import { handleTelegramLogin, generateGroupLinkCode } from '@/lib/telegram-auth';
 
 interface TelegramUser {
   id: number;
@@ -12,32 +12,27 @@ interface TelegramUser {
   language_code?: string;
 }
 
-async function sendTelegramReply(chatId: number, loginUrl: string | null, errorMessage?: string) {
+interface TelegramChat {
+    id: number;
+    title: string;
+    type: 'private' | 'group' | 'supergroup';
+}
+
+
+async function sendTelegramReply(chatId: number, message: {text: string, reply_markup?: any}) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!botToken) {
-    console.error("Крок 5 (Помилка конфігурації): TELEGRAM_BOT_TOKEN не знайдено в env.");
-    // Do not proceed if token is missing
+    console.error("TELEGRAM_BOT_TOKEN is not defined.");
     return;
   }
 
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  console.log(`Крок 5 (Підготовка до відправки): Цільовий URL Telegram API: ${apiUrl}`);
-
-  const payload = loginUrl
-    ? {
-        chat_id: chatId,
-        text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: loginUrl }]],
-        },
-      }
-    : {
-        chat_id: chatId,
-        text: errorMessage || "Щось пішло не так. Спробуйте ще раз.",
-      };
-      
-  console.log("Крок 5 (Payload):", JSON.stringify(payload, null, 2));
+  
+  const payload = {
+    chat_id: chatId,
+    ...message
+  };
 
   try {
     const response = await fetch(apiUrl, {
@@ -49,13 +44,13 @@ async function sendTelegramReply(chatId: number, loginUrl: string | null, errorM
     const responseData = await response.json();
 
     if (!response.ok) {
-      console.error(`Крок 5 (Помилка): Не вдалося надіслати повідомлення Telegram:`, responseData);
+      console.error(`Failed to send Telegram message:`, responseData);
     } else {
-        console.log("Крок 5 (Успіх): Повідомлення в Telegram успішно надіслано.");
+        console.log("Successfully sent Telegram message.");
     }
   } catch(error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown fetch error";
-      console.error("Крок 5 (Критична помилка): Не вдалося виконати fetch-запит до Telegram API.", errorMessage, error);
+      console.error("Failed to execute fetch request to Telegram API.", errorMessage, error);
   }
 }
 
@@ -64,65 +59,73 @@ async function sendTelegramReply(chatId: number, loginUrl: string | null, errorM
  * This is the Next.js backend endpoint that Telegram will call.
  */
 export async function POST(request: NextRequest) {
-  console.log("Крок 1: Отримано запит на /api/telegram/webhook");
+  console.log("Webhook request received");
   
-  let chatId: number | undefined;
-
   try {
     const body = await request.json();
-    console.log("Тіло вебхука:", JSON.stringify(body, null, 2));
+    console.log("Webhook body:", JSON.stringify(body, null, 2));
 
-
+    // Check for message and /start command
     if (body.message && body.message.text && body.message.text.startsWith('/start')) {
-      const fromUser: TelegramUser = body.message.from;
-      chatId = body.message.chat.id;
+        const chat: TelegramChat = body.message.chat;
+        
+        // --- Group Linking Flow ---
+        if (chat.type === 'group' || chat.type === 'supergroup') {
+            const { code, error } = await generateGroupLinkCode(chat.id.toString(), chat.title);
+            if (error || !code) {
+                 await sendTelegramReply(chat.id, { text: `Не вдалося згенерувати код для прив'язки: ${error}` });
+                 return NextResponse.json({ status: 'error', message: error }, { status: 500 });
+            }
+            
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
+            const linkUrl = `${appUrl}/telegram-groups`;
+            
+            await sendTelegramReply(chat.id, {
+                text: `Для прив'язки цієї групи до FINEKO, адміністратор має ввести цей код на сторінці 'Телеграм групи':\n\n*${code}*\n\nКод дійсний 10 хвилин.`,
+                reply_markup: {
+                    inline_keyboard: [[{ text: "Перейти до FINEKO", url: linkUrl }]]
+                }
+            });
 
-      // Extract payload from the /start command
-      const commandText = body.message.text as string;
-      const payload = commandText.split(' ')[1] || 'auth'; // e.g., "auth" or "auth_remember"
-      const rememberMe = payload === 'auth_remember';
-
-      // Directly call the login logic instead of using fetch
-      const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);
-      console.log(`Крок 2: Пошук/створення користувача. Результат: ${details}`);
-
-      if (error || !tempToken) {
-        const errorMessage = error || 'Authentication failed. No token provided.';
-        console.error(`Помилка на кроці 2/3: ${errorMessage}`);
-        if (chatId) {
-          await sendTelegramReply(chatId, null, `Authentication error: ${errorMessage}`);
+            return NextResponse.json({ status: 'ok', message: 'Group link code sent.' });
         }
-        return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
-      }
-      
-      console.log("Крок 3: Тимчасовий токен успішно згенеровано.");
-      
-      const appUrl = "https://studio--fineko-tasktracker.us-central1.hosted.app";
-      if (!appUrl) {
-          console.error("Помилка конфігурації: NEXT_PUBLIC_APP_URL не знайдено.");
-          throw new Error("Application URL is not configured.");
-      }
+        
+        // --- Private Chat Login Flow ---
+        if (chat.type === 'private') {
+            const fromUser: TelegramUser = body.message.from;
+            const commandText = body.message.text as string;
+            const payload = commandText.split(' ')[1] || 'auth';
+            const rememberMe = payload === 'auth_remember';
 
-      const redirectUrl = `${appUrl}/auth/telegram/callback?token=${tempToken}`;
-      console.log(`Крок 4: URL для кнопки згенеровано: ${redirectUrl}`);
-      
-      if (chatId) {
-        await sendTelegramReply(chatId, redirectUrl);
-      } else {
-        console.error("Не вдалося визначити chat_id для відправки відповіді.");
-      }
+            const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);
+            console.log(`User lookup/creation result: ${details}`);
 
-      return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
+            if (error || !tempToken) {
+                const errorMessage = error || 'Authentication failed. No token provided.';
+                await sendTelegramReply(chat.id, { text: `Помилка автентифікації: ${errorMessage}` });
+                return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
+            }
+            
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
+            const redirectUrl = `${appUrl}/auth/telegram/callback?token=${tempToken}`;
+
+            await sendTelegramReply(chat.id, {
+                text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
+                reply_markup: {
+                    inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]]
+                }
+            });
+
+            return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
+        }
     }
 
     return NextResponse.json({ status: 'ok', message: 'Webhook received, but no action taken.' });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    console.error('Критична помилка в обробнику вебхука:', errorMessage, error);
-    if (chatId) {
-        await sendTelegramReply(chatId, null, 'A critical server error occurred. Please contact support.');
-    }
+    console.error('Critical error in webhook handler:', errorMessage, error);
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
 }
+

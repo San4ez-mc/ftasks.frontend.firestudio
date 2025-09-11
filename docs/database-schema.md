@@ -1,3 +1,4 @@
+
 # FINEKO Database Schema Specification
 
 This document outlines the recommended database schema for the FINEKO application. The structure is designed to be relational-friendly but can be adapted for NoSQL databases like Firestore.
@@ -23,6 +24,7 @@ This document outlines the recommended database schema for the FINEKO applicatio
 5.  [Integration Tables](#5-integration-tables)
     -   [telegram_groups](#telegram_groups)
     -   [telegram_members](#telegram_members)
+    -   [group_link_codes](#group_link_codes)
 6.  [Relationships Diagram (ERD)](#6-relationships-diagram-erd)
 
 ---
@@ -60,18 +62,21 @@ Represents a workspace or an organization. All data is scoped to a company.
 
 ### `employees`
 
-This is a **join table** that links a `user` to a `company`, establishing their membership and role within that specific organization.
+This is a **join table** that links a `user` to a `company`, establishing their membership and role within that specific organization. It can also store profiles created from Telegram groups that are not yet linked to a global `user`.
 
 | Column        | Type                     | Description                                    | Notes                               |
 | ------------- | ------------------------ | ---------------------------------------------- | ----------------------------------- |
 | **id**        | `UUID` / `VARCHAR`       | **Primary Key** - Unique employee identifier.  | `emp-1`                             |
-| **user_id**   | `UUID` / `VARCHAR`       | **Foreign Key** to `users.id`.                 |                                     |
+| user_id   | `UUID` / `VARCHAR`       | **Foreign Key** to `users.id`.                 | Null if created via TG group import. |
 | **company_id**| `UUID` / `VARCHAR`       | **Foreign Key** to `companies.id`.             |                                     |
+| tg_user_id    | `VARCHAR`                | User's unique ID from Telegram.                | Used for linking profiles.          |
+| first_name    | `VARCHAR`                | First name from Telegram.                      |                                     |
+| last_name     | `VARCHAR`                | Last name from Telegram.                       |                                     |
 | status        | `ENUM`                   | Employee's status within the company.          | `'active', 'vacation', 'inactive'`  |
 | notes         | `TEXT`                   | Administrative notes about the employee.       | Optional.                           |
 | created_at    | `TIMESTAMP`              | Timestamp of when the user joined the company. | `DEFAULT NOW()`                     |
 
-*Note: A composite unique key on `(user_id, company_id)` should exist to prevent a user from being in the same company twice.*
+*Note: A composite unique key on `(user_id, company_id)` and `(tg_user_id, company_id)` should exist.*
 
 ---
 
@@ -93,6 +98,7 @@ Stores long-term goals or OKRs.
 | assignee_id      | `UUID` / `VARCHAR` | **Foreign Key** to `employees.id`.           | The employee responsible.         |
 | reporter_id      | `UUID` / `VARCHAR` | **Foreign Key** to `employees.id`.           | The employee who set the goal.    |
 | expected_result  | `TEXT`             | A clear definition of done.                  |                                   |
+| access_list      | `JSONB` / `ARRAY`  | Array of `employee.id` who have access.      | For shared results.               |
 
 ### `sub_results`
 
@@ -135,6 +141,7 @@ For creating recurring tasks.
 | -------------- | ------------------ | ---------------------------------------- | --------------------------------- |
 | **id**         | `UUID` / `VARCHAR` | **Primary Key**                          | `template-1`                      |
 | **company_id** | `UUID` / `VARCHAR` | **Foreign Key** to `companies.id`.       |                                   |
+| result_id      | `UUID` / `VARCHAR` | **Foreign Key** to `results.id`.         | Optional link to a result.        |
 | name           | `VARCHAR`          | Name of the template.                    |                                   |
 | repeatability  | `VARCHAR`          | Cron string or human-readable schedule.  | e.g., `0 9 * * 1-5` or `Щодня о 9:00` |
 | task_details   | `JSONB`            | A JSON object with the task properties to create. | `title`, `type`, `expectedTime`, etc. |
@@ -236,16 +243,18 @@ Stores information about linked Telegram groups.
 
 ### `telegram_members`
 
-Maps Telegram users to company employees.
+Maps Telegram users to company employees. This is more of a logical view than a physical table; the data is stored on the `employees` table.
 
-| Column          | Type               | Description                                   | Notes                                    |
-| --------------- | ------------------ | --------------------------------------------- | ---------------------------------------- |
-| **tg_user_id**  | `VARCHAR`          | **Primary Key** - User's unique ID from TG. |                                          |
-| **tg_group_id** | `VARCHAR`          | **Foreign Key** to `telegram_groups.tg_group_id`. | Links to the group.                      |
-| employee_id     | `UUID` / `VARCHAR` | **Foreign Key** to `employees.id`.            | Optional link to an employee profile.    |
-| tg_username     | `VARCHAR`          | Telegram username.                            |                                          |
-| tg_first_name   | `VARCHAR`          | User's first name in Telegram.                |                                          |
-| tg_last_name    | `VARCHAR`          | User's last name in Telegram.                 | Optional.                                |
+### `group_link_codes`
+
+Temporarily stores codes for linking new Telegram groups.
+
+| Column        | Type               | Description                               | Notes                           |
+| ------------- | ------------------ | ----------------------------------------- | ------------------------------- |
+| **code**      | `VARCHAR`          | **Primary Key** - The unique 6-char code. | `XYZ123`                        |
+| tg_group_id   | `VARCHAR`          | The Telegram group ID to be linked.       |                                 |
+| group_title   | `VARCHAR`          | The Telegram group title.                 |                                 |
+| expires_at    | `TIMESTAMP`        | When the code becomes invalid.            | e.g., 10 minutes from creation  |
 
 ---
 
@@ -267,6 +276,7 @@ erDiagram
         UUID id PK
         UUID user_id FK
         UUID company_id FK
+        VARCHAR tg_user_id
         ENUM status
     }
     results {
@@ -275,12 +285,13 @@ erDiagram
         VARCHAR name
         UUID assignee_id FK
         UUID reporter_id FK
+        JSONB access_list
     }
-    sub_results {
+    templates {
         UUID id PK
+        UUID company_id FK
         UUID result_id FK
         VARCHAR name
-        BOOLEAN completed
     }
     tasks {
         UUID id PK
@@ -301,23 +312,20 @@ erDiagram
         UUID manager_id FK
         VARCHAR name
     }
-    department_employees {
-        UUID department_id PK, FK
-        UUID employee_id PK, FK
-    }
-    instructions {
+    telegram_groups {
         UUID id PK
         UUID company_id FK
-        VARCHAR title
+        VARCHAR tg_group_id
     }
-    instruction_access {
-        UUID instruction_id PK, FK
-        UUID user_id PK, FK
-        ENUM access_level
+    group_link_codes {
+        VARCHAR code PK
+        VARCHAR tg_group_id
+        TIMESTAMP expires_at
     }
 
-    users ||--o{ employees : "is an"
-    companies ||--o{ employees : "has"
+
+    users ||--o{ employees : "can be"
+    companies ||--|{ employees : "has"
     companies ||--|{ divisions : "has"
     companies ||--|{ results : "has"
     companies ||--|{ tasks : "has"
@@ -328,12 +336,7 @@ erDiagram
     employees }o..|| departments : "manages"
 
     divisions ||--|{ departments : "contains"
-    departments }o--o{ department_employees : "has"
-    employees }o--o{ department_employees : "is in"
 
-    results ||--|{ sub_results : "contains"
+    results ||--o{ templates: "can have"
     results }o..o| tasks : "is related to"
-
-    instructions }o--o{ instruction_access : "has access rule for"
-    users }o--o{ instruction_access : "has access to"
 ```
