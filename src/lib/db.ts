@@ -38,6 +38,7 @@ export let companyEmployees: Employee[] = [
         synonyms: ['Alex', 'O.M.'],
         email: 'alex@fineko.dev',
         birthDate: '1990-05-15',
+        telegramPermissions: ['create_task', 'create_result', 'view_tasks', 'list_employees'],
     },
     {
         id: 'emp-2',
@@ -53,6 +54,7 @@ export let companyEmployees: Employee[] = [
         synonyms: ['Маша'],
         email: 'maria.s@fineko.dev',
         birthDate: '1992-11-20',
+        telegramPermissions: ['create_task', 'view_tasks'],
     },
      {
         id: 'emp-3',
@@ -68,6 +70,7 @@ export let companyEmployees: Employee[] = [
         synonyms: [],
         email: 'olena.k@fineko.dev',
         birthDate: '1995-03-10',
+        telegramPermissions: ['create_task', 'view_tasks'],
     },
     {
         id: 'emp-4',
@@ -83,6 +86,7 @@ export let companyEmployees: Employee[] = [
         synonyms: ['Петя'],
         email: 'petro@fineko.dev',
         birthDate: '1985-01-01',
+        telegramPermissions: ['create_task', 'view_tasks'],
     },
      {
         id: 'emp-5',
@@ -98,6 +102,7 @@ export let companyEmployees: Employee[] = [
         synonyms: [],
         email: 'andriy.b@fineko.dev',
         birthDate: '1993-08-25',
+        telegramPermissions: [],
     },
 ];
 
@@ -109,6 +114,27 @@ export let employees = [
 export let tasksDb: Task[] = [];
 
 export let resultsDb: Result[] = [
+  {
+    id: 'res-user-1',
+    name: 'Запустити робочу воронку продаж і отримати з неї клієнтів на консалтинг',
+    status: 'В роботі',
+    completed: false,
+    deadline: '2025-09-30',
+    assignee: { id: 'emp-1', name: 'Oleksandr Matsuk', avatar: 'https://picsum.photos/100/100?random=1' },
+    reporter: { id: 'emp-1', name: 'Oleksandr Matsuk', avatar: 'https://picsum.photos/100/100?random=1' },
+    description: '',
+    expectedResult: '',
+    subResults: [
+        { id: 'sub-user-1', name: 'реклама на міні курс', completed: false },
+        { id: 'sub-user-2', name: 'записати міні курс', completed: false },
+        { id: 'sub-user-3', name: 'створити автоматизований аудит', completed: false },
+        { id: 'sub-user-4', name: 'створити автоматизований курс "як вийти з пастки власника"', completed: false },
+    ],
+    tasks: [],
+    templates: [],
+    comments: [],
+    accessList: [],
+  },
   {
     id: 'res-1',
     name: 'Запустити рекламну кампанію в Google Ads',

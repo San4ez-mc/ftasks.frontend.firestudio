@@ -5,7 +5,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, Search, Trash2, Upload, Save, X, Shield } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Upload, Save, X, Shield, Bot } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ import type { Employee } from '@/types/company';
 import type { CompanyProfile } from '@/types/company-profile';
 import { getEmployees, updateEmployee, getCompanyProfile, updateCompanyProfile } from './actions';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 // --- MOCK DATA ---
@@ -39,6 +40,14 @@ const mockGroups = [
     { id: 'grp-2', name: 'Менеджмент' },
     { id: 'grp-3', name: 'Маркетинг' },
 ];
+
+const telegramCommands = [
+    { id: 'create_task', label: 'Створювати задачі' },
+    { id: 'create_result', label: 'Створювати результати' },
+    { id: 'view_tasks', label: 'Переглядати задачі' },
+    { id: 'list_employees', label: 'Переглядати співробітників' },
+];
+
 
 // --- TOUR STEPS ---
 
@@ -314,6 +323,16 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
             return { ...prev, positions: newPositions };
         });
     };
+    
+    const handlePermissionChange = (commandId: string, checked: boolean) => {
+        setFormData(prev => {
+            const currentPermissions = prev.telegramPermissions || [];
+            const newPermissions = checked
+                ? [...currentPermissions, commandId]
+                : currentPermissions.filter(id => id !== commandId);
+            return { ...prev, telegramPermissions: newPermissions };
+        });
+    };
 
     const handleSaveChanges = () => {
         onUpdate({ ...employee, ...formData });
@@ -405,6 +424,28 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                                 </button>
                             ))}
                         </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="p-4">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Bot className="h-4 w-4" />
+                            Дозволи для Telegram-бота
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 space-y-2">
+                        {telegramCommands.map(command => (
+                            <div key={command.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`perm-${command.id}`}
+                                    checked={formData.telegramPermissions?.includes(command.id)}
+                                    onCheckedChange={(checked) => handlePermissionChange(command.id, !!checked)}
+                                />
+                                <Label htmlFor={`perm-${command.id}`} className="text-xs font-normal">
+                                    {command.label}
+                                </Label>
+                            </div>
+                        ))}
                     </CardContent>
                 </Card>
 

@@ -15,4 +15,5 @@ export interface Employee {
     synonyms: string[];
     email?: string;
     birthDate?: string;
+    telegramPermissions?: string[];
 }

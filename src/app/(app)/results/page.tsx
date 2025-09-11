@@ -659,13 +659,13 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                 </div>
                 <div className={cn("hidden items-center gap-2 cursor-pointer transition-all duration-300", panelOpen ? "md:hidden" : "md:col-span-2 md:flex")} onClick={() => onResultSelect(result)}>
                     <div>
-                        <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' ? 'Постановник' : 'Відповідальний'}</p>
+                        <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' || activeTab === 'delegated' ? 'Виконавець' : 'Постановник'}</p>
                         <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
-                                <AvatarImage src={activeTab === 'mine' ? result.reporter.avatar : result.assignee.avatar} alt={activeTab === 'mine' ? result.reporter.name : result.assignee.name} />
-                                <AvatarFallback>{(activeTab === 'mine' ? result.reporter.name : result.assignee.name).charAt(0)}</AvatarFallback>
+                                <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
+                                <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span className="text-xs hidden lg:inline">{activeTab === 'mine' ? result.reporter.name : result.assignee.name}</span>
+                            <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
                         </div>
                     </div>
                 </div>
@@ -719,4 +719,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
 }
 
     
+
 

@@ -47,11 +47,12 @@ const EmployeeSchema = z.object({
 export const TelegramCommandInputSchema = z.object({
   command: z.string().describe('The natural language command from the user.'),
   employees: z.array(EmployeeSchema).describe('A list of available employees to assign tasks/results to.'),
+  allowedCommands: z.array(z.string()).describe('A list of commands the user is permitted to execute.'),
 });
 export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
 
 export const TelegramCommandOutputSchema = z.object({
-  command: z.enum(['create_task', 'create_result', 'list_employees', 'unknown', 'clarify'])
+  command: z.enum(['create_task', 'create_result', 'list_employees', 'view_tasks', 'unknown', 'clarify'])
     .describe('The recognized command the user wants to execute.'),
   parameters: z.object({
     title: z.string().optional().describe('The title for the task or result.'),

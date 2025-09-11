@@ -18,7 +18,7 @@ export const mockInitialProcess: Process = {
     {
       id: 'lane-1',
       role: 'Керівник відділу',
-      sectionId: 'dept-owner-ceo', // Placeholder sectionId
+      sectionId: 'sec-1', // Placeholder sectionId
       steps: [
         { id: 'step-1', name: 'Створення заявки на вакансію', responsibleId: 'user-1', order: 1, connections: [{ to: 'step-2' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'CRM > New Vacancy Request' },
         { id: 'step-6', name: 'Технічна співбесіда', responsibleId: 'user-2', order: 6, connections: [{ to: 'step-7' }], status: 'ok', notes: '' },
@@ -32,7 +32,7 @@ export const mockInitialProcess: Process = {
     {
       id: 'lane-2',
       role: 'HR Менеджер',
-      sectionId: 'dept-hr-hiring', // Placeholder sectionId
+      sectionId: 'sec-2', // Placeholder sectionId
       steps: [
         { id: 'step-2', name: 'Публікація вакансії', responsibleId: 'user-3', order: 2, connections: [{ to: 'step-3' }], status: 'ok', notes: '' },
         { id: 'step-3', name: 'Скринінг резюме', responsibleId: 'user-3', order: 3, connections: [{ to: 'step-4' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'Applicant Tracking System' },
@@ -48,7 +48,7 @@ export const mockInitialProcess: Process = {
     {
       id: 'lane-3',
       role: 'IT Спеціаліст',
-      sectionId: 'dept-admin-comms', // Placeholder sectionId
+      sectionId: 'sec-3', // Placeholder sectionId
       steps: [
         { id: 'step-11', name: 'Налаштування робочого місця та доступів', responsibleId: 'user-2', order: 11, connections: [{ to: 'step-12' }], status: 'problematic', notes: 'Замовити новий монітор, старий мерехтить' },
       ],
@@ -56,7 +56,7 @@ export const mockInitialProcess: Process = {
     {
         id: 'lane-4',
         role: 'Бухгалтерія',
-        sectionId: 'dept-finance-accounting', // Placeholder sectionId
+        sectionId: 'sec-4', // Placeholder sectionId
         steps: [
             { id: 'step-14', name: 'Внесення в payroll систему', responsibleId: 'user-4', order: 14, connections: [{ to: 'step-15' }], status: 'ok', notes: '', isDataSavePoint: true, dataSaveLocation: 'Payroll System' },
         ],
