@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus, PlusCircle, X, ChevronsUpDown } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus, PlusCircle, X, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -40,6 +40,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 // --- Mock Data ---
@@ -118,6 +119,13 @@ export default function TelegramGroupsPage() {
     setSelectedGroup(null);
   }
 
+  const handleDeleteGroup = (groupId: string) => {
+    setGroups(prev => prev.filter(g => g.id !== groupId));
+    if (selectedGroup?.id === groupId) {
+        setSelectedGroup(null);
+    }
+  }
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
         if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -167,17 +175,42 @@ export default function TelegramGroupsPage() {
            {groups.map(group => (
              <Card 
                 key={group.id} 
-                onClick={() => setSelectedGroup(group)}
                 className={cn(
-                    "cursor-pointer hover:shadow-md transition-shadow",
+                    "cursor-pointer hover:shadow-md transition-shadow group/item",
                     selectedGroup?.id === group.id && "ring-2 ring-primary"
                 )}
              >
-                <CardContent className="p-4 flex items-center justify-between">
+                <CardContent className="p-4 flex items-center justify-between" onClick={() => setSelectedGroup(group)}>
                     <p className="font-semibold">{group.title}</p>
-                    <Badge variant={group.linked ? "secondary" : "outline"}>
-                        {group.linked ? "Прив'язано" : "Не прив'язано"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge variant={group.linked ? "secondary" : "outline"}>
+                            {group.linked ? "Прив'язано" : "Не прив'язано"}
+                        </Badge>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 opacity-0 group-hover/item:opacity-100"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Це назавжди видалить групу "{group.title}" та її налаштування.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel onClick={e => e.stopPropagation()}>Скасувати</AlertDialogCancel>
+                                    <AlertDialogAction onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}>Видалити</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                 </CardContent>
              </Card>
            ))}
@@ -411,4 +444,5 @@ function MessageLogCard({ logs }: { logs: typeof mockMessageLogs }) {
     )
 }
 
+    
     
