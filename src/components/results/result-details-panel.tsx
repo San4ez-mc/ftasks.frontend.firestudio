@@ -59,21 +59,16 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     const [description, setDescription] = useState(result.description);
     const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
-    const subResultContainerRef = useRef<HTMLDivElement>(null);
+    const [lastAddedSubResultId, setLastAddedSubResultId] = useState<string | null>(null);
     const { toast } = useToast();
-    const lastFocusedSubResult = useRef<string | null>(null);
-
 
     useEffect(() => {
-        const previousSubResultsLength = subResultContainerRef.current?.dataset.subresultsCount || '0';
-        if (subResults.length > parseInt(previousSubResultsLength)) {
-            const lastInput = subResultContainerRef.current?.querySelector('input[data-subresult-input]:last-of-type') as HTMLInputElement;
+        if (lastAddedSubResultId) {
+            const lastInput = document.querySelector(`input[data-subresult-id="${lastAddedSubResultId}"]`) as HTMLInputElement;
             lastInput?.focus();
+            setLastAddedSubResultId(null);
         }
-        if (subResultContainerRef.current) {
-            subResultContainerRef.current.dataset.subresultsCount = String(subResults.length);
-        }
-    }, [subResults.length]);
+    }, [subResults, lastAddedSubResultId]);
 
 
     useEffect(() => {
@@ -112,6 +107,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
             assignee: result.assignee, // Default to main result assignee
             deadline: result.deadline, // Default to main result deadline
         };
+        setLastAddedSubResultId(newSubResult.id);
         const updatedSubResults = [...subResults, newSubResult];
         setSubResults(updatedSubResults);
         onUpdate({ ...result, subResults: updatedSubResults });
@@ -121,16 +117,17 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
         const updatedSubResults = subResults.map(sr => 
             sr.id === id ? { ...sr, [field]: value } : sr
         );
-         setSubResults(updatedSubResults);
-        onUpdate({ ...result, subResults: updatedSubResults });
+        setSubResults(updatedSubResults);
+        // Do not call onUpdate on every keystroke to prevent table jump
     };
     
     const handleSubResultBlur = (id: string) => {
         const subResult = subResults.find(sr => sr.id === id);
         if (subResult && subResult.name.trim() === '') {
-            // If the name is empty on blur, remove it, unless it's the only one
             if (subResults.length > 1) {
                 handleSubResultDelete(id);
+            } else {
+                onUpdate({ ...result, subResults }); // Save even if empty if it's the only one
             }
         } else {
              onUpdate({ ...result, subResults });
@@ -341,10 +338,10 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                 <Separator />
 
                 {/* Sub-results */}
-                <div ref={subResultContainerRef}>
+                <div>
                     <h3 className="font-semibold text-xs mb-2">Підрезультати</h3>
                     <div className="space-y-2">
-                        {subResults.map((sr, index) => (
+                        {subResults.map((sr) => (
                             <div key={sr.id} className="flex flex-col gap-2 p-2 border rounded-md group/sub-result">
                                 <div className="flex items-center gap-2">
                                     <Checkbox 
@@ -352,14 +349,13 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                                         onCheckedChange={(checked) => handleSubResultChange(sr.id, 'completed', !!checked)}
                                     />
                                     <Input 
-                                        data-subresult-input
+                                        data-subresult-id={sr.id}
                                         value={sr.name}
                                         onChange={(e) => handleSubResultChange(sr.id, 'name', e.target.value)}
                                         onKeyDown={(e) => handleSubResultKeyDown(e, sr.id)}
                                         onBlur={() => handleSubResultBlur(sr.id)}
                                         placeholder="Новий підрезультат..."
                                         className="h-7 text-xs border-none focus-visible:ring-1 flex-1"
-                                        autoFocus={!sr.name && index === subResults.length - 1}
                                     />
                                     <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/sub-result:opacity-100" onClick={() => handleSubResultDelete(sr.id)}>
                                         <Trash2 className="h-3 w-3" />
@@ -634,5 +630,3 @@ function AccessListCombobox({ allUsers, selectedUsers, onSelectionChange }: { al
         </Popover>
     )
 }
-
-    
