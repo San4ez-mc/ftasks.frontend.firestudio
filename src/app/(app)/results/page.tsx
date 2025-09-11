@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter, User, Calendar, PlusCircle } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter, User, Calendar, PlusCircle, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +75,20 @@ export default function ResultsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const newResultInputRef = useRef<HTMLInputElement>(null);
+  const [collapsedResults, setCollapsedResults] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedMode = localStorage.getItem('resultsViewMode');
+    if (savedMode === 'table' || savedMode === 'cards') {
+      setViewMode(savedMode);
+    }
+  }, []);
+
+  const handleViewModeChange = (mode: 'table' | 'cards') => {
+    localStorage.setItem('resultsViewMode', mode);
+    setViewMode(mode);
+  };
 
   useEffect(() => {
     startTransition(async () => {
@@ -97,6 +111,12 @@ export default function ResultsPage() {
         document.removeEventListener("mousedown", handleClickOutside);
     };
 }, [containerRef]);
+
+  useEffect(() => {
+    if (selectedResult?.name === '' && newResultInputRef.current) {
+        newResultInputRef.current.focus();
+    }
+  }, [selectedResult]);
 
 
   const handleResultUpdate = (updatedResult: Result) => {
@@ -202,6 +222,12 @@ export default function ResultsPage() {
     }
   };
   
+  const toggleResultCollapse = (id: string) => {
+    setCollapsedResults(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+  
   const filteredResults = useMemo(() => {
     if (!currentUser) return [];
     let filtered = results;
@@ -253,10 +279,10 @@ export default function ResultsPage() {
           <div className="flex items-center justify-center relative">
             <h1 className="text-xl font-bold tracking-tight font-headline text-center">Результати</h1>
             <div id="results-view-toggle" className="absolute right-0 flex items-center gap-2">
-              <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('table')}>
+              <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="icon" onClick={() => handleViewModeChange('table')}>
                 <List className="h-5 w-5" />
               </Button>
-              <Button variant={viewMode === 'cards' ? 'secondary' : 'ghost'} size="icon" onClick={() => setViewMode('cards')}>
+              <Button variant={viewMode === 'cards' ? 'secondary' : 'ghost'} size="icon" onClick={() => handleViewModeChange('cards')}>
                 <LayoutGrid className="h-5 w-5" />
               </Button>
             </div>
@@ -317,6 +343,8 @@ export default function ResultsPage() {
               handleCreateTemplate={handleCreateTemplate}
               handleDeleteResult={handleDeleteResult}
               handlePostponeResult={handlePostponeResult}
+              collapsedResults={collapsedResults}
+              toggleCollapse={toggleResultCollapse}
             />
           ) : (
             <ResultsCards results={filteredResults} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
@@ -328,7 +356,7 @@ export default function ResultsPage() {
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden w-full md:w-0",
         selectedResult ? "md:w-1/2 lg:min-w-[520px]" : "hidden"
       )}>
-        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} onDelete={handleDeleteResult}/>}
+        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} onDelete={handleDeleteResult} newResultInputRef={newResultInputRef}/>}
       </div>
        <Button id="create-result-fab" onClick={() => handleCreateNewResult()} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
           <Plus className="h-8 w-8" />
@@ -352,6 +380,8 @@ type ResultsTableProps = {
   handleCreateTemplate: (result: Result) => void;
   handleDeleteResult: (resultId: string) => void;
   handlePostponeResult: (result: Result) => void;
+  collapsedResults: string[];
+  toggleCollapse: (id: string) => void;
 };
 
 
@@ -367,6 +397,8 @@ function ResultsTable({
   handleCreateTemplate,
   handleDeleteResult,
   handlePostponeResult,
+  collapsedResults,
+  toggleCollapse
 }: ResultsTableProps) {
   
   
@@ -454,8 +486,10 @@ function ResultsTable({
           handleCreateTemplate={handleCreateTemplate}
           handleDeleteResult={handleDeleteResult}
           handlePostponeResult={handlePostponeResult}
+          collapsedResults={collapsedResults}
+          toggleCollapse={toggleCollapse}
         />
-        {(result.subResults || []).map((sr) => (
+        {!collapsedResults.includes(result.id) && (result.subResults || []).map((sr) => (
           <SubResultRows 
             key={sr.id}
             result={result}
@@ -468,6 +502,8 @@ function ResultsTable({
             level={1}
             path={[sr.id]}
             panelOpen={panelOpen}
+            collapsedResults={collapsedResults}
+            toggleCollapse={toggleCollapse}
           />
         ))}
       </React.Fragment>
@@ -512,7 +548,7 @@ function ResultsTable({
   )
 }
 
-function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, onDeleteSubResult, level, path, panelOpen }: {
+function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, onDeleteSubResult, level, path, panelOpen, collapsedResults, toggleCollapse }: {
   result: Result;
   subResult: SubResult;
   onResultSelect: (result: Result) => void;
@@ -523,11 +559,16 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
   level: number;
   path: string[];
   panelOpen: boolean;
+  collapsedResults: string[];
+  toggleCollapse: (id: string) => void;
 }) {
   
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       onSubResultChange(result, path, 'name', e.target.value);
   }
+
+  const hasSubResults = subResult.subResults && subResult.subResults.length > 0;
+  const isCollapsed = collapsedResults.includes(subResult.id);
 
   return (
     <React.Fragment>
@@ -535,6 +576,16 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
          <div className="flex items-center gap-2 p-2 relative">
              <div className="absolute left-[-1rem] top-0 h-full w-px bg-border"></div>
              <div className="absolute left-[-1rem] top-1/2 -translate-y-1/2 h-px w-4 bg-border"></div>
+            
+            {hasSubResults ? (
+                <button
+                    onClick={(e) => { e.stopPropagation(); toggleCollapse(subResult.id); }}
+                    className="p-0.5 rounded-sm hover:bg-accent -ml-1"
+                >
+                    <ChevronRight className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-90")} />
+                </button>
+            ) : <div className="w-5" />}
+            
             <Checkbox
               checked={subResult.completed}
               onCheckedChange={(checked) => {
@@ -577,7 +628,7 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
             </div>
         </div>
       </div>
-      {(subResult.subResults || []).map(sr => (
+      {!isCollapsed && (subResult.subResults || []).map(sr => (
         <SubResultRows 
           key={sr.id}
           result={result}
@@ -590,6 +641,8 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
           level={level + 1}
           path={[...path, sr.id]}
           panelOpen={panelOpen}
+          collapsedResults={collapsedResults}
+          toggleCollapse={toggleCollapse}
         />
       ))}
     </React.Fragment>
@@ -597,7 +650,9 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
 }
 
 
-function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, activeTab, panelOpen, onAddSubResult, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult}: any) {
+function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, activeTab, panelOpen, onAddSubResult, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult, collapsedResults, toggleCollapse}: any) {
+    const hasSubResults = result.subResults && result.subResults.length > 0;
+    const isCollapsed = collapsedResults.includes(result.id);
     
     return (
       <div 
@@ -624,7 +679,17 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                 </div>
                 <div className={cn("col-span-11", panelOpen ? "md:col-span-11" : "md:col-span-5" )}>
                     <div className="font-medium flex items-center gap-2">
-                        <div className="flex-1">
+                        <div className="flex-1 flex items-center gap-1">
+                             {hasSubResults ? (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); toggleCollapse(result.id); }}
+                                    className="p-0.5 rounded-sm hover:bg-accent"
+                                >
+                                    <ChevronRight className={cn("h-4 w-4 transition-transform", !isCollapsed && "rotate-90")} />
+                                </button>
+                            ) : (
+                                <div className="w-5 h-5" />
+                            )}
                             <span
                                 className={cn("text-sm", result.completed && "line-through text-muted-foreground")}
                             >
@@ -721,3 +786,6 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+
+    
