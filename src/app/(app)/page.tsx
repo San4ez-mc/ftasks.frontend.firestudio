@@ -180,8 +180,8 @@ export default function TasksPage() {
     handleTaskCreate(newTaskData);
   };
 
-  const handleResultClick = (result: Result) => {
-    createNewTask(result.name, result.name);
+  const handleResultClick = (result: {name: string, parentName: string}) => {
+    createNewTask(result.name, result.parentName);
   };
 
   const handleNewTaskKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -236,6 +236,9 @@ export default function TasksPage() {
   }, [filteredTasks, activeTab]);
   
   const totalExpectedHours = totalExpectedTime / 60;
+  
+  const showTypeColumn = useMemo(() => activeTab === 'mine' && !panelOpen, [activeTab, panelOpen]);
+
 
   const WorkloadAlert = () => {
     if (activeTab !== 'mine' || totalExpectedHours <= 6) return null;

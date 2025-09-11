@@ -1,4 +1,3 @@
-
 // --- Mock Database ---
 // In a real application, this would connect to a real database like PostgreSQL or Firestore.
 
@@ -107,65 +106,7 @@ export let employees = [
     { id: 'emp-1', userId: 'user-1', companyId: 'company-1', status: 'active', notes: '' },
 ];
 
-export let tasksDb: Task[] = [
-    { 
-        id: '1', 
-        title: 'Розробити API для авторизації', 
-        description: 'Створити ендпоінти для реєстрації, входу та виходу користувача. Використовувати JWT для автентифікації.',
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo', 
-        type: 'important-urgent', 
-        expectedTime: 60,
-        assignee: { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        resultName: 'Розробити новий модуль аналітики',
-    },
-    { 
-        id: '2', 
-        title: 'Створити UI/UX для сторінки задач', 
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo',
-        type: 'important-not-urgent',
-        expectedTime: 120,
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
-    },
-    { 
-        id: '3', 
-        title: 'Налаштувати інтеграцію з Telegram', 
-        dueDate: new Date(Date.now() - 86400000).toISOString().split('T')[0], // Yesterday
-        status: 'done',
-        type: 'not-important-urgent',
-        expectedTime: 45,
-        actualTime: 50,
-        expectedResult: 'Інтеграція має бути налаштована',
-        actualResult: 'Інтеграція налаштована і протестована',
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        resultName: 'Запустити рекламну кампанію в Google Ads'
-    },
-    { 
-        id: '4', 
-        title: 'Підготувати презентацію для клієнта', 
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo',
-        type: 'not-important-not-urgent',
-        expectedTime: 30,
-        assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-        reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' }
-    },
-    { 
-        id: '5', 
-        title: 'Задача від керівника', 
-        description: 'Перевірити звіти за минулий місяць.',
-        dueDate: new Date().toISOString().split('T')[0], 
-        status: 'todo', 
-        type: 'important-urgent', 
-        expectedTime: 90,
-        assignee: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-        reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    },
-];
+export let tasksDb: Task[] = [];
 
 export let resultsDb: Result[] = [
   {
@@ -218,8 +159,8 @@ export let resultsDb: Result[] = [
     completed: false,
     isUrgent: false,
     deadline: '2024-09-30',
-    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    reporter: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
+    assignee: { id: 'emp-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/100/100?random=4' },
+    reporter: { id: 'emp-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/100/100?random=4' },
     description: 'Звіт має містити аналіз фінансових показників, досягнень та планів на наступний квартал.',
     expectedResult: 'Фінальна версія звіту у форматі PDF надіслана усім інвесторам.',
     subResults: [
@@ -239,8 +180,8 @@ export let resultsDb: Result[] = [
     completed: false,
     isUrgent: false,
     deadline: '2024-08-25',
-    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    reporter: { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
+    assignee: { id: 'emp-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/100/100?random=4' },
+    reporter: { id: 'emp-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/100/100?random=2' },
     description: 'Переробити UI/UX для підвищення конверсії на 15%.',
     expectedResult: 'Новий дизайн головної сторінки опубліковано.',
     subResults: [],
@@ -256,8 +197,8 @@ export let resultsDb: Result[] = [
     completed: true,
     isUrgent: false,
     deadline: '2024-07-30',
-    assignee: { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-    reporter: { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
+    assignee: { id: 'emp-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/100/100?random=4' },
+    reporter: { id: 'emp-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/100/100?random=3' },
     description: 'Визначити оптимальну цінову стратегію для нового продукту.',
     expectedResult: 'Звіт з результатами A/B тестування та рекомендаціями по ціноутворенню.',
     subResults: [],
