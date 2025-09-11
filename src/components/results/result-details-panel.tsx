@@ -1,6 +1,7 @@
 
 'use client';
 import type { Result, SubResult, User, ResultComment } from '@/types/result';
+import type { Task, TaskType } from '@/types/task';
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -25,6 +26,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { createTask as createTaskAction } from '@/app/(app)/tasks/actions';
+import { useToast } from '@/hooks/use-toast';
+
 
 type ResultDetailsPanelProps = {
   result: Result;
@@ -40,6 +45,13 @@ const mockUsers: User[] = [
   { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
 ];
 
+const typeOptions: { value: TaskType; label: string; color: string }[] = [
+  { value: 'important-urgent', label: 'Важлива, термінова', color: 'bg-red-500' },
+  { value: 'important-not-urgent', label: 'Важлива, нетермінова', color: 'bg-blue-500' },
+  { value: 'not-important-urgent', label: 'Неважлива, термінова', color: 'bg-purple-500' },
+  { value: 'not-important-not-urgent', label: 'Неважлива, нетермінова', color: 'bg-yellow-600' },
+];
+
 
 export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete }: ResultDetailsPanelProps) {
     const [name, setName] = useState(result.name);
@@ -47,6 +59,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     const [subResults, setSubResults] = useState<SubResult[]>(result.subResults || []);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
     const subResultContainerRef = useRef<HTMLDivElement>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         const previousSubResultsLength = subResultContainerRef.current?.dataset.subresultsCount || '0';
@@ -121,16 +134,22 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
         }
     };
     
-    const handleCreateTask = () => {
-        // This is a placeholder. In a real app, this would trigger
-        // a global state change or an API call to create a task.
-        const newTask = {
-            id: `task-${Date.now()}`,
-            title: result.name,
-            status: 'todo' as 'todo' | 'done'
-        };
-        onUpdate({ ...result, tasks: [...result.tasks, newTask] });
-        alert(`Задача "${result.name}" створена на сьогодні!`);
+    const handleCreateTask = async (taskData: Omit<Task, 'id'>) => {
+        try {
+            const newTask = await createTaskAction(taskData);
+            const newResultTask = { id: newTask.id, title: newTask.title, status: newTask.status };
+            onUpdate({ ...result, tasks: [...result.tasks, newResultTask] });
+            toast({
+                title: "Успіх!",
+                description: `Задача "${newTask.title}" створена.`,
+            });
+        } catch(error) {
+             toast({
+                title: "Помилка!",
+                description: "Не вдалося створити задачу.",
+                variant: "destructive"
+            });
+        }
     }
     
      const handleCreateTemplate = () => {
@@ -162,7 +181,9 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                         <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleCreateTask}>Створити задачу</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                            <DialogAddTask result={result} onTaskCreate={handleCreateTask} />
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleCreateTemplate}>Створити шаблон</DropdownMenuItem>
                         <DropdownMenuItem>Дублювати</DropdownMenuItem>
                         <AlertDialog>
@@ -368,7 +389,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                                <p className="flex-1">{task.title}</p>
                             </div>
                         ))}
-                         <Button onClick={handleCreateTask} variant="outline" size="sm" className="w-full text-xs h-8"><PlusCircle className="mr-2 h-3 w-3"/> Додати задачу на сьогодні</Button>
+                         <DialogAddTask result={result} onTaskCreate={handleCreateTask} triggerButton />
                     </div>
                 </div>
                 
@@ -435,4 +456,97 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
             </footer>
         </div>
     );
+}
+
+// Helper component for Add Task Dialog
+function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result: Result; onTaskCreate: (taskData: Omit<Task, 'id'>) => void, triggerButton?: boolean }) {
+    const [title, setTitle] = useState(result.name);
+    const [assigneeId, setAssigneeId] = useState(result.assignee.id);
+    const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
+    const [type, setType] = useState<TaskType>('important-not-urgent');
+
+    const handleSubmit = () => {
+        const assignee = mockUsers.find(u => u.id === assigneeId) || result.assignee;
+        
+        onTaskCreate({
+            title,
+            assignee,
+            dueDate: (dueDate || new Date()).toISOString().split('T')[0],
+            type,
+            reporter: result.reporter, // Or current user
+            status: 'todo',
+            expectedTime: 30, // Default value
+            resultId: result.id,
+            resultName: result.name,
+        });
+    };
+
+    const Trigger = triggerButton ? (
+        <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full text-xs h-8"><PlusCircle className="mr-2 h-3 w-3"/> Додати задачу</Button>
+        </DialogTrigger>
+    ) : (
+        <DialogTrigger className="w-full text-left">Створити задачу</DialogTrigger>
+    );
+
+    return (
+        <Dialog>
+            {Trigger}
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Створити нову задачу</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 text-sm">
+                    <div className="space-y-1">
+                        <Label htmlFor="task-title">Назва</Label>
+                        <Input id="task-title" value={title} onChange={e => setTitle(e.target.value)} />
+                    </div>
+                     <div className="space-y-1">
+                        <Label>Відповідальний</Label>
+                        <Select value={assigneeId} onValueChange={setAssigneeId}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                {mockUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-1">
+                        <Label>Дата виконання</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="font-normal w-full justify-start">
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dueDate ? formatDate(dueDate) : <span>Обрати дату</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus/>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="space-y-1">
+                        <Label>Тип задачі</Label>
+                        <Select value={type} onValueChange={(v: TaskType) => setType(v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {typeOptions.map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        <Badge className={cn("text-xs", opt.color)}>{opt.label}</Badge>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="secondary">Скасувати</Button>
+                    </DialogClose>
+                     <DialogClose asChild>
+                        <Button type="submit" onClick={handleSubmit}>Створити</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
 }
