@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter, User, Calendar } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter, User, Calendar, PlusCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -424,6 +424,26 @@ function ResultsTable({
     const updatedSubResults = addRecursively(result.subResults, parentSubResultPath);
     onResultUpdate({ ...result, subResults: updatedSubResults });
   };
+  
+  const handleDeleteSubResult = (result: Result, pathToDelete: string[]) => {
+    const deleteRecursively = (items: SubResult[], path: string[]): SubResult[] => {
+        const idToDelete = path[0];
+        const remainingPath = path.slice(1);
+
+        if (remainingPath.length === 0) {
+            return items.filter(item => item.id !== idToDelete);
+        }
+
+        return items.map(item => {
+            if (item.id === idToDelete && item.subResults) {
+                return { ...item, subResults: deleteRecursively(item.subResults, remainingPath) };
+            }
+            return item;
+        });
+    };
+    onResultUpdate({ ...result, subResults: deleteRecursively(result.subResults, pathToDelete) });
+  };
+
 
   const renderRow = (result: Result, index: number, allResults: Result[]) => {
     const globalIndex = allResults.findIndex(r => r.id === result.id);
@@ -439,6 +459,7 @@ function ResultsTable({
           newResultInputRef={newResultInputRef}
           activeTab={activeTab}
           panelOpen={panelOpen}
+          onAddSubResult={handleAddSubResult}
           handleCreateTask={handleCreateTask}
           handleCreateTemplate={handleCreateTemplate}
           handleDeleteResult={handleDeleteResult}
@@ -453,6 +474,7 @@ function ResultsTable({
             onResultUpdate={onResultUpdate}
             onSubResultChange={handleSubResultChange}
             onAddSubResult={handleAddSubResult}
+            onDeleteSubResult={handleDeleteSubResult}
             level={1}
             path={[sr.id]}
             panelOpen={panelOpen}
@@ -500,13 +522,14 @@ function ResultsTable({
   )
 }
 
-function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, level, path, panelOpen }: {
+function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, onDeleteSubResult, level, path, panelOpen }: {
   result: Result;
   subResult: SubResult;
   onResultSelect: (result: Result) => void;
   onResultUpdate: (result: Result) => void;
   onSubResultChange: (result: Result, path: string[], field: 'name' | 'completed' | 'assignee' | 'deadline', value: any) => void;
   onAddSubResult: (result: Result, path: string[]) => void;
+  onDeleteSubResult: (result: Result, path: string[]) => void;
   level: number;
   path: string[];
   panelOpen: boolean;
@@ -558,11 +581,16 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
                     <span className="text-xs text-muted-foreground">{formatDate(subResult.deadline)}</span>
                  )}
             </div>
-             {level < 5 && (
-                <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/parent:opacity-100" onClick={() => onAddSubResult(result, path)}>
-                    <Plus className="h-3 w-3" />
+             <div className="flex items-center opacity-0 group-hover/parent:opacity-100 transition-opacity">
+                 {level < 5 && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAddSubResult(result, path)} title="Додати підрезультат">
+                        <PlusCircle className="h-3 w-3" />
+                    </Button>
+                 )}
+                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDeleteSubResult(result, path)} title="Видалити">
+                    <Trash2 className="h-3 w-3 text-destructive"/>
                 </Button>
-             )}
+            </div>
         </div>
       </div>
       {(subResult.subResults || []).map(sr => (
@@ -574,6 +602,7 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
           onResultUpdate={onResultUpdate}
           onSubResultChange={onSubResultChange}
           onAddSubResult={onAddSubResult}
+          onDeleteSubResult={onDeleteSubResult}
           level={level + 1}
           path={[...path, sr.id]}
           panelOpen={panelOpen}
@@ -584,7 +613,7 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
 }
 
 
-function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, newResultInputRef, activeTab, panelOpen, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult}: any) {
+function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, selectedResultId, newResultInputRef, activeTab, panelOpen, onAddSubResult, handleCreateTask, handleCreateTemplate, handleDeleteResult, handlePostponeResult}: any) {
     const isCreating = result.name === '';
     
     return (
@@ -630,6 +659,7 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                         </div>
                         <div className="flex items-center opacity-0 group-hover/row:opacity-100 transition-opacity">
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onResultSelect(result)} title="Редагувати"><Edit className="h-3 w-3"/></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onAddSubResult(result, [])} title="Додати підрезультат"><PlusCircle className="h-3 w-3"/></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePostponeResult(result)} title="Відкласти"><Clock className="h-3 w-3"/></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTask(result)} title="Створити задачу"><Plus className="h-3 w-3"/></Button>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCreateTemplate(result)} title="Створити шаблон"><FileText className="h-3 w-3"/></Button>
@@ -721,3 +751,6 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
     
 
 
+
+
+    
