@@ -72,7 +72,7 @@ const telegramCommandFlow = ai.defineFlow(
     outputSchema: TelegramCommandOutputSchema,
   },
   async (input) => {
-    const { output } = await telegramCommandFlow(input);
+    const { output } = await telegramCommandPrompt(input);
     return output!;
   }
 );
