@@ -81,8 +81,15 @@ const defaultProcesses: Omit<Process, 'id'>[] = [
     }
 ]
 
+const firestoreGuard = () => {
+    if (!firestore) {
+        throw new Error('Firestore is not initialized. Check server logs for Firebase Admin SDK initialization errors.');
+    }
+};
+
 // --- Data Seeding ---
 export async function seedDatabase() {
+  firestoreGuard();
   const seedStatusRef = firestore.collection('internal').doc('seedStatus');
   const seedStatusDoc = await seedStatusRef.get();
 
@@ -127,6 +134,7 @@ export async function seedDatabase() {
 // --- Generic Firestore Functions ---
 
 async function getAll<T>(collectionName: string): Promise<T[]> {
+  firestoreGuard();
   await seedDatabase();
   const snapshot = await firestore.collection(collectionName).get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
@@ -134,6 +142,7 @@ async function getAll<T>(collectionName: string): Promise<T[]> {
 
 async function getByQuery<T>(collectionName: string, queryField: string, queryValue: string): Promise<T[]> {
   try {
+    firestoreGuard();
     await seedDatabase();
     const snapshot = await firestore.collection(collectionName).where(queryField, '==', queryValue).get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
@@ -145,6 +154,7 @@ async function getByQuery<T>(collectionName: string, queryField: string, queryVa
 
 
 async function getById<T>(collectionName: string, id: string): Promise<T | null> {
+    firestoreGuard();
     await seedDatabase();
     const docRef = firestore.collection(collectionName).doc(id);
     const doc = await docRef.get();
@@ -153,6 +163,7 @@ async function getById<T>(collectionName: string, id: string): Promise<T | null>
 
 
 async function create<T extends { id?: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
+  firestoreGuard();
   const { id, ...rest } = data as any; // Firestore adds its own ID, so we exclude it if present
   const docRef = await firestore.collection(collectionName).add(rest);
   const newDoc = await docRef.get();
@@ -160,6 +171,7 @@ async function create<T extends { id?: string }>(collectionName: string, data: O
 }
 
 async function update<T>(collectionName: string, docId: string, updates: Partial<T>): Promise<T | null> {
+  firestoreGuard();
   const docRef = firestore.collection(collectionName).doc(docId);
   await docRef.update(updates);
   const updatedDoc = await docRef.get();
@@ -167,6 +179,7 @@ async function update<T>(collectionName: string, docId: string, updates: Partial
 }
 
 async function remove(collectionName: string, docId: string): Promise<{ success: boolean }> {
+  firestoreGuard();
   await firestore.collection(collectionName).doc(docId).delete();
   return { success: true };
 }
@@ -174,6 +187,7 @@ async function remove(collectionName: string, docId: string): Promise<{ success:
 // --- Service-Specific Functions ---
 
 export async function linkTelegramGroup(code: string, companyId: string): Promise<{ group: TelegramGroup, wasCreated: boolean }> {
+    firestoreGuard();
     const codeRef = firestore.collection(GROUP_LINK_CODES_COLLECTION).doc(code);
     const codeDoc = await codeRef.get();
 
@@ -277,6 +291,7 @@ export const getTelegramGroupById = (id: string) => getById<TelegramGroup>(GROUP
 export const createTelegramLog = (data: Omit<MessageLog, 'id'>) => create<MessageLog>(TELEGRAM_LOGS_COLLECTION, data);
 
 export async function getTelegramLogsByGroupId(groupId: string): Promise<MessageLog[]> {
+    firestoreGuard();
     await seedDatabase();
     const snapshot = await firestore.collection(TELEGRAM_LOGS_COLLECTION)
         .where('groupId', '==', groupId)
@@ -285,5 +300,3 @@ export async function getTelegramLogsByGroupId(groupId: string): Promise<Message
         .get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MessageLog));
 }
-
-    
