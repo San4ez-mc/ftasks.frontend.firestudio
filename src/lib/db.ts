@@ -1,4 +1,3 @@
-
 // --- Mock Database ---
 // In a real application, this would connect to a real database like PostgreSQL or Firestore.
 
@@ -6,7 +5,7 @@ import type { Result } from "@/types/result";
 import type { Task } from "@/types/task";
 import type { Template } from "@/types/template";
 import type { Employee } from "@/types/company";
-import type { TelegramMessageLog } from "@/types/telegram-group";
+import type { MessageLog } from "@/types/telegram-group";
 
 // User table based on docs/database-schema.md
 export let users = [
@@ -278,7 +277,7 @@ export let templatesDb: Template[] = [
   },
 ];
 
-export let messageLogsDb: TelegramMessageLog[] = [];
+export let messageLogsDb: MessageLog[] = [];
 
 
 // Export all tables as a single object for convenience
