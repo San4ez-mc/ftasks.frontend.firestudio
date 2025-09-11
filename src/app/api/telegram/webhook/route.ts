@@ -44,7 +44,8 @@ async function sendTelegramReply(chatId: number, message: {text: string, reply_m
   const payload = {
     chat_id: chatId,
     text: message.text,
-    reply_markup: finalReplyMarkup
+    reply_markup: finalReplyMarkup,
+    parse_mode: 'Markdown'
   };
 
   try {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
                  return NextResponse.json({ status: 'error', message: error }, { status: 500 });
             }
             
-            const linkUrl = `${APP_URL}/telegram-groups`;
+            const linkUrl = `${APP_URL}/telegram-groups?action=add-group`;
             
             await sendTelegramReply(chat.id, {
                 text: `Для прив'язки цієї групи до FINEKO, адміністратор має ввести цей код на сторінці 'Телеграм групи':\n\n*${code}*\n\nКод дійсний 10 хвилин.`,

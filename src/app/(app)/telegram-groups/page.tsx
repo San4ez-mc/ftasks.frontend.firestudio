@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -108,11 +109,17 @@ const telegramTourSteps: TourStep[] = [
 ];
 
 
-// --- Main Page Component ---
-
-export default function TelegramGroupsPage() {
+function TelegramGroupsPageContent() {
   const [groups, setGroups] = useState(mockGroups);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(groups[0]);
+  const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'add-group') {
+      setIsAddGroupOpen(true);
+    }
+  }, [searchParams]);
 
   const handleClosePanel = () => {
     setSelectedGroup(null);
@@ -135,7 +142,7 @@ export default function TelegramGroupsPage() {
         <header className="p-4 md:p-6">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold tracking-tight font-headline">Телеграм групи</h1>
-            <Dialog>
+            <Dialog open={isAddGroupOpen} onOpenChange={setIsAddGroupOpen}>
                 <DialogTrigger asChild>
                     <Button id="add-group-button"><PlusCircle className="mr-2 h-4 w-4"/>Додати групу</Button>
                 </DialogTrigger>
@@ -211,6 +218,16 @@ export default function TelegramGroupsPage() {
       </div>
     </div>
   );
+}
+
+
+// --- Main Page Component Wrapper for Suspense ---
+export default function TelegramGroupsPage() {
+  return (
+    <Suspense fallback={<div>Завантаження...</div>}>
+      <TelegramGroupsPageContent />
+    </Suspense>
+  )
 }
 
 
