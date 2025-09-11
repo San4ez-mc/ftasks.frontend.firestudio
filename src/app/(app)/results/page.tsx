@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter } from 'lucide-react';
+import { LayoutGrid, List, Plus, FilePlus, Edit, Trash2, X, FileText, Clock, ArrowUpDown, Filter, User, Calendar } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -24,8 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { companyEmployees } from '@/lib/db';
 
 
-const currentUserId = 'emp-4'; 
-const currentUser = companyEmployees.find(e => e.id === currentUserId); 
+const currentUser = companyEmployees.find(e => e.id === 'emp-2'); 
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
 
@@ -209,22 +208,23 @@ export default function ResultsPage() {
   };
   
   const filteredResults = useMemo(() => {
+    if (!currentUser) return [];
     let filtered = results;
     
     // Primary tab filtering
     switch(activeTab) {
         case 'delegated':
-            filtered = filtered.filter(r => r.reporter.id === currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => r.reporter.id === currentUser.id && r.assignee.id !== currentUser.id && r.status !== 'Відкладено');
             break;
         case 'subordinates':
-            filtered = filtered.filter(r => r.reporter.id !== currentUserId && r.assignee.id !== currentUserId && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => r.reporter.id !== currentUser.id && r.assignee.id !== currentUser.id && r.status !== 'Відкладено');
             break;
         case 'postponed':
             filtered = filtered.filter(r => r.status === 'Відкладено');
             break;
         case 'mine':
         default:
-            filtered = filtered.filter(r => (r.assignee.id === currentUserId || r.accessList?.some(user => user.id === currentUserId)) && r.status !== 'Відкладено');
+            filtered = filtered.filter(r => (r.assignee.id === currentUser.id || r.accessList?.some(user => user.id === currentUser.id)) && r.status !== 'Відкладено');
             break;
     }
 
@@ -234,10 +234,10 @@ export default function ResultsPage() {
     }
     
     return filtered;
-  }, [results, activeTab, statusFilter]);
+  }, [results, activeTab, statusFilter, currentUser]);
 
-  const groupedResults = activeTab === 'mine' 
-    ? { [currentUserId]: {id: currentUserId, name: `${currentUser?.firstName} ${currentUser?.lastName}`, results: filteredResults } } 
+  const groupedResults = activeTab === 'mine' && currentUser
+    ? { [currentUser.id]: {id: currentUser.id, name: `${currentUser?.firstName} ${currentUser?.lastName}`, results: filteredResults } } 
     : filteredResults.reduce((acc, result) => {
         const key = result.assignee.id;
         if (!acc[key]) {
@@ -377,7 +377,7 @@ function ResultsTable({
 }: ResultsTableProps) {
   
   
-  const handleSubResultChange = (result: Result, subResultPath: string[], field: 'name' | 'completed', value: string | boolean) => {
+  const handleSubResultChange = (result: Result, subResultPath: string[], field: 'name' | 'completed' | 'assignee' | 'deadline', value: any) => {
     
     const updateRecursively = (subResults: SubResult[], path: string[]): SubResult[] => {
       if (!path.length) return subResults;
@@ -453,6 +453,7 @@ function ResultsTable({
             onAddSubResult={handleAddSubResult}
             level={1}
             path={[sr.id]}
+            panelOpen={panelOpen}
           />
         ))}
       </React.Fragment>
@@ -497,15 +498,16 @@ function ResultsTable({
   )
 }
 
-function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, level, path }: {
+function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSubResultChange, onAddSubResult, level, path, panelOpen }: {
   result: Result;
   subResult: SubResult;
   onResultSelect: (result: Result) => void;
   onResultUpdate: (result: Result) => void;
-  onSubResultChange: (result: Result, path: string[], field: 'name' | 'completed', value: string | boolean) => void;
+  onSubResultChange: (result: Result, path: string[], field: 'name' | 'completed' | 'assignee' | 'deadline', value: any) => void;
   onAddSubResult: (result: Result, path: string[]) => void;
   level: number;
   path: string[];
+  panelOpen: boolean;
 }) {
   const [name, setName] = useState(subResult.name);
 
@@ -539,6 +541,21 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
                 subResult.completed && "line-through text-muted-foreground"
               )}
             />
+            <div className={cn("items-center gap-2", panelOpen ? "hidden" : "flex")}>
+                {subResult.assignee && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Avatar className="h-6 w-6"><AvatarImage src={subResult.assignee.avatar} /></Avatar>
+                            </TooltipTrigger>
+                            <TooltipContent><p>{subResult.assignee.name}</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+                 {subResult.deadline && (
+                    <span className="text-xs text-muted-foreground">{formatDate(subResult.deadline)}</span>
+                 )}
+            </div>
              {level < 5 && (
                 <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover/parent:opacity-100" onClick={() => onAddSubResult(result, path)}>
                     <Plus className="h-3 w-3" />
@@ -557,6 +574,7 @@ function SubResultRows({ result, subResult, onResultSelect, onResultUpdate, onSu
           onAddSubResult={onAddSubResult}
           level={level + 1}
           path={[...path, sr.id]}
+          panelOpen={panelOpen}
         />
       ))}
     </React.Fragment>

@@ -30,6 +30,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { createTask as createTaskAction } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { companyEmployees } from '@/lib/db';
 
 
 type ResultDetailsPanelProps = {
@@ -39,12 +40,8 @@ type ResultDetailsPanelProps = {
   onDelete: (resultId: string) => void;
 };
 
-const mockUsers: User[] = [
-  { id: 'user-1', name: 'Іван Петренко', avatar: 'https://picsum.photos/40/40?random=1' },
-  { id: 'user-2', name: 'Марія Сидоренко', avatar: 'https://picsum.photos/40/40?random=2' },
-  { id: 'user-3', name: 'Олена Ковальчук', avatar: 'https://picsum.photos/40/40?random=3' },
-  { id: 'user-4', name: 'Петро Іваненко', avatar: 'https://picsum.photos/40/40?random=4' },
-];
+const mockUsers: User[] = companyEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
+
 
 const typeOptions: { value: TaskType; label: string; color: string }[] = [
   { value: 'important-urgent', label: 'Важлива, термінова', color: 'bg-red-500' },
@@ -58,16 +55,20 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
     const [localResult, setLocalResult] = useState(result);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
+    const lastAddedSubResultId = useRef<string | null>(null);
+    const subResultInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
     useEffect(() => {
         setLocalResult(result)
     }, [result])
     
     useEffect(() => {
-        if (result.id.startsWith('new-') && nameInputRef.current) {
-            nameInputRef.current.focus();
+        if (lastAddedSubResultId.current && subResultInputRefs.current[lastAddedSubResultId.current]) {
+            subResultInputRefs.current[lastAddedSubResultId.current]?.focus();
+            lastAddedSubResultId.current = null;
         }
-    }, [result.id]);
+    }, [localResult.subResults]);
+
 
     const handleFieldChange = (field: keyof Result, value: any) => {
         const updatedResult = { ...localResult, [field]: value };
@@ -197,6 +198,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                                  <SelectItem value="В роботі">В роботі</SelectItem>
                                  <SelectItem value="Заплановано">Заплановано</SelectItem>
                                  <SelectItem value="Виконано">Виконано</SelectItem>
+                                 <SelectItem value="Відкладено">Відкладено</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -283,6 +285,8 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                         subResults={localResult.subResults}
                         onSubResultsChange={handleSubResultsChange}
                         onBlur={handleSubResultsBlur}
+                        lastAddedIdRef={lastAddedSubResultId}
+                        inputRefs={subResultInputRefs}
                     />
                 </div>
 
@@ -371,16 +375,21 @@ type SubResultListProps = {
     subResults: SubResult[];
     onSubResultsChange: (subResults: SubResult[]) => void;
     onBlur: () => void;
+    lastAddedIdRef: React.MutableRefObject<string | null>;
+    inputRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
     level?: number;
 }
 
-function SubResultList({ subResults, onSubResultsChange, onBlur, level = 0 }: SubResultListProps) {
+function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef, inputRefs, level = 0 }: SubResultListProps) {
     const handleAddSubResult = (parentSubResultId?: string) => {
         const newSubResult: SubResult = {
             id: `sub-${Date.now()}`,
             name: '',
             completed: false,
+            assignee: mockUsers[0],
+            deadline: new Date().toISOString().split('T')[0],
         };
+        lastAddedIdRef.current = newSubResult.id;
 
         const addRecursively = (items: SubResult[]): SubResult[] => {
             if (!parentSubResultId) return [...items, newSubResult];
@@ -436,9 +445,13 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, level = 0 }: Su
                         <div className="flex items-center gap-2">
                             <Checkbox
                                 checked={sr.completed}
-                                onCheckedChange={(checked) => handleChange(sr.id, 'completed', !!checked)}
+                                onCheckedChange={(checked) => {
+                                    handleChange(sr.id, 'completed', !!checked);
+                                    onBlur();
+                                }}
                             />
                             <Input
+                                ref={el => (inputRefs.current[sr.id] = el)}
                                 value={sr.name}
                                 onChange={(e) => handleChange(sr.id, 'name', e.target.value)}
                                 onKeyDown={(e) => { if(e.key === 'Enter') handleAddSubResult(sr.id)}}
@@ -455,6 +468,52 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, level = 0 }: Su
                                 <Trash2 className="h-3 w-3" />
                             </Button>
                         </div>
+                        <div className="flex items-center justify-between pl-6">
+                            <Select 
+                                value={sr.assignee?.id}
+                                onValueChange={(userId) => {
+                                    const user = mockUsers.find(u => u.id === userId);
+                                    if(user) {
+                                        handleChange(sr.id, 'assignee', user);
+                                        onBlur();
+                                    }
+                                }}>
+                                <SelectTrigger className="h-7 text-xs w-auto border-none p-0 focus:ring-0">
+                                    <SelectValue asChild>
+                                        <Avatar className="h-5 w-5 cursor-pointer"><AvatarImage src={sr.assignee?.avatar} /></Avatar>
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {mockUsers.map(user => (
+                                        <SelectItem key={user.id} value={user.id}>
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
+                                                <span>{user.name}</span>
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" className="h-7 text-xs font-normal p-1">
+                                        <CalendarIcon className="mr-1 h-3 w-3"/>
+                                        {sr.deadline ? formatDate(sr.deadline) : 'Дата'}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar
+                                        mode="single"
+                                        selected={sr.deadline ? new Date(sr.deadline) : undefined}
+                                        onSelect={(date) => {
+                                            handleChange(sr.id, 'deadline', date?.toISOString().split('T')[0]);
+                                            onBlur();
+                                        }}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
                     {sr.subResults && sr.subResults.length > 0 && (
                         <SubResultList 
@@ -462,6 +521,8 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, level = 0 }: Su
                             onSubResultsChange={(updated) => handleChange(sr.id, 'subResults', updated)}
                             onBlur={onBlur}
                             level={level + 1}
+                            lastAddedIdRef={lastAddedIdRef}
+                            inputRefs={inputRefs}
                         />
                     )}
                 </div>

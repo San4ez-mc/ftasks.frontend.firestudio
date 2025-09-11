@@ -53,5 +53,3 @@ export interface Result {
   comments: ResultComment[];
   accessList: User[];
 }
-
-    

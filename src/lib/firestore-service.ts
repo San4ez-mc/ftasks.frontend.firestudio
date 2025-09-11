@@ -29,12 +29,26 @@ const initialInstructions: Omit<Instruction, 'id'>[] = [
   { title: 'Політика відпусток', department: 'Загальні', summary: 'Правила подання та затвердження заяв на відпустку.', content: '', accessList: [] },
 ];
 
+const defaultProcesses: Omit<Process, 'id'>[] = [
+    mockInitialProcess,
+    {
+        name: 'Основний бізнес-процес',
+        description: 'Від залучення клієнта до повного виконання всіх обов\'язків.',
+        lanes: [],
+    },
+    {
+        name: 'Створення фінансової звітності',
+        description: 'Процес підготовки та подання щомісячної фінансової звітності.',
+        lanes: [],
+    }
+]
+
 // --- Data Seeding ---
 export async function seedDatabase() {
   const seedStatusRef = firestore.collection('internal').doc('seedStatus');
   const seedStatusDoc = await seedStatusRef.get();
 
-  if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded_v3) { // Use a new seed version flag
+  if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded_v4) { // Use a new seed version flag
     return { success: true, message: 'Database already seeded.' };
   }
 
@@ -54,8 +68,10 @@ export async function seedDatabase() {
   batch.set(firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companies[0].id), companyProfile);
 
   // Seed new collections
-  const processRef = firestore.collection(PROCESSES_COLLECTION).doc(mockInitialProcess.id);
-  batch.set(processRef, mockInitialProcess);
+  defaultProcesses.forEach(proc => {
+      const docRef = firestore.collection(PROCESSES_COLLECTION).doc();
+      batch.set(docRef, proc);
+  });
   
   initialInstructions.forEach(instr => {
       const docRef = firestore.collection(INSTRUCTIONS_COLLECTION).doc();
@@ -64,7 +80,7 @@ export async function seedDatabase() {
 
 
   await batch.commit();
-  await seedStatusRef.set({ seeded_v3: true });
+  await seedStatusRef.set({ seeded_v4: true });
 
   return { success: true, message: 'Database seeded successfully.' };
 }

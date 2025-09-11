@@ -23,8 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { companyEmployees } from '@/lib/db';
 
 
-const currentUserId = 'user-2'; 
-const currentUser = companyEmployees.find(e => e.telegramUserId === 'tg-456'); // Mock current user is Maria S.
+const currentUser = companyEmployees.find(e => e.id === 'emp-2'); // Mock current user is Maria S.
 
 // --- TOUR STEPS ---
 
@@ -80,9 +79,9 @@ export default function TasksPage() {
   }, []);
 
   useEffect(() => {
-    if (currentDate) {
+    if (currentDate && currentUser) {
         startTransition(async () => {
-            const fetchedTasks = await getTasksForDate(currentDate.toISOString().split('T')[0], currentUserId, activeTab as any);
+            const fetchedTasks = await getTasksForDate(currentDate.toISOString().split('T')[0], currentUser.id, activeTab as any);
             setTasks(fetchedTasks);
         });
     }
@@ -131,8 +130,8 @@ export default function TasksPage() {
         } catch (error) {
             // Revert on error
             toast({ title: "Помилка", description: "Не вдалося оновити задачу.", variant: "destructive" });
-             if (currentDate) {
-                const fetchedTasks = await getTasksForDate(currentDate.toISOString().split('T')[0], currentUserId, activeTab as any);
+             if (currentDate && currentUser) {
+                const fetchedTasks = await getTasksForDate(currentDate.toISOString().split('T')[0], currentUser.id, activeTab as any);
                 setTasks(fetchedTasks);
             }
         }
@@ -173,8 +172,8 @@ export default function TasksPage() {
       expectedTime: 30, // Default time
       description: '',
       expectedResult: 'Очікуваний результат генерується GPT',
-      assignee: { id: currentUserId, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
-      reporter: { id: currentUserId, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
+      assignee: { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
+      reporter: { id: currentUser.id, name: `${currentUser.firstName} ${currentUser.lastName}`, avatar: currentUser.avatar },
       resultName: resultName,
     };
     handleTaskCreate(newTaskData);
@@ -204,6 +203,8 @@ export default function TasksPage() {
   const handleClosePanel = () => {
     setSelectedTask(null);
   };
+  
+  const panelOpen = !!selectedTask;
 
   const { totalExpectedTime, filteredTasks } = useMemo(() => {
     const totals = tasks.reduce(
@@ -222,7 +223,7 @@ export default function TasksPage() {
   const groupedTasks = useMemo(() => {
     if (activeTab === 'mine') {
         const name = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Мої задачі';
-        return { [currentUserId]: { name, results: filteredTasks } };
+        return { [currentUser?.id || 'current-user']: { name, results: filteredTasks } };
     }
     return filteredTasks.reduce((acc, task) => {
         const key = task.assignee.id || 'unassigned';
@@ -274,7 +275,6 @@ export default function TasksPage() {
     return null; // or a loading skeleton
   }
 
-  const panelOpen = !!selectedTask;
 
   return (
     <div ref={containerRef} className="flex flex-col md:flex-row h-screen">
