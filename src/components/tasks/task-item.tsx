@@ -4,23 +4,42 @@ import type { Task, TaskStatus, TaskType } from "@/types/task";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Clock, Edit, MoreVertical } from "lucide-react";
+import { CalendarIcon, Clock, Edit, MoreVertical, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { formatTime, parseTime } from "@/lib/timeUtils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 type TaskItemProps = {
     task: Task;
     onSelect: () => void;
     onUpdate: (task: Task) => void;
+    onDelete: (taskId: string) => void;
     showTypeColumn: boolean;
     panelOpen: boolean;
 };
@@ -40,7 +59,7 @@ const typeLabels: Record<TaskType, string> = {
 };
 
 
-export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn, panelOpen }: TaskItemProps) {
+export default function TaskItem({ task, onSelect, onUpdate, onDelete, showTypeColumn, panelOpen }: TaskItemProps) {
     const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [actualTime, setActualTime] = useState(formatTime(task.actualTime));
@@ -162,7 +181,33 @@ export default function TaskItem({ task, onSelect, onUpdate, showTypeColumn, pan
                             />
                         </PopoverContent>
                     </Popover>
-                    <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-3 w-3"/></Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-3 w-3"/></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4"/>
+                                        Видалити
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Цю дію неможливо скасувати. Це назавжди видалить задачу "{task.title}".
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => onDelete(task.id)}>Видалити</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </TableCell>
         </TableRow>

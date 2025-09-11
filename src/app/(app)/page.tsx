@@ -3,7 +3,7 @@
 
 import type { Task } from '@/types/task';
 import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
-import { Plus, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, AlertTriangle, Clock, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
@@ -17,10 +17,11 @@ import type { Result } from '@/types/result';
 import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
-import { getTasksForDate, createTask, updateTask } from '@/app/(app)/tasks/actions';
+import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { companyEmployees } from '@/lib/db';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const currentUser = companyEmployees.find(e => e.id === 'emp-2'); // Mock current user is Maria S.
@@ -163,10 +164,18 @@ export default function TasksPage() {
   }
 
   const handleTaskDelete = (taskId: string) => {
-    // Optimistically remove the task from the UI
-    setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
-    // Close the panel
-    setSelectedTask(null);
+    startTransition(async () => {
+        try {
+            await deleteTask(taskId);
+            setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
+            if (selectedTask?.id === taskId) {
+                setSelectedTask(null);
+            }
+            toast({ title: "Успіх", description: "Задачу видалено." });
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося видалити задачу.", variant: "destructive" });
+        }
+    });
   };
 
   const createNewTask = (title: string, resultName?: string) => {
@@ -204,11 +213,22 @@ export default function TasksPage() {
 
   const handleFabClick = () => {
     createNewTask('');
-    setTimeout(() => newTaskInputRef.current?.focus(), 0);
+    setTimeout(() => {
+        const openTask = tasks.find(t => t.title === '');
+        if(openTask) {
+           setSelectedTask(openTask);
+        }
+    }, 100);
   };
   
   const handleClosePanel = () => {
+    const taskToClose = selectedTask;
     setSelectedTask(null);
+
+    // If the task being closed has an empty title, delete it
+    if (taskToClose && taskToClose.title.trim() === '') {
+        handleTaskDelete(taskToClose.id);
+    }
   };
   
   const panelOpen = !!selectedTask;
@@ -336,6 +356,7 @@ export default function TasksPage() {
                                         task={task} 
                                         onSelect={() => handleTaskSelect(task)}
                                         onUpdate={handleTaskUpdate}
+                                        onDelete={handleTaskDelete}
                                         showTypeColumn={activeTab === 'mine' && !panelOpen}
                                         panelOpen={panelOpen}
                                     />
