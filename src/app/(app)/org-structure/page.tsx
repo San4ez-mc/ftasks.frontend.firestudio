@@ -3,8 +3,8 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Save, UserPlus, Info, Trash2 } from 'lucide-react';
-import { mockDivisions, mockDepartments, mockEmployees } from '@/data/org-structure-mock';
+import { Plus, Download, Save, UserPlus, Info, Trash2, Library } from 'lucide-react';
+import { mockDivisions, mockDepartments, mockEmployees, departmentTemplates } from '@/data/org-structure-mock';
 import type { Department, Employee, Division } from '@/types/org-structure';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 
@@ -210,14 +211,14 @@ export default function OrgStructurePage() {
   const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
   const [draggedItemHeight, setDraggedItemHeight] = useState(0);
 
-  const handleAddDepartment = (divisionId: string) => {
+  const handleAddDepartment = (divisionId: string, name?: string, ckp?: string) => {
     const newDepartment: Department = {
         id: `dept-${Date.now()}`,
-        name: 'Новий відділ',
+        name: name || 'Новий відділ',
         divisionId: divisionId,
         managerId: '',
         employeeIds: [],
-        ckp: '',
+        ckp: ckp || '',
     };
     setDepartments(prev => [...prev, newDepartment]);
   };
@@ -304,9 +305,11 @@ export default function OrgStructurePage() {
                                 style={{ height: `${draggedItemHeight}px` }}
                              ></div>
                         )}
-                         <Button id={`add-department-button-${division.id}`} variant="outline" className="mt-auto" onClick={() => handleAddDepartment(division.id)}>
-                            <Plus className="mr-2 h-4 w-4" /> Додати відділ
-                        </Button>
+                         <AddDepartmentButton 
+                            id={`add-department-button-${division.id}`} 
+                            divisionId={division.id} 
+                            onAddDepartment={handleAddDepartment} 
+                         />
                     </div>
                 )
             })}
@@ -315,4 +318,69 @@ export default function OrgStructurePage() {
       </ScrollArea>
     </div>
   );
+}
+
+
+function AddDepartmentButton({ id, divisionId, onAddDepartment }: { id: string, divisionId: string, onAddDepartment: (divisionId: string, name?: string, ckp?: string) => void }) {
+    const [open, setOpen] = useState(false);
+    const [customName, setCustomName] = useState("");
+
+    const templates = departmentTemplates[divisionId] || [];
+
+    const handleAdd = () => {
+        onAddDepartment(divisionId, customName);
+        setCustomName("");
+        setOpen(false);
+    }
+    
+    const handleAddFromTemplate = (template: { name: string; ckp: string; }) => {
+        onAddDepartment(divisionId, template.name, template.ckp);
+        setOpen(false);
+    }
+
+    return (
+         <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                 <Button id={id} variant="outline" className="mt-auto">
+                    <Plus className="mr-2 h-4 w-4" /> Додати відділ
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Додати новий відділ</DialogTitle>
+                    <DialogDescription>
+                        Ви можете додати відділ за шаблоном або створити власний.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="py-4 space-y-4">
+                    {templates.length > 0 && (
+                        <div className="space-y-2">
+                             <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground"><Library className="h-4 w-4"/> Шаблони для цього відділення</h4>
+                             <div className="grid grid-cols-2 gap-2">
+                                {templates.map(template => (
+                                    <Button key={template.name} variant="secondary" onClick={() => handleAddFromTemplate(template)}>
+                                        {template.name}
+                                    </Button>
+                                ))}
+                             </div>
+                        </div>
+                    )}
+                    <div className="space-y-2">
+                         <h4 className="text-sm font-medium text-muted-foreground">Створити власний</h4>
+                        <Label htmlFor="custom-dept-name" className="sr-only">Назва відділу</Label>
+                        <Input 
+                            id="custom-dept-name" 
+                            placeholder="Назва нового відділу"
+                            value={customName}
+                            onChange={(e) => setCustomName(e.target.value)}
+                        />
+                    </div>
+                 </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Скасувати</Button>
+                    <Button onClick={handleAdd} disabled={!customName}>Додати</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
 }

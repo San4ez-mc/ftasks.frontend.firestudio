@@ -3,7 +3,7 @@
 
 import type { Task } from '@/types/task';
 import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TasksHeader from '@/components/tasks/tasks-header';
 import TaskItem from '@/components/tasks/task-item';
@@ -13,12 +13,13 @@ import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ResultsList from '@/components/tasks/results-list';
-import type { Result as ResultType } from '@/types/result';
+import type { Result } from '@/types/result';
 import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTasksForDate, createTask, updateTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const currentUserId = 'user-2'; // Mock current user
@@ -159,7 +160,7 @@ export default function TasksPage() {
     handleTaskCreate(newTaskData);
   };
 
-  const handleResultClick = (result: ResultType) => {
+  const handleResultClick = (result: Result) => {
     createNewTask(result.name, result.name);
   };
 
@@ -184,10 +185,12 @@ export default function TasksPage() {
     setSelectedTask(null);
   };
 
-  const { totalExpectedTime, totalActualTime, filteredTasks } = useMemo(() => {
+  const { totalExpectedTime, filteredTasks } = useMemo(() => {
     const totals = tasks.reduce(
       (acc, task) => {
-        acc.totalExpectedTime += task.expectedTime || 0;
+        if (task.status !== 'done') {
+          acc.totalExpectedTime += task.expectedTime || 0;
+        }
         acc.totalActualTime += task.actualTime || 0;
         return acc;
       },
@@ -211,6 +214,38 @@ export default function TasksPage() {
 
   }, [filteredTasks, activeTab]);
   
+  const totalExpectedHours = totalExpectedTime / 60;
+
+  const WorkloadAlert = () => {
+    if (activeTab !== 'mine' || totalExpectedHours <= 6) return null;
+
+    if (totalExpectedHours > 8) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Надмірне навантаження!</AlertTitle>
+          <AlertDescription>
+            Заплановано роботи на {formatTime(totalExpectedTime)}. Ви ризикуєте не встигнути все виконати. Рекомендуємо перенести частину задач на інший день.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
+    if (totalExpectedHours > 6) {
+      return (
+        <Alert>
+          <Clock className="h-4 w-4" />
+          <AlertTitle>Високе навантаження</AlertTitle>
+          <AlertDescription>
+            На сьогодні заплановано {formatTime(totalExpectedTime)} роботи. Це щільний графік, тому будь-яка нова термінова задача може порушити ваші плани.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
+    return null;
+  };
+  
   if (!currentDate) {
     return null; // or a loading skeleton
   }
@@ -232,6 +267,9 @@ export default function TasksPage() {
             onTabChange={setActiveTab}
           />
           <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
+            <div className="px-1">
+                <WorkloadAlert />
+            </div>
             <div className="border-t" id="tasks-table">
                  {isPending && <div>Завантаження...</div>}
                  {!isPending && Object.values(groupedTasks).map(group => (
@@ -274,7 +312,7 @@ export default function TasksPage() {
                                     <TableRow>
                                         <TableCell colSpan={3} className="font-bold">Всього</TableCell>
                                         <TableCell className="font-bold text-xs">{formatTime(totalExpectedTime)}</TableCell>
-                                        <TableCell className="font-bold text-xs">{formatTime(totalActualTime)}</TableCell>
+                                        <TableCell className="font-bold text-xs">{formatTime(tasks.reduce((acc, t) => acc + (t.actualTime || 0), 0))}</TableCell>
                                         <TableCell></TableCell>
                                     </TableRow>
                                 </TableFooter>
