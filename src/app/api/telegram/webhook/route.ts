@@ -3,10 +3,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
 import { parseTelegramCommand } from '@/ai/flows/telegram-command-flow';
-import { getAllEmployees, createTaskInDb, createResultInDb } from '@/lib/firestore-service';
+import { getAllEmployees, createTaskInDb, createResultInDb, getAllTasks, updateTaskInDb, getAllResults, updateResultInDb } from '@/lib/firestore-service';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
 import type { Employee } from '@/types/company';
+import { ai } from '@/ai/genkit';
 
 
 interface TelegramUser {
@@ -94,15 +95,17 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             allowedCommands: allowedCommands,
         });
 
+        const params = aiResult.parameters;
+
         switch (aiResult.command) {
             case 'create_task':
-                if (aiResult.parameters?.title) {
-                    const assigneeName = aiResult.parameters.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
+                if (params?.title) {
+                    const assigneeName = params.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
                     const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
 
                     const newTaskData: Omit<Task, 'id'> = {
-                        title: aiResult.parameters.title,
-                        dueDate: aiResult.parameters.dueDate || new Date().toISOString().split('T')[0],
+                        title: params.title,
+                        dueDate: params.dueDate || new Date().toISOString().split('T')[0],
                         status: 'todo',
                         type: 'important-not-urgent',
                         expectedTime: 30,
@@ -117,17 +120,17 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 break;
             
             case 'create_result':
-                 if (aiResult.parameters?.title) {
-                    const assigneeName = aiResult.parameters.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
+                 if (params?.title) {
+                    const assigneeName = params.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
                     const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
                     const twoWeeksFromNow = new Date();
                     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
                     const newResultData: Omit<Result, 'id'> = {
-                        name: aiResult.parameters.title,
+                        name: params.title,
                         status: 'Заплановано',
                         completed: false,
-                        deadline: aiResult.parameters.dueDate || twoWeeksFromNow.toISOString().split('T')[0],
+                        deadline: params.dueDate || twoWeeksFromNow.toISOString().split('T')[0],
                         assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { name: assigneeName, id: '' },
                         reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}` },
                         description: '',
@@ -138,6 +141,43 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     await sendTelegramReply(chat.id, { text: `🎯 Результат створено: "${createdResult.name}" для ${assigneeName}.` });
                 } else {
                      await sendTelegramReply(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
+                }
+                break;
+            
+            case 'edit_task_title':
+                if (params?.targetTitle && params.newTitle) {
+                    const allTasks = await getAllTasks();
+                    const taskToEdit = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                    if (taskToEdit) {
+                        await updateTaskInDb(taskToEdit.id, { title: params.newTitle });
+                        await sendTelegramReply(chat.id, { text: `✅ Назву задачі оновлено на "${params.newTitle}".` });
+                    } else {
+                        await sendTelegramReply(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                    }
+                } else {
+                    await sendTelegramReply(chat.id, { text: `🤔 Для зміни назви задачі, вкажіть поточну та нову назву.` });
+                }
+                break;
+
+            case 'add_comment_to_result':
+                 if (params?.targetTitle && params.commentText) {
+                    const allResults = await getAllResults();
+                    const resultToComment = allResults.find(r => r.name.toLowerCase() === params.targetTitle?.toLowerCase());
+                    if (resultToComment) {
+                        const newComment = {
+                            id: `comment-${Date.now()}`,
+                            text: params.commentText,
+                            author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.photo_url },
+                            timestamp: new Date().toLocaleString('uk-UA')
+                        };
+                        const updatedComments = [...(resultToComment.comments || []), newComment];
+                        await updateResultInDb(resultToComment.id, { comments: updatedComments });
+                        await sendTelegramReply(chat.id, { text: `💬 Коментар додано до результату "${params.targetTitle}".` });
+                    } else {
+                        await sendTelegramReply(chat.id, { text: `❌ Не знайдено результат з назвою "${params.targetTitle}".` });
+                    }
+                } else {
+                    await sendTelegramReply(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву результату та текст коментаря.` });
                 }
                 break;
 
@@ -165,6 +205,26 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
     }
 }
 
+async function getTelegramAudioDataUri(fileId: string): Promise<string> {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is not defined.");
+
+    const getFileUrl = `https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`;
+    const fileInfoResponse = await fetch(getFileUrl);
+    if (!fileInfoResponse.ok) throw new Error("Failed to get file info from Telegram.");
+    const fileInfo = await fileInfoResponse.json();
+    const filePath = fileInfo.result.file_path;
+    if (!filePath) throw new Error("File path not found in Telegram response.");
+
+    const downloadUrl = `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+    const audioResponse = await fetch(downloadUrl);
+    if (!audioResponse.ok) throw new Error("Failed to download audio file from Telegram.");
+    
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const base64String = Buffer.from(audioBuffer).toString('base64');
+    
+    return `data:audio/ogg;base64,${base64String}`;
+}
 
 /**
  * This is the Next.js backend endpoint that Telegram will call.
@@ -185,10 +245,30 @@ export async function POST(request: NextRequest) {
         const isReplyToBot = message.reply_to_message?.from?.username === BOT_USERNAME;
         const isBotMentioned = text.includes(`@${BOT_USERNAME}`);
 
-        // --- Voice Message Handler (Placeholder) ---
+        // --- Voice Message Handler ---
         if (voice) {
-             await sendTelegramReply(chat.id, { text: "Обробка голосових команд ще в розробці. Будь ласка, використовуйте текстові команди." });
-             return NextResponse.json({ status: 'ok', message: 'Voice command placeholder sent.' });
+             try {
+                const audioDataUri = await getTelegramAudioDataUri(voice.file_id);
+
+                const transcribeResponse = await ai.generate({
+                    model: 'googleai/gemini-1.5-flash-latest',
+                    prompt: [{media: {url: audioDataUri, contentType: 'audio/ogg'}}, {text: 'Транскрибуй це аудіо українською мовою. Прибери будь-які слова-паразити та заповнювачі пауз, щоб текст був чистим та лаконічним.'}],
+                });
+                const transcribedText = transcribeResponse.text;
+
+                if (!transcribedText) {
+                    await sendTelegramReply(chat.id, { text: "Не вдалося розпізнати аудіо. Спробуйте ще раз." });
+                    return NextResponse.json({ status: 'ok', message: 'Audio transcription failed.' });
+                }
+
+                await handleNaturalLanguageCommand(chat, fromUser, transcribedText);
+                return NextResponse.json({ status: 'ok', message: 'Voice command processed.' });
+
+            } catch (error) {
+                console.error("Error processing voice message:", error);
+                await sendTelegramReply(chat.id, { text: "Виникла помилка під час обробки вашого голосового повідомлення." });
+                return NextResponse.json({ status: 'error', message: 'Failed to process voice command.' });
+            }
         }
 
 
