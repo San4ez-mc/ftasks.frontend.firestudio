@@ -23,6 +23,7 @@ import { getResults, createResult, updateResult, deleteResult } from './actions'
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { companyEmployees } from '@/lib/db';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const currentUser = companyEmployees.find(e => e.id === 'emp-2'); 
@@ -718,3 +719,4 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
 }
 
     
+
