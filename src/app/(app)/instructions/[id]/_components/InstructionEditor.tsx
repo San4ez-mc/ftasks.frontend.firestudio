@@ -6,16 +6,24 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Users, Settings, Eye, Trash2, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Users, Settings, Trash2, X, Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import type { Instruction } from '@/types/instruction';
+import type { Instruction, InstructionAccess } from '@/types/instruction';
 import { updateInstruction } from '../../actions';
 import { useToast } from '@/hooks/use-toast';
-
+import { companyEmployees } from '@/lib/db';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 type InstructionEditorProps = {
   instruction: Instruction;
 };
+
+const allUsers = companyEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
+
 
 export default function InstructionEditor({ instruction: initialInstruction }: InstructionEditorProps) {
   const router = useRouter();
@@ -41,6 +49,11 @@ export default function InstructionEditor({ instruction: initialInstruction }: I
       } finally {
         setIsSaving(false);
       }
+  }
+
+  const handleAccessChange = (selectedUsers: {id: string, name: string}[]) => {
+      const newAccessList = selectedUsers.map(u => ({ userId: u.id, access: 'view' as const }));
+      handleFieldChange('accessList', newAccessList);
   }
 
 
@@ -105,19 +118,73 @@ export default function InstructionEditor({ instruction: initialInstruction }: I
                     Доступи
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-                {instruction.accessList.map(access => (
-                    <div key={access.userId} className="flex items-center justify-between text-sm">
-                        <span>User {access.userId}</span>
-                        <div className="flex items-center gap-2">
-                            <Eye className="h-4 w-4 text-muted-foreground"/>
-                            <span>{access.access}</span>
-                        </div>
-                    </div>
-                ))}
+            <CardContent>
+                <AccessListCombobox 
+                    allUsers={allUsers}
+                    selectedUsers={instruction.accessList.map(item => {
+                        const user = allUsers.find(u => u.id === item.userId);
+                        return user || { id: item.userId, name: 'Unknown User', avatar: ''};
+                    })}
+                    onSelectionChange={handleAccessChange}
+                />
             </CardContent>
         </Card>
       </aside>
     </div>
   );
+}
+
+
+function AccessListCombobox({ allUsers, selectedUsers, onSelectionChange }: { 
+    allUsers: {id: string, name: string, avatar: string}[], 
+    selectedUsers: {id: string, name: string, avatar: string}[], 
+    onSelectionChange: (users: {id: string, name: string}[]) => void 
+}) {
+    const [open, setOpen] = useState(false);
+    
+    const handleSelect = (user: {id: string, name: string}) => {
+        const isSelected = selectedUsers.some(su => su.id === user.id);
+        if (isSelected) {
+            onSelectionChange(selectedUsers.filter(su => su.id !== user.id));
+        } else {
+            onSelectionChange([...selectedUsers, user]);
+        }
+    }
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start h-auto min-h-10">
+                    <div className="flex flex-wrap gap-1">
+                        {selectedUsers.length > 0 ? selectedUsers.map(user => (
+                            <Badge key={user.id} variant="secondary" className="gap-1">
+                                <Avatar className="h-5 w-5"><AvatarImage src={user.avatar} /></Avatar>
+                                {user.name}
+                                <button onClick={(e) => { e.stopPropagation(); handleSelect(user);}} className="rounded-full hover:bg-muted-foreground/20 p-0.5">
+                                    <X className="h-3 w-3"/>
+                                </button>
+                            </Badge>
+                        )) : "Надати доступ..."}
+                    </div>
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                    <CommandInput placeholder="Пошук співробітника..." />
+                    <CommandList>
+                        <CommandEmpty>Не знайдено.</CommandEmpty>
+                        <CommandGroup>
+                            {allUsers.map(user => (
+                                <CommandItem key={user.id} onSelect={() => handleSelect(user)} value={user.name}>
+                                    <Checkbox className="mr-2" checked={selectedUsers.some(su => su.id === user.id)} />
+                                    <Avatar className="h-6 w-6 mr-2"><AvatarImage src={user.avatar} /></Avatar>
+                                    <span>{user.name}</span>
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    )
 }

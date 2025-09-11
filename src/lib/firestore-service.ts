@@ -3,7 +3,7 @@
 'use server';
 
 import { firestore } from '@/lib/firebase-admin';
-import { resultsDb, tasksDb, templatesDb, companyEmployees as employeesDb, companies } from '@/lib/db';
+import { resultsDb, tasksDb, templatesDb, companyEmployees as employeesDb, companies, users } from '@/lib/db';
 import { mockInitialProcess } from '@/data/process-mock';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
@@ -24,9 +24,20 @@ const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
 const COMPANY_PROFILES_COLLECTION = 'company_profiles';
 
 const initialInstructions: Omit<Instruction, 'id'>[] = [
-  { title: 'Як користуватися CRM', department: 'Відділ продажів', summary: 'Загальні правила та процедури роботи з клієнтською базою.', content: '<h1>Загальні правила</h1><p>Завжди заповнюйте всі поля...</p>', accessList: [] },
-  { title: 'Процес онбордингу', department: 'HR', summary: 'Кроки для успішної адаптації нового співробітника.', content: '', accessList: [] },
-  { title: 'Політика відпусток', department: 'Загальні', summary: 'Правила подання та затвердження заяв на відпустку.', content: '', accessList: [] },
+  { 
+    title: 'Планування в таск-трекері та робота в Telegram', 
+    department: 'Загальні', 
+    summary: 'Як ефективно планувати задачі та використовувати інтеграцію з Telegram.', 
+    content: '<h1>Основні принципи</h1><p>1. Всі задачі створюються в системі...</p>', 
+    accessList: [] 
+  },
+  { 
+    title: 'Робота з організаційною структурою', 
+    department: 'HR/Менеджмент', 
+    summary: 'Правила та рекомендації по роботі з модулем оргструктури.', 
+    content: '<h1>Як редагувати структуру</h1><p>Перетягуйте відділи між колонками...</p>', 
+    accessList: [] 
+  },
 ];
 
 const defaultProcesses: Omit<Process, 'id'>[] = [
@@ -48,7 +59,7 @@ export async function seedDatabase() {
   const seedStatusRef = firestore.collection('internal').doc('seedStatus');
   const seedStatusDoc = await seedStatusRef.get();
 
-  if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded_v4) { // Use a new seed version flag
+  if (seedStatusDoc.exists && seedStatusDoc.data()?.seeded_v5) { // Use a new seed version flag
     return { success: true, message: 'Database already seeded.' };
   }
 
@@ -64,6 +75,7 @@ export async function seedDatabase() {
   const companyProfile: Omit<CompanyProfile, 'id'> = {
       name: companies[0].name,
       description: 'Інноваційні рішення для вашого бізнесу.',
+      adminId: users[0].id, // Default admin is the first user
   };
   batch.set(firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companies[0].id), companyProfile);
 
@@ -80,7 +92,7 @@ export async function seedDatabase() {
 
 
   await batch.commit();
-  await seedStatusRef.set({ seeded_v4: true });
+  await seedStatusRef.set({ seeded_v5: true });
 
   return { success: true, message: 'Database seeded successfully.' };
 }

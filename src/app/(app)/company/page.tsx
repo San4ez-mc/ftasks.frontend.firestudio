@@ -5,7 +5,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, Search, Trash2, Upload, Save, X } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Upload, Save, X, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -78,6 +78,8 @@ export default function CompanyPage() {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+
 
     // Hardcoded company ID for now
     const companyId = 'company-1';
@@ -95,6 +97,21 @@ export default function CompanyPage() {
             setCompanyProfile(fetchedProfile);
         });
     }, []);
+
+     useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                const clickedOnTrigger = (event.target as HTMLElement).closest('.group/item');
+                 if (!clickedOnTrigger) {
+                    handleClosePanel();
+                }
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [containerRef]);
 
     const handleEmployeeUpdate = (updatedEmployee: Employee) => {
         startTransition(async () => {
@@ -127,6 +144,7 @@ export default function CompanyPage() {
                 await updateCompanyProfile(companyId, {
                     name: companyProfile.name,
                     description: companyProfile.description,
+                    adminId: companyProfile.adminId,
                 });
                 toast({ title: "Успіх", description: "Інформацію про компанію оновлено." });
             } catch (error) {
@@ -136,7 +154,7 @@ export default function CompanyPage() {
     }
 
     return (
-        <div className="flex flex-col md:flex-row h-screen overflow-hidden">
+        <div ref={containerRef} className="flex flex-col md:flex-row h-screen overflow-hidden">
             <InteractiveTour pageKey="company" steps={companyTourSteps} />
             {/* Employee List */}
             <div className={cn(
@@ -178,6 +196,22 @@ export default function CompanyPage() {
                                         onChange={(e) => setCompanyProfile({...companyProfile, description: e.target.value})} 
                                     />
                                 </div>
+                                 <div>
+                                    <Label htmlFor="companyAdmin" className="flex items-center gap-2"><Shield className="h-4 w-4"/> Адміністратор системи</Label>
+                                    <Select 
+                                        value={companyProfile.adminId} 
+                                        onValueChange={(adminId) => setCompanyProfile({...companyProfile, adminId: adminId})}
+                                    >
+                                        <SelectTrigger id="companyAdmin">
+                                            <SelectValue placeholder="Обрати адміністратора..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {employees.map(emp => (
+                                                <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                 </div>
                                 <Button size="sm" onClick={handleCompanyInfoSave} disabled={isPending}>
                                     <Save className="mr-2 h-4 w-4" />
                                     Зберегти
@@ -202,7 +236,7 @@ export default function CompanyPage() {
                                         key={emp.id}
                                         onClick={() => setSelectedEmployee(emp)}
                                         className={cn(
-                                            "cursor-pointer",
+                                            "cursor-pointer group/item",
                                             selectedEmployee?.id === emp.id && "bg-accent"
                                         )}
                                     >

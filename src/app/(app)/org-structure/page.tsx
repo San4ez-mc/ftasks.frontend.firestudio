@@ -305,7 +305,7 @@ export default function OrgStructurePage() {
                                 style={{ height: `${draggedItemHeight}px` }}
                              ></div>
                         )}
-                         <AddDepartmentButton 
+                         <AddDepartmentControl
                             id={`add-department-button-${division.id}`} 
                             divisionId={division.id} 
                             onAddDepartment={handleAddDepartment} 
@@ -321,66 +321,23 @@ export default function OrgStructurePage() {
 }
 
 
-function AddDepartmentButton({ id, divisionId, onAddDepartment }: { id: string, divisionId: string, onAddDepartment: (divisionId: string, name?: string, ckp?: string) => void }) {
-    const [open, setOpen] = useState(false);
-    const [customName, setCustomName] = useState("");
-
+function AddDepartmentControl({ id, divisionId, onAddDepartment }: { id: string, divisionId: string, onAddDepartment: (divisionId: string, name?: string, ckp?: string) => void }) {
     const templates = departmentTemplates[divisionId] || [];
 
-    const handleAdd = () => {
-        onAddDepartment(divisionId, customName);
-        setCustomName("");
-        setOpen(false);
-    }
-    
-    const handleAddFromTemplate = (template: { name: string; ckp: string; }) => {
-        onAddDepartment(divisionId, template.name, template.ckp);
-        setOpen(false);
-    }
-
     return (
-         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                 <Button id={id} variant="outline" className="mt-auto">
-                    <Plus className="mr-2 h-4 w-4" /> Додати відділ
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Додати новий відділ</DialogTitle>
-                    <DialogDescription>
-                        Ви можете додати відділ за шаблоном або створити власний.
-                    </DialogDescription>
-                </DialogHeader>
-                 <div className="py-4 space-y-4">
-                    {templates.length > 0 && (
-                        <div className="space-y-2">
-                             <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground"><Library className="h-4 w-4"/> Шаблони для цього відділення</h4>
-                             <div className="grid grid-cols-2 gap-2">
-                                {templates.map(template => (
-                                    <Button key={template.name} variant="secondary" onClick={() => handleAddFromTemplate(template)}>
-                                        {template.name}
-                                    </Button>
-                                ))}
-                             </div>
-                        </div>
-                    )}
-                    <div className="space-y-2">
-                         <h4 className="text-sm font-medium text-muted-foreground">Створити власний</h4>
-                        <Label htmlFor="custom-dept-name" className="sr-only">Назва відділу</Label>
-                        <Input 
-                            id="custom-dept-name" 
-                            placeholder="Назва нового відділу"
-                            value={customName}
-                            onChange={(e) => setCustomName(e.target.value)}
-                        />
-                    </div>
-                 </div>
-                <DialogFooter>
-                    <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Скасувати</Button>
-                    <Button onClick={handleAdd} disabled={!customName}>Додати</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <div className="mt-auto space-y-2">
+            {templates.length > 0 && (
+                <div className="space-y-2">
+                    {templates.map(template => (
+                        <Button key={template.name} variant="secondary" size="sm" className="w-full justify-start" onClick={() => onAddDepartment(divisionId, template.name, template.ckp)}>
+                           <Plus className="mr-2 h-4 w-4" /> {template.name}
+                        </Button>
+                    ))}
+                </div>
+            )}
+            <Button id={id} variant="outline" className="w-full">
+                <Plus className="mr-2 h-4 w-4" /> Додати свій відділ
+            </Button>
+        </div>
     )
 }
