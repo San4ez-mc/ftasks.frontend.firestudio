@@ -64,7 +64,6 @@ export default function AuditsListPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Дата проведення</TableHead>
-                    <TableHead>Кількість виявлених проблем</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
@@ -73,7 +72,6 @@ export default function AuditsListPage() {
                   {audits.map((audit) => (
                     <TableRow key={audit.id}>
                       <TableCell className="font-medium">{formatDate(audit.createdAt)}</TableCell>
-                      <TableCell>{audit.problems?.length || 0}</TableCell>
                       <TableCell>{audit.isCompleted ? 'Завершено' : 'В процесі'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild>
