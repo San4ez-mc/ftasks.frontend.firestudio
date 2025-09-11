@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Mic, Square, Wand2, AlertTriangle, Send } from 'lucide-react';
-import { continueConversationalAudit, getAudit, updateAudit } from '../actions';
+import { continueAudit, getAudit, updateAudit } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Audit, ConversationTurn } from '@/types/audit';
 import type { AuditStructure } from '@/ai/types';
@@ -29,7 +29,6 @@ export default function AuditPage({ params }: AuditPageProps) {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [currentTranscript, setCurrentTranscript] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
 
@@ -100,14 +99,13 @@ export default function AuditPage({ params }: AuditPageProps) {
   const handleSubmit = (audioDataUri: string, textInput?: string) => {
     if ((!audioDataUri && !textInput) || !audit) return;
     
-    setIsLoading(true);
     setCurrentTranscript('');
 
     startTransition(async () => {
       try {
-        const result = await continueConversationalAudit({
+        const result = await continueAudit({
           auditId: audit.id,
-          userAudioDataUri: audioDataUri, // The new flow expects audio
+          userAudioDataUri: audioDataUri,
           conversationHistory: audit.conversationHistory,
           currentSummary: audit.structuredSummary,
         });
@@ -128,13 +126,11 @@ export default function AuditPage({ params }: AuditPageProps) {
       } catch (error) {
         console.error("Error in audit turn:", error);
         toast({ title: "Помилка AI", description: "Не вдалося обробити вашу відповідь.", variant: "destructive" });
-      } finally {
-        setIsLoading(false);
       }
     });
   };
 
-  if (isPending || !audit) {
+  if (!audit) {
       return <div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>;
   }
   
@@ -151,7 +147,7 @@ export default function AuditPage({ params }: AuditPageProps) {
                 </div>
              </div>
            ))}
-           {isLoading && (
+           {isPending && (
               <div className="flex items-start gap-4">
                  <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0"><Wand2 className="h-5 w-5"/></div>
                   <div className="p-3 rounded-lg bg-muted flex items-center gap-2">
@@ -164,8 +160,8 @@ export default function AuditPage({ params }: AuditPageProps) {
         </div>
         
         <div className="flex items-center gap-4 pt-4 border-t">
-          <Textarea placeholder="Або введіть відповідь текстом..." className="flex-1" disabled={isRecording || isLoading}/>
-          <Button size="icon" className="h-12 w-12 shrink-0" onClick={isRecording ? stopRecording : startRecording} disabled={isLoading}>
+          <Textarea placeholder="Або введіть відповідь текстом..." className="flex-1" disabled={isRecording || isPending}/>
+          <Button size="icon" className="h-12 w-12 shrink-0" onClick={isRecording ? stopRecording : startRecording} disabled={isPending}>
             {isRecording ? <Square className="h-6 w-6"/> : <Mic className="h-6 w-6" />}
           </Button>
           {isRecording && <span className="text-sm font-mono min-w-[50px] text-center">{recordingSeconds}s</span>}
