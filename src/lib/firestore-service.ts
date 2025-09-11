@@ -133,9 +133,14 @@ async function getAll<T>(collectionName: string): Promise<T[]> {
 }
 
 async function getByQuery<T>(collectionName: string, queryField: string, queryValue: string): Promise<T[]> {
-  await seedDatabase();
-  const snapshot = await firestore.collection(collectionName).where(queryField, '==', queryValue).get();
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+  try {
+    await seedDatabase();
+    const snapshot = await firestore.collection(collectionName).where(queryField, '==', queryValue).get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+  } catch (error) {
+    console.error(`Error in getByQuery for collection ${collectionName} where ${queryField} == ${queryValue}:`, error);
+    return []; // Return empty array on failure to prevent crash
+  }
 }
 
 
@@ -168,7 +173,7 @@ async function remove(collectionName: string, docId: string): Promise<{ success:
 
 // --- Service-Specific Functions ---
 
-export async function linkTelegramGroup(code: string, companyId: string): Promise<TelegramGroup> {
+export async function linkTelegramGroup(code: string, companyId: string): Promise<{ group: TelegramGroup, wasCreated: boolean }> {
     const codeRef = firestore.collection(GROUP_LINK_CODES_COLLECTION).doc(code);
     const codeDoc = await codeRef.get();
 
@@ -183,7 +188,6 @@ export async function linkTelegramGroup(code: string, companyId: string): Promis
         throw new Error("Невірний або застарілий код.");
     }
 
-    // Check if the group is already linked to this company
     const groupsRef = firestore.collection(GROUPS_COLLECTION);
     const existingGroupQuery = await groupsRef
         .where('tgGroupId', '==', codeData.tgGroupId)
@@ -194,18 +198,15 @@ export async function linkTelegramGroup(code: string, companyId: string): Promis
     await codeRef.delete(); // Delete the code now that we've used it
 
     if (!existingGroupQuery.empty) {
-        // Group exists, so update it
-        const existingDoc = existingGroupQuery.docs[0];
-        const updatedData = {
-            title: codeData.groupTitle, // Update title in case it changed
-            linkedAt: new Date().toISOString(), // Update linked timestamp
-        };
-        await existingDoc.ref.update(updatedData);
-        // Combine existing data with new data for the return value
-        const returnedData = { ...existingDoc.data(), ...updatedData, id: existingDoc.id };
-        return returnedData as TelegramGroup;
+        // Group exists, update it
+        const existingGroupDoc = existingGroupQuery.docs[0];
+        const updatedGroup = await update<TelegramGroup>(GROUPS_COLLECTION, existingGroupDoc.id, { title: codeData.groupTitle, linkedAt: new Date().toISOString() });
+        if (!updatedGroup) {
+            throw new Error("Failed to update existing group.");
+        }
+        return { group: updatedGroup, wasCreated: false };
     } else {
-        // Group is new, so create it
+        // Group is new, create it
         const newGroupData: Omit<TelegramGroup, 'id'> = {
             tgGroupId: codeData.tgGroupId,
             title: codeData.groupTitle,
@@ -213,7 +214,7 @@ export async function linkTelegramGroup(code: string, companyId: string): Promis
             linkedAt: new Date().toISOString(),
         };
         const newGroup = await create<TelegramGroup>(GROUPS_COLLECTION, newGroupData);
-        return newGroup;
+        return { group: newGroup, wasCreated: true };
     }
 }
 
@@ -264,6 +265,8 @@ export const getAllAudits = () => getAll<Audit>(AUDITS_COLLECTION);
 export const getAuditById = (id: string) => getById<Audit>(AUDITS_COLLECTION, id);
 export const createAuditInDb = (data: Omit<Audit, 'id'>) => create<Audit>(AUDITS_COLLECTION, data);
 export const updateAuditInDb = (id: string, updates: Partial<Audit>) => update<Audit>(AUDITS_COLLECTION, id, updates);
+export const deleteAuditFromDb = (id: string) => remove(AUDITS_COLLECTION, id);
+
 
 // --- Telegram Groups ---
 export const getAllTelegramGroups = (companyId: string) => getByQuery<TelegramGroup>(GROUPS_COLLECTION, 'companyId', companyId);

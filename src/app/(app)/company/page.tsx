@@ -110,7 +110,7 @@ export default function CompanyPage() {
      useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                const clickedOnTrigger = (event.target as HTMLElement).closest('.group/item');
+                const clickedOnTrigger = (event.target as HTMLElement).closest('[data-employee-row]');
                  if (!clickedOnTrigger) {
                     handleClosePanel();
                 }
@@ -244,8 +244,9 @@ export default function CompanyPage() {
                                     <TableRow
                                         key={emp.id}
                                         onClick={() => setSelectedEmployee(emp)}
+                                        data-employee-row
                                         className={cn(
-                                            "cursor-pointer group/item",
+                                            "cursor-pointer",
                                             selectedEmployee?.id === emp.id && "bg-accent"
                                         )}
                                     >
