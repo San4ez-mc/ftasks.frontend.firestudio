@@ -6,6 +6,7 @@ import { parseTelegramCommand } from '@/ai/flows/telegram-command-flow';
 import { getAllEmployees, createTaskInDb, createResultInDb } from '@/lib/firestore-service';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
+import type { Employee } from '@/types/company';
 
 
 interface TelegramUser {
@@ -26,14 +27,6 @@ interface TelegramChat {
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 
-const mainMenu = {
-    keyboard: [
-        [{ text: "Задачі", web_app: { url: `${APP_URL}/` } }, { text: "Результати", web_app: { url: `${APP_URL}/results` } }],
-        [{ text: "Орг.структура", web_app: { url: `${APP_URL}/org-structure` } }, { text: "Шаблони", web_app: { url: `${APP_URL}/templates` } }]
-    ],
-    resize_keyboard: true,
-};
-
 async function sendTelegramReply(chatId: number, message: {text: string, reply_markup?: any}) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -44,14 +37,15 @@ async function sendTelegramReply(chatId: number, message: {text: string, reply_m
 
   const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   
-  const finalReplyMarkup = message.reply_markup ? message.reply_markup : mainMenu;
-  
-  const payload = {
+  const payload: any = {
     chat_id: chatId,
     text: message.text,
-    reply_markup: finalReplyMarkup,
     parse_mode: 'Markdown'
   };
+
+  if (message.reply_markup) {
+    payload.reply_markup = message.reply_markup;
+  }
 
   try {
     const response = await fetch(apiUrl, {
@@ -81,19 +75,24 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
     }
 
     try {
-        const employees = await getAllEmployees();
-        const employeeList = employees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}` }));
+        const allEmployees = await getAllEmployees();
+        // Find the employee profile linked to the user
+        const currentEmployee = allEmployees.find(e => e.id === finekoUser.id);
+        const allowedCommands = currentEmployee?.telegramPermissions || [];
+
+        const employeeList = allEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}` }));
 
         const aiResult = await parseTelegramCommand({
             command: text,
             employees: employeeList,
+            allowedCommands: allowedCommands,
         });
 
         switch (aiResult.command) {
             case 'create_task':
                 if (aiResult.parameters?.title) {
                     const assigneeName = aiResult.parameters.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
-                    const assignee = employees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
 
                     const newTaskData: Omit<Task, 'id'> = {
                         title: aiResult.parameters.title,
@@ -101,7 +100,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         status: 'todo',
                         type: 'important-not-urgent',
                         expectedTime: 30,
-                        assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { name: assigneeName },
+                        assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { id: 'unknown', name: assigneeName },
                         reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}` },
                     };
                     const createdTask = await createTaskInDb(newTaskData);
@@ -114,7 +113,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             case 'create_result':
                  if (aiResult.parameters?.title) {
                     const assigneeName = aiResult.parameters.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
-                    const assignee = employees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
                     const twoWeeksFromNow = new Date();
                     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
@@ -137,7 +136,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 break;
 
             case 'list_employees':
-                const employeeNames = employees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
+                const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
                 await sendTelegramReply(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
                 break;
 
@@ -147,7 +146,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
 
             case 'unknown':
             default:
-                await sendTelegramReply(chat.id, { text: aiResult.reply || "Вибачте, я не зрозумів ваш запит. Спробуйте перефразувати." });
+                await sendTelegramReply(chat.id, { text: aiResult.reply || "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
                 break;
         }
     } catch (error) {
@@ -213,10 +212,9 @@ export async function POST(request: NextRequest) {
                 const redirectUrl = `${APP_URL}/auth/telegram/callback?token=${tempToken}`;
 
                 await sendTelegramReply(chat.id, {
-                    text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід. Також ви можете використовувати меню для швидкого доступу до основних розділів.",
+                    text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
                     reply_markup: {
                         inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]],
-                        ...mainMenu
                     }
                 });
                 return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
@@ -224,7 +222,8 @@ export async function POST(request: NextRequest) {
         } 
         // --- Natural Language Command Handler ---
         else if (chat.type === 'private' || ( (chat.type === 'group' || chat.type === 'supergroup') && (isBotMentioned || isReplyToBot) )) {
-            await handleNaturalLanguageCommand(chat, fromUser, text);
+            const commandText = text.replace(`@${BOT_USERNAME}`, '').trim();
+            await handleNaturalLanguageCommand(chat, fromUser, commandText);
             return NextResponse.json({ status: 'ok', message: 'Command processed.' });
         }
     }
