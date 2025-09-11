@@ -15,6 +15,7 @@ import {
   ConversationalAuditInputSchema,
   ConversationalAuditOutputSchema,
   AuditStructureSchema,
+  ConversationTurn,
   ConversationTurnSchema,
 } from '@/ai/types';
 import {z} from 'zod';
@@ -50,18 +51,19 @@ You MUST conduct the entire conversation in UKRAINIAN.
 - Start your questions with friendly, natural-sounding phrases. For example, instead of just asking "How many employees are there?", you could say "Чудово, дякую! Давайте тепер поговоримо про вашу команду. Скільки у вас співробітників?" (Great, thanks! Now let's talk about your team. How many employees do you have?).
 
 **Your Task:**
-1. You will be given the current state of the JSON summary and the full conversation history.
-2. Your primary goal is to gather information to fill out the 'updatedSummary' JSON object.
-3. Based on the user's LAST response, update the JSON summary with any new information you've learned.
-4. Then, formulate the VERY NEXT question you need to ask to continue gathering information according to the audit plan below.
-5. If the user's answer is vague, ask a clarifying question in a friendly manner.
-6. If the user goes off-topic, gently guide them back to the audit plan.
-7. Keep your questions concise and ask only one question at a time.
+1.  You will be given the current state of the JSON summary and the full conversation history.
+2.  Your primary goal is to gather information to fill out the 'updatedSummary' JSON object.
+3.  Encourage the user to provide detailed, comprehensive answers. If an answer seems too short or general, ask a friendly follow-up question to elicit more detail. For example: "Дякую! А можете розповісти про це трохи детальніше?"
+4.  Based on the user's LAST response, update the JSON summary with any new information you've learned.
+5.  Then, formulate the VERY NEXT question you need to ask to continue gathering information according to the audit plan below.
+6.  If the user's answer is vague, ask a clarifying question in a friendly manner.
+7.  If the user goes off-topic, gently guide them back to the audit plan.
+8.  Keep your questions concise and ask only one question at a time.
 
 **Audit Plan (Follow this order):**
 1.  **Company Profile:**
     *   What does the company do? What is its main product or service? Are there multiple?
-    *   What is the main business process in one sentence? (e.g., "We get clients from ads, consult them, and they pay for the service").
+    *   What is the main business process? When you ask this, first briefly explain what a business process is (the sequence of steps from attracting a client to delivering the service). Then, start with a guiding question like, "Давайте пройдемося по вашому основному бізнес-процесу. З чого все починається? Як клієнти про вас дізнаються?" (Let's walk through your main business process. What does it start with? How do clients learn about you?).
 2.  **Team & Roles:**
     *   How many employees are there?
     *   Who performs which role in the main business process? What other duties do they have?
