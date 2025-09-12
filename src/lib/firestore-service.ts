@@ -163,6 +163,37 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
     return { newCompanyId: newCompanyRef.id };
 }
 
+export async function removeEmployeeLink(userId: string, companyId: string): Promise<{ success: boolean; message: string }> {
+    firestoreGuard();
+
+    // 1. Check if the user is the owner of the company
+    const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId);
+    const companyDoc = await companyRef.get();
+    if (!companyDoc.exists) {
+        return { success: false, message: "Компанію не знайдено." };
+    }
+    if (companyDoc.data()?.ownerId === userId) {
+        return { success: false, message: "Власник не може покинути компанію. Спочатку передайте права власності." };
+    }
+
+    // 2. Find the employee link document
+    const employeeLinkQuery = await firestore.collection(EMPLOYEES_COLLECTION)
+        .where('userId', '==', userId)
+        .where('companyId', '==', companyId)
+        .limit(1)
+        .get();
+
+    if (employeeLinkQuery.empty) {
+        return { success: false, message: "Ви не є учасником цієї компанії." };
+    }
+
+    // 3. Delete the document
+    const docToDelete = employeeLinkQuery.docs[0];
+    await docToDelete.ref.delete();
+
+    return { success: true, message: "Ви успішно покинули компанію." };
+}
+
 
 // --- Tasks ---
 export const getAllTasksForCompany = (companyId: string) => getByQuery<Task>(TASKS_COLLECTION, 'companyId', companyId);

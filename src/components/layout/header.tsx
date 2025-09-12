@@ -8,13 +8,15 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/lib/api';
+import Link from 'next/link';
 
 export default function Header() {
   const router = useRouter();
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    // Use window.location to force a full reload and clear state
+    window.location.href = '/login';
   };
 
   return (
@@ -36,15 +38,17 @@ export default function Header() {
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
+            <DropdownMenuItem asChild>
+              <Link href="/settings/companies">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Налаштування</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
+              <span>Вийти</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
