@@ -7,8 +7,10 @@ export type ConversationTurn = {
 };
 
 export type WorkPlanItem = {
+    department: string;
     problem: string;
     solution: string;
+    timelineMonths: number;
 }
 
 export interface Audit {
