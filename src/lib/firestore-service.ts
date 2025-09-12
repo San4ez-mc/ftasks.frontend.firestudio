@@ -79,7 +79,7 @@ async function create<T extends { id?: string }>(collectionName: string, data: O
 
 async function update<T>(collectionName: string, docId: string, companyId: string, updates: Partial<T>): Promise<T | null> {
   firestoreGuard();
-  const doc = await getDocAndValidateCompany<T>(collectionName, docId, companyId);
+  const doc = await getDocAndValidateCompany<T & {id: string}>(collectionName, docId, companyId);
   if (!doc) {
       return null;
   }
@@ -140,12 +140,25 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
     firestoreGuard();
     const batch = firestore.batch();
 
+    // Create the company
     const newCompanyRef = firestore.collection(COMPANIES_COLLECTION).doc();
     batch.set(newCompanyRef, { name: companyName, ownerId: userId });
 
+    // Create the employee link
     const newEmployeeLinkRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
     batch.set(newEmployeeLinkRef, { userId, companyId: newCompanyRef.id, status: 'active', notes: 'Company creator' });
     
+    // Also create a company profile
+    const user = await getUserById(userId);
+    if(user) {
+        const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
+        batch.set(companyProfileRef, {
+            name: companyName,
+            description: `Компанія ${companyName}`,
+            adminId: user.id
+        });
+    }
+
     await batch.commit();
     return { newCompanyId: newCompanyRef.id };
 }
@@ -172,10 +185,18 @@ export const deleteTemplateFromDb = (companyId: string, id: string) => remove(TE
 // --- Employees ---
 export const getAllEmployeesForCompany = (companyId: string) => getByQuery<Employee>(EMPLOYEES_COLLECTION, 'companyId', companyId);
 export const updateEmployeeInDb = (companyId: string, id: string, updates: Partial<Employee>) => update<Employee>(EMPLOYEES_COLLECTION, id, companyId, updates);
+export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyId: string } | null> => {
+    const links = await getByQuery<{ companyId: string }>(EMPLOYEES_COLLECTION, 'userId', userId);
+    return links[0] || null; // Return the first company link found
+};
 
 // --- Company Profile ---
 export const getCompanyProfileFromDb = (companyId: string) => getDocAndValidateCompany<CompanyProfile>(COMPANY_PROFILES_COLLECTION, companyId, companyId);
-export const updateCompanyProfileInDb = (companyId: string, updates: Partial<CompanyProfile>) => update<CompanyProfile>(COMPANY_PROFILES_COLLECTION, companyId, companyId, updates);
+export const updateCompanyProfileInDb = (companyId: string, updates: Partial<CompanyProfile>) => {
+    firestoreGuard();
+    const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
+    return docRef.update(updates).then(() => getCompanyProfileFromDb(companyId));
+};
 
 // --- Processes ---
 export const getAllProcessesForCompany = (companyId: string) => getByQuery<Process>(PROCESSES_COLLECTION, 'companyId', companyId);
@@ -213,12 +234,13 @@ export const linkTelegramGroup = async (code: string, companyId: string): Promis
         throw new Error("Невірний або застарілий код.");
     }
 
-    const existingGroup = await findTelegramGroupByTgId(codeData.tgGroupId);
+    const existingGroups = await getByQuery<TelegramGroup & { id: string }>(GROUPS_COLLECTION, 'tgGroupId', codeData.tgGroupId);
+    const existingGroup = existingGroups.find(g => g.companyId === companyId);
 
     await codeRef.delete();
 
     if (existingGroup) {
-        const updatedGroup = await update<TelegramGroup>(GROUPS_COLLECTION, existingGroup.id, companyId, { title: codeData.groupTitle, linkedAt: new Date().toISOString(), companyId });
+        const updatedGroup = await update<TelegramGroup>(GROUPS_COLLECTION, existingGroup.id, companyId, { title: codeData.groupTitle, linkedAt: new Date().toISOString() });
         if (!updatedGroup) throw new Error("Failed to update existing group.");
         return { group: updatedGroup, wasCreated: false };
     } else {

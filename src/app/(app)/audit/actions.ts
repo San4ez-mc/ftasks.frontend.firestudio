@@ -74,6 +74,11 @@ export type ContinueAuditResponse = {
 
 export async function continueAudit(input: ConversationalAuditInput): Promise<ContinueAuditResponse> {
     const companyId = await getCompanyIdOrThrow();
+    const currentAudit = await getAuditById(companyId, input.auditId);
+    
+    if (!currentAudit) {
+        return { success: false, error: "AUDIT_NOT_FOUND", userTranscript: "", updatedConversationHistory: [] };
+    }
 
     // 1. Get user transcript from audio or text
     let userTranscript: string;
@@ -91,16 +96,11 @@ export async function continueAudit(input: ConversationalAuditInput): Promise<Co
         }
     } catch (transcriptionError) {
         console.error("Transcription failed:", transcriptionError);
-        return { success: false, error: "TRANSCRIPTION_FAILED", userTranscript: "", updatedConversationHistory: input.conversationHistory };
+        return { success: false, error: "TRANSCRIPTION_FAILED", userTranscript: "", updatedConversationHistory: currentAudit.conversationHistory };
     }
 
 
     // 2. Save user's turn to the database immediately
-    const currentAudit = await getAuditById(companyId, input.auditId);
-    if (!currentAudit) {
-        return { success: false, error: "AUDIT_NOT_FOUND", userTranscript, updatedConversationHistory: input.conversationHistory };
-    }
-
     const updatedHistoryWithUser = [...currentAudit.conversationHistory, { role: 'user' as const, text: userTranscript }];
     await updateAuditInDb(companyId, input.auditId, { conversationHistory: updatedHistoryWithUser });
 

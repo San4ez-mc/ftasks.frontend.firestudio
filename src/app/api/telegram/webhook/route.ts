@@ -3,11 +3,22 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
 import { parseTelegramCommand } from '@/ai/flows/telegram-command-flow';
-import { getAllEmployees, createTaskInDb, createResultInDb, getAllTasks, updateTaskInDb, getAllResults, updateResultInDb } from '@/lib/firestore-service';
+import { 
+    createTaskInDb, 
+    createResultInDb, 
+    updateTaskInDb, 
+    updateResultInDb,
+    getAllTasksForCompany,
+    getAllResultsForCompany,
+    getAllEmployeesForCompany,
+    getEmployeeLinkForUser,
+    findTelegramGroupByTgId,
+    upsertTelegramMember,
+    getMembersForGroupDb,
+} from '@/lib/firestore-service';
 import { sendTelegramMessage } from '@/lib/telegram-service';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
-import type { Employee } from '@/types/company';
 import { ai } from '@/ai/genkit';
 
 
@@ -42,9 +53,15 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
         return;
     }
 
+    const employeeLink = await getEmployeeLinkForUser(finekoUser.id);
+    if (!employeeLink) {
+        await sendTelegramMessage(chat.id, { text: "Ваш профіль не прив'язаний до жодної компанії." });
+        return;
+    }
+    const { companyId } = employeeLink;
+
     try {
-        const allEmployees = await getAllEmployees();
-        // Find the employee profile linked to the user
+        const allEmployees = await getAllEmployeesForCompany(companyId);
         const currentEmployee = allEmployees.find(e => e.id === finekoUser.id);
         const allowedCommands = currentEmployee?.telegramPermissions || [];
 
@@ -73,7 +90,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { id: 'unknown', name: assigneeName },
                         reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}` },
                     };
-                    const createdTask = await createTaskInDb(newTaskData);
+                    const createdTask = await createTaskInDb(companyId, newTaskData);
                     await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
                 } else {
                      await sendTelegramMessage(chat.id, { text: "Не вдалося створити задачу. Спробуйте ще раз, вказавши назву." });
@@ -98,7 +115,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         expectedResult: '',
                         subResults: [], tasks: [], templates: [], comments: [], accessList: [],
                     };
-                    const createdResult = await createResultInDb(newResultData);
+                    const createdResult = await createResultInDb(companyId, newResultData);
                     await sendTelegramMessage(chat.id, { text: `🎯 Результат створено: "${createdResult.name}" для ${assigneeName}.` });
                 } else {
                      await sendTelegramMessage(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
@@ -107,10 +124,10 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             
             case 'edit_task_title':
                 if (params?.targetTitle && params.newTitle) {
-                    const allTasks = await getAllTasks();
+                    const allTasks = await getAllTasksForCompany(companyId);
                     const taskToEdit = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
                     if (taskToEdit) {
-                        await updateTaskInDb(taskToEdit.id, { title: params.newTitle });
+                        await updateTaskInDb(companyId, taskToEdit.id, { title: params.newTitle });
                         await sendTelegramMessage(chat.id, { text: `✅ Назву задачі оновлено на "${params.newTitle}".` });
                     } else {
                         await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
@@ -122,7 +139,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
 
             case 'add_comment_to_result':
                  if (params?.targetTitle && params.commentText) {
-                    const allResults = await getAllResults();
+                    const allResults = await getAllResultsForCompany(companyId);
                     const resultToComment = allResults.find(r => r.name.toLowerCase() === params.targetTitle?.toLowerCase());
                     if (resultToComment) {
                         const newComment = {
@@ -132,7 +149,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                             timestamp: new Date().toLocaleString('uk-UA')
                         };
                         const updatedComments = [...(resultToComment.comments || []), newComment];
-                        await updateResultInDb(resultToComment.id, { comments: updatedComments });
+                        await updateResultInDb(companyId, resultToComment.id, { comments: updatedComments });
                         await sendTelegramMessage(chat.id, { text: `💬 Коментар додано до результату "${params.targetTitle}".` });
                     } else {
                         await sendTelegramMessage(chat.id, { text: `❌ Не знайдено результат з назвою "${params.targetTitle}".` });
@@ -185,6 +202,26 @@ async function getTelegramAudioDataUri(fileId: string): Promise<string> {
     const base64String = Buffer.from(audioBuffer).toString('base64');
     
     return `data:audio/ogg;base64,${base64String}`;
+}
+
+async function handleFirstGroupMessage(chatId: number, chatTitle: string, user: TelegramUser) {
+    const group = await findTelegramGroupByTgId(chatId.toString());
+    if (!group) return; // Not a group linked to our system
+
+    const members = await getMembersForGroupDb(group.companyId, group.id);
+    const isExistingMember = members.some(m => m.tgUserId === user.id.toString());
+
+    if (!isExistingMember) {
+        await upsertTelegramMember(group.companyId, {
+            groupId: group.id,
+            tgUserId: user.id.toString(),
+            tgFirstName: user.first_name,
+            tgLastName: user.last_name || '',
+            tgUsername: user.username || '',
+        });
+        const username = user.username ? `@${user.username}` : `${user.first_name} ${user.last_name || ''}`;
+        await sendTelegramMessage(chatId, { text: `✅ Користувача ${username} додано до компанії "${group.title}".` });
+    }
 }
 
 /**
@@ -284,6 +321,13 @@ export async function POST(request: NextRequest) {
             const commandText = text.replace(`@${BOT_USERNAME}`, '').trim();
             await handleNaturalLanguageCommand(chat, fromUser, commandText);
             return NextResponse.json({ status: 'ok', message: 'Command processed.' });
+        }
+        // --- New Member Discovery Handler ---
+        else if (text && (chat.type === 'group' || chat.type === 'supergroup')) {
+            await handleFirstGroupMessage(chat.id, chat.title, fromUser);
+            // This can fall through, so the message is not just "swallowed" if other logic needs to process it.
+            // For now, we'll stop here.
+            return NextResponse.json({ status: 'ok', message: 'Member discovery checked.' });
         }
     }
 
