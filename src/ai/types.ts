@@ -128,8 +128,6 @@ export type AuditStructure = z.infer<typeof AuditStructureSchema>;
 export const ConversationalAuditInputSchema = z.object({
     userAudioDataUri: z.string().describe("A chunk of the user's spoken answer, as a data URI that must include a MIME type and use Base64 encoding.").optional(),
     userText: z.string().describe("The user's answer as text.").optional(),
-    conversationHistory: z.array(ConversationTurnSchema),
-    currentSummary: AuditStructureSchema,
     auditId: z.string(),
 }).refine(data => !!data.userAudioDataUri || !!data.userText, {
     message: "Either userAudioDataUri or userText must be provided.",
@@ -148,8 +146,10 @@ export type ConversationalAuditOutput = z.infer<typeof ConversationalAuditOutput
 
 // From work-plan-flow.ts
 export const WorkPlanItemSchema = z.object({
+    department: z.string().describe("The business department this item relates to (e.g., 'Marketing', 'Sales'). Must be in Ukrainian."),
     problem: z.string().describe("A concise description of the identified problem or weakness. Must be in Ukrainian."),
     solution: z.string().describe("A concise description of the proposed solution or desired future state. Must be in Ukrainian."),
+    timelineMonths: z.number().describe("The estimated number of months to implement the solution."),
 });
 export type WorkPlanItem = z.infer<typeof WorkPlanItemSchema>;
 

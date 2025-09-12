@@ -6,15 +6,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, Mic, Square, Wand2, AlertTriangle, Send, Sparkles, FileText, ArrowRight, ClipboardCopy, Trash2 } from 'lucide-react';
-import { continueAudit, getAudit, updateAudit, generateWorkPlan, deleteAudit } from '../actions';
+import { Loader2, Mic, Square, Wand2, AlertTriangle, Send, Sparkles, FileText, ArrowRight, ClipboardCopy, RefreshCcw } from 'lucide-react';
+import { continueAudit, getAudit, updateAudit, generateWorkPlan, retryAiProcessing } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Audit, ConversationTurn, WorkPlanItem } from '@/types/audit';
 import type { AuditStructure } from '@/ai/types';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,8 +23,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 type AuditPageProps = {
@@ -93,10 +93,34 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
     const [currentTranscript, setCurrentTranscript] = useState('');
     const [textInput, setTextInput] = useState('');
     const conversationEndRef = useRef<HTMLDivElement>(null);
+    const [aiError, setAiError] = useState(false);
+    const [auditDuration, setAuditDuration] = useState('');
+    const summaryContentRef = useRef<HTMLDivElement>(null);
+
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            const seconds = Math.floor((Date.now() - new Date(audit.createdAt).getTime()) / 1000);
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            setAuditDuration(`${h}:${m}:${s}`);
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [audit.createdAt]);
+    
 
      useEffect(() => {
         conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
      }, [audit?.conversationHistory]);
+
+     useEffect(() => {
+        summaryContentRef.current?.scrollTo({
+            top: summaryContentRef.current.scrollHeight,
+            behavior: 'smooth'
+        });
+     }, [audit?.structuredSummary]);
+
 
     const startRecording = async () => {
         try {
@@ -143,6 +167,7 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
         
         setCurrentTranscript('');
         if (text) setTextInput('');
+        setAiError(false);
 
         startTransition(async () => {
             try {
@@ -150,22 +175,23 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
                     auditId: audit.id,
                     userAudioDataUri: audioDataUri,
                     userText: text,
-                    conversationHistory: audit.conversationHistory,
-                    currentSummary: audit.structuredSummary,
                 });
 
-                if (result.userTranscript) setCurrentTranscript(result.userTranscript);
-                
-                const updatedAudit = await updateAudit(audit.id, {
-                    structuredSummary: result.updatedStructuredSummary,
-                    conversationHistory: result.updatedConversationHistory,
-                });
-
-                if (updatedAudit) setAudit(updatedAudit);
+                if (result.success) {
+                    if (result.data.userTranscript) setCurrentTranscript(result.data.userTranscript);
+                    
+                    const updatedAudit = await getAudit(audit.id);
+                    if (updatedAudit) setAudit(updatedAudit);
+                } else {
+                    toast({ title: "Помилка AI", description: "Вашу відповідь збережено, але ШІ не зміг її обробити. Спробуйте ще раз.", variant: "destructive" });
+                    const fetchedAudit = await getAudit(audit.id);
+                    if (fetchedAudit) setAudit(fetchedAudit);
+                    setAiError(true);
+                }
 
             } catch (error) {
                 console.error("Error in audit turn:", error);
-                toast({ title: "Помилка AI", description: "Не вдалося обробити вашу відповідь.", variant: "destructive" });
+                toast({ title: "Критична помилка", description: "Не вдалося зберегти вашу відповідь.", variant: "destructive" });
             }
         });
     };
@@ -175,10 +201,28 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
             handleSubmit(undefined, textInput.trim());
         }
     }
+    
+    const handleRetry = () => {
+        setAiError(false);
+        startTransition(async () => {
+            const result = await retryAiProcessing(audit.id);
+            if (result.success) {
+                 const updatedAudit = await getAudit(audit.id);
+                 if (updatedAudit) setAudit(updatedAudit);
+            } else {
+                toast({ title: "Помилка AI", description: "Спроба не вдалася. Спробуйте ще раз пізніше.", variant: "destructive" });
+                setAiError(true);
+            }
+        });
+    }
 
     return (
-         <div className="flex flex-col md:flex-row h-full">
+         <div className="flex flex-col md:flex-row h-[calc(100vh-4rem)]">
             <div className="flex flex-col flex-1 p-4 md:p-8 space-y-4">
+                 <div className="flex items-center justify-between border-b pb-2">
+                    <h2 className="text-lg font-semibold">Діалог з AI-консультантом</h2>
+                    <div className="font-mono text-lg">{auditDuration}</div>
+                </div>
                 <div className="flex-1 space-y-4 overflow-y-auto pr-4">
                 {(audit.conversationHistory || []).map((turn, index) => (
                     <div key={index} className={cn("flex items-start gap-4", turn.role === 'user' && "justify-end")}>
@@ -188,7 +232,7 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
                         </div>
                     </div>
                 ))}
-                {isPending && (
+                {isPending && !aiError && (
                     <div className="flex items-start gap-4">
                         <div className="w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center shrink-0"><Wand2 className="h-5 w-5"/></div>
                         <div className="p-3 rounded-lg bg-muted flex items-center gap-2">
@@ -196,6 +240,19 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
                             <span className="text-sm text-muted-foreground">{currentTranscript ? 'Аналізую...' : 'Обробка...'}</span>
                         </div>
                     </div>
+                )}
+                {aiError && (
+                    <Alert variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Помилка обробки</AlertTitle>
+                        <AlertDescription className="flex items-center justify-between">
+                            <span>Вашу відповідь збережено.</span>
+                            <Button variant="secondary" size="sm" onClick={handleRetry} disabled={isPending}>
+                                {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+                                <span className="ml-2">Повторити</span>
+                            </Button>
+                        </AlertDescription>
+                    </Alert>
                 )}
                 <div ref={conversationEndRef} />
                 </div>
@@ -223,7 +280,7 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
                     {isRecording && <span className="text-sm font-mono min-w-[50px] text-center">{recordingSeconds}s</span>}
                 </div>
             </div>
-            <aside className="w-full md:w-1/3 lg:w-2/5 bg-card border-l p-6 flex flex-col">
+            <aside className="w-full md:w-1/3 lg:w-2/5 bg-card border-l p-6 flex flex-col h-full">
                  <CardHeader className="p-0">
                     <CardTitle className="flex items-center gap-2">
                         <FileText />
@@ -231,7 +288,7 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
                     </CardTitle>
                     <CardDescription>Результати оновлюються після кожної вашої відповіді.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 p-0 mt-6 space-y-4 overflow-y-auto">
+                <CardContent ref={summaryContentRef} className="flex-1 p-0 mt-6 space-y-4 overflow-y-auto">
                     <StructuredSummaryView summary={audit.structuredSummary} />
                 </CardContent>
                  <div className="pt-4 border-t mt-4">
@@ -247,35 +304,36 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
 
 function CompletedAuditView({ audit }: { audit: Audit }) {
   return (
-    <div className="grid md:grid-cols-2 h-full overflow-hidden">
-      {/* Left Panel: Current Situation & Team Audit */}
-      <div className="flex flex-col p-6 border-r overflow-y-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <FileText />
-            Поточна ситуація (Результати аудиту)
-          </CardTitle>
-          <CardDescription>Зведений аналіз на основі вашого діалогу.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <StructuredSummaryView summary={audit.structuredSummary} />
-        </CardContent>
+    <div className="flex flex-col h-full p-6 overflow-y-auto">
         <TeamAuditProposal audit={audit} />
-      </div>
+        <Separator className="my-8" />
+        <div className="grid lg:grid-cols-2 gap-8">
+            <div className="flex flex-col">
+                <CardHeader className="px-0">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                        <FileText />
+                        Поточна ситуація (Результати аудиту)
+                    </CardTitle>
+                    <CardDescription>Зведений аналіз на основі вашого діалогу.</CardDescription>
+                </CardHeader>
+                <CardContent className="px-0 space-y-4">
+                    <StructuredSummaryView summary={audit.structuredSummary} />
+                </CardContent>
+            </div>
 
-      {/* Right Panel: Work Plan */}
-      <div className="flex flex-col p-6 overflow-y-auto bg-muted/40">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Sparkles />
-            План робіт після консалтингу
-          </CardTitle>
-          <CardDescription>Рекомендовані кроки для систематизації та покращення вашого бізнесу.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <WorkPlanView workPlan={audit.workPlan || []} />
-        </CardContent>
-      </div>
+            <div className="flex flex-col">
+                <CardHeader className="px-0">
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                        <Sparkles />
+                        План робіт після консалтингу
+                    </CardTitle>
+                    <CardDescription>Рекомендовані кроки для систематизації та покращення вашого бізнесу.</CardDescription>
+                </CardHeader>
+                <CardContent className="px-0">
+                    <WorkPlanView workPlan={audit.workPlan || []} />
+                </CardContent>
+            </div>
+        </div>
     </div>
   );
 }
@@ -341,19 +399,38 @@ function WorkPlanView({ workPlan }: { workPlan: WorkPlanItem[] }) {
         );
     }
 
+    const groupedByDepartment = workPlan.reduce((acc, item) => {
+        const dept = item.department || "Загальне";
+        if (!acc[dept]) {
+            acc[dept] = [];
+        }
+        acc[dept].push(item);
+        return acc;
+    }, {} as Record<string, WorkPlanItem[]>);
+
     return (
-        <div className="space-y-6">
-            <div className="space-y-4">
-                {workPlan.map((item, index) => (
-                    <div key={index} className="p-4 border rounded-lg">
-                        <h4 className="font-semibold text-destructive">Проблема (як є зараз)</h4>
-                        <p className="text-muted-foreground text-sm mt-1">{item.problem}</p>
-                        <h4 className="font-semibold text-primary mt-3">Рішення (як має бути)</h4>
-                        <p className="text-sm mt-1">{item.solution}</p>
-                    </div>
-                ))}
-            </div>
-            <div className="text-center pt-4">
+        <div className="space-y-8">
+            {Object.entries(groupedByDepartment).map(([department, items]) => (
+                <Card key={department} className="bg-muted/30">
+                    <CardHeader>
+                        <CardTitle className="text-lg">{department}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {items.map((item, index) => (
+                            <div key={index} className="p-4 border rounded-lg bg-background">
+                                <h4 className="font-semibold text-destructive">Проблема (як є зараз)</h4>
+                                <p className="text-muted-foreground text-sm mt-1">{item.problem}</p>
+                                <h4 className="font-semibold text-primary mt-3">Рішення (як має бути)</h4>
+                                <p className="text-sm mt-1">{item.solution}</p>
+                                <Badge variant="outline" className="mt-3">
+                                    Орієнтовний термін: {item.timelineMonths} міс.
+                                </Badge>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            ))}
+             <div className="text-center pt-4">
                  <Button asChild>
                     <Link href="https://ring-asterisk-327.notion.site/246549e42c9a800d8f21f75d1ddb2e77?source=copy_link" target="_blank" rel="noopener noreferrer">
                         Отримати комерційну пропозицію <ArrowRight className="ml-2 h-4 w-4"/>
@@ -379,19 +456,20 @@ function TeamAuditProposal({ audit }: { audit: Audit }) {
     };
 
     return (
-        <Card className="mt-8">
+        <Card className="bg-primary/5 border-primary/20">
             <CardHeader>
-                <CardTitle>Проведіть аудит команди</CardTitle>
-                <CardDescription>
-                    Щоб отримати повну картину, важливо почути думку кожного члена команди. Надішліть їм персональні посилання для проходження короткого аудиту.
+                <CardTitle className="text-xl">Наступний крок: Аудит команди</CardTitle>
+                <CardDescription className="text-base">
+                    Ви можете переглянути попередні результати аудиту нижче, але для повної та об'єктивної картини ми наполегливо рекомендуємо зібрати думки ключових співробітників.
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                 <p className="mb-4 text-sm">Надішліть їм персональні посилання для проходження короткого анонімного аудиту. Після того, як всі пройдуть опитування, ми надішлемо вам зведений звіт.</p>
                 <ul className="space-y-2">
                     {teamMembers.map((name, index) => (
-                        <li key={index} className="flex items-center justify-between p-2 border rounded-md">
+                        <li key={index} className="flex items-center justify-between p-3 border rounded-md bg-background">
                             <span className="font-medium text-sm">{name} <span className="text-xs text-muted-foreground ml-2">(статус: очікується)</span></span>
-                            <Button size="sm" variant="outline" onClick={() => handleCopyLink(name)}>
+                            <Button size="sm" variant="secondary" onClick={() => handleCopyLink(name)}>
                                 <ClipboardCopy className="mr-2 h-4 w-4" />
                                 Копіювати посилання
                             </Button>
@@ -400,5 +478,5 @@ function TeamAuditProposal({ audit }: { audit: Audit }) {
                 </ul>
             </CardContent>
         </Card>
-    )
+    );
 }

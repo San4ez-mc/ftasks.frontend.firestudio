@@ -29,17 +29,19 @@ const workPlanPrompt = ai.definePrompt({
 Focus on identifying systemic weaknesses, especially those related to the "owner's trap" where the business is too dependent on the owner.
 
 For each identified weakness, create a clear "Problem" and "Solution" pair.
+- **Department:** Categorize the problem into a relevant business department (e.g., "Маркетинг", "Продажі", "Фінанси", "Операційна діяльність", "Команда та ролі").
 - **Problem:** A concise statement of the current issue (e.g., "CRM system is not used," "No formal hiring process," "Owner is the only person closing sales").
 - **Solution:** A description of the desired future state, framed as an achievable goal (e.g., "CRM system is configured for company processes, tracking leads and sales," "A documented hiring and onboarding process is implemented," "Sales scripts are created and a sales manager is trained to handle deals").
+- **Timeline:** Provide an estimated implementation timeline in months for each solution.
 
-The entire output, including both problems and solutions, MUST be in UKRAINIAN.
+The entire output, including all fields, MUST be in UKRAINIAN.
 
 Here is the business audit summary:
 \`\`\`json
 {{{json structuredSummary}}}
 \`\`\`
 
-Now, provide the work plan as a JSON array of objects, where each object has a 'problem' and a 'solution' key.
+Now, provide the work plan as a JSON array of objects, where each object has a 'department', 'problem', 'solution', and 'timelineMonths' key.
 `,
 });
 
