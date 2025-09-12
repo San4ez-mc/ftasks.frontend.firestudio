@@ -362,12 +362,16 @@ function MemberManagementCard({ group }: { group: TelegramGroup }) {
 
     const fetchMembers = () => {
         startTransition(async () => {
-            const [fetchedMembers, fetchedEmployees] = await Promise.all([
-                getGroupMembers(group.id),
-                getEmployees()
-            ]);
-            setMembers(fetchedMembers);
-            setEmployees(fetchedEmployees);
+            try {
+                const [fetchedMembers, fetchedEmployees] = await Promise.all([
+                    getGroupMembers(group.id),
+                    getEmployees()
+                ]);
+                setMembers(fetchedMembers);
+                setEmployees(fetchedEmployees);
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося завантажити дані.", variant: "destructive" });
+            }
         });
     }
 
@@ -378,9 +382,13 @@ function MemberManagementCard({ group }: { group: TelegramGroup }) {
     
     const handleRefreshMembers = () => {
         startTransition(async () => {
-            const updatedMembers = await refreshGroupMembers(group.id);
-            setMembers(updatedMembers);
-            toast({ title: "Склад оновлено!", description: "Список учасників синхронізовано." });
+            try {
+                const updatedMembers = await refreshGroupMembers(group.id, group.tgGroupId);
+                setMembers(updatedMembers);
+                toast({ title: "Склад оновлено!", description: "Список адміністраторів синхронізовано." });
+            } catch (error) {
+                 toast({ title: "Помилка", description: error instanceof Error ? error.message : "Не вдалося оновити склад.", variant: "destructive" });
+            }
         });
     }
 
@@ -400,7 +408,9 @@ function MemberManagementCard({ group }: { group: TelegramGroup }) {
          <Card id="member-management-card">
             <CardHeader>
                 <CardTitle>Склад Telegram-групи</CardTitle>
-                <CardDescription>Учасники групи та їх статус у компанії.</CardDescription>
+                <CardDescription>
+                    Відображаються адміністратори групи. Щоб бот бачив звичайних учасників, вимкніть для нього режим конфіденційності в BotFather.
+                </CardDescription>
                 <div className="flex gap-2 pt-2">
                     <Button size="sm" variant="outline" onClick={handleRefreshMembers} disabled={isPending}>
                         {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4" />}
@@ -527,5 +537,3 @@ function MessageLogCard({ group }: { group: TelegramGroup }) {
         </Card>
     )
 }
-
-    

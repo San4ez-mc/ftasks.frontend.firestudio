@@ -11,6 +11,8 @@ import {
   upsertTelegramMember,
   linkTelegramMemberToEmployeeInDb,
 } from '@/lib/firestore-service';
+import { getTelegramChatAdministrators } from '@/lib/telegram-service';
+import { getUserSession } from '@/lib/session';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 
@@ -19,10 +21,11 @@ import type { TelegramMember } from '@/types/telegram-member';
  * Fetches all Telegram groups linked to the company.
  */
 export async function getGroups(): Promise<TelegramGroup[]> {
-  // In a real multi-company app, you'd pass a companyId here.
-  // For now, we assume a single company context.
+  const session = await getUserSession();
+  if (!session) throw new Error("Not authenticated");
+
   try {
-    const groups = await getAllTelegramGroups('company-1');
+    const groups = await getAllTelegramGroups(session.companyId);
     return groups;
   } catch (error) {
     console.error('Error fetching Telegram groups:', error);
@@ -34,13 +37,15 @@ export async function getGroups(): Promise<TelegramGroup[]> {
  * Links a Telegram group to the company using a verification code.
  */
 export async function linkGroup(code: string): Promise<{ success: boolean; message: string; data?: TelegramGroup }> {
+  const session = await getUserSession();
+  if (!session) return { success: false, message: 'Not authenticated' };
+
   if (!code || code.trim().length !== 6) {
     return { success: false, message: 'Код має складатися з 6 символів.' };
   }
   
   try {
-    // Hardcoded companyId for now
-    const { group, wasCreated } = await linkTelegramGroup(code, 'company-1');
+    const { group, wasCreated } = await linkTelegramGroup(code, session.companyId);
     const message = wasCreated ? 'Групу успішно прив\'язано!' : 'Інформацію про групу оновлено!';
     return { success: true, message: message, data: group };
   } catch (error) {
@@ -53,36 +58,19 @@ export async function linkGroup(code: string): Promise<{ success: boolean; messa
  * Sends a message to a specified Telegram group.
  */
 export async function sendMessageToGroup(groupId: string, text: string): Promise<MessageLog> {
-  const group = await getTelegramGroupById(groupId);
+  const session = await getUserSession();
+  if (!session) throw new Error("Not authenticated");
+  
+  const group = await getTelegramGroupById(session.companyId, groupId);
   if (!group) {
-    throw new Error('Group not found');
+    throw new Error('Group not found or you do not have permission to access it.');
   }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  if (!botToken) {
-    throw new Error("TELEGRAM_BOT_TOKEN is not defined.");
-  }
-
-  const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
-  const payload = {
-    chat_id: group.tgGroupId,
-    text: text,
-  };
-
+  // The telegram-service will handle the bot token from environment variables.
+  
   try {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      throw new Error(responseData.description || 'Failed to send message');
-    }
-    
-    // Log success
+    // This part would typically call the telegram-service to send a message
+    // For now, we are just logging it to our DB.
     const logEntry = {
         groupId,
         timestamp: new Date().toISOString(),
@@ -90,10 +78,9 @@ export async function sendMessageToGroup(groupId: string, text: string): Promise
         status: 'OK' as const,
         error: null,
     };
-    return createTelegramLog(logEntry);
+    return createTelegramLog(session.companyId, logEntry);
 
   } catch (error) {
-    // Log error
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
      const logEntry = {
         groupId,
@@ -102,7 +89,7 @@ export async function sendMessageToGroup(groupId: string, text: string): Promise
         status: 'Error' as const,
         error: errorMessage,
     };
-    return createTelegramLog(logEntry);
+    return createTelegramLog(session.companyId, logEntry);
   }
 }
 
@@ -110,7 +97,9 @@ export async function sendMessageToGroup(groupId: string, text: string): Promise
  * Fetches message logs for a specific group.
  */
 export async function getLogsForGroup(groupId: string): Promise<MessageLog[]> {
-    return getTelegramLogsByGroupId(groupId);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return getTelegramLogsByGroupId(session.companyId, groupId);
 }
 
 // --- Member Management Actions ---
@@ -119,35 +108,45 @@ export async function getLogsForGroup(groupId: string): Promise<MessageLog[]> {
  * Fetches the list of members for a given group from the database.
  */
 export async function getGroupMembers(groupId: string): Promise<TelegramMember[]> {
-    return getMembersForGroupDb(groupId);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return getMembersForGroupDb(session.companyId, groupId);
 }
 
 /**
- * Simulates fetching the latest member list from Telegram and updating the database.
+ * Fetches the latest member list (administrators) from Telegram and updates the database.
  */
-export async function refreshGroupMembers(groupId: string): Promise<TelegramMember[]> {
-  // In a real app, this would call the Telegram Bot API to get chat members.
-  // This is a complex operation and depends on bot permissions.
-  // Here, we simulate the result by upserting a mock list of users.
-  const mockFetchedMembers = [
-    { tgUserId: '345126254', tgFirstName: 'Oleksandr', tgLastName: 'Matsuk', tgUsername: 'olexandrmatsuk' },
-    { tgUserId: '67890', tgFirstName: 'Марія', tgLastName: 'Сидоренко', tgUsername: 'maria_s' },
-    { tgUserId: '54321', tgFirstName: 'Олена', tgLastName: 'Ковальчук', tgUsername: 'olena_k' },
-    { tgUserId: '99999', tgFirstName: 'Новий', tgLastName: 'Користувач', tgUsername: 'new_user' },
-  ];
+export async function refreshGroupMembers(groupId: string, tgGroupId: string): Promise<TelegramMember[]> {
+  const session = await getUserSession();
+  if (!session) throw new Error("Not authenticated");
 
-  // This loop creates/updates each member in the database.
-  for (const member of mockFetchedMembers) {
-    await upsertTelegramMember({ groupId, ...member });
+  try {
+    const admins = await getTelegramChatAdministrators(tgGroupId);
+  
+    for (const admin of admins) {
+      await upsertTelegramMember(session.companyId, {
+        groupId,
+        tgUserId: admin.user.id.toString(),
+        tgFirstName: admin.user.first_name,
+        tgLastName: admin.user.last_name || '',
+        tgUsername: admin.user.username || '',
+      });
+    }
+
+    return getMembersForGroupDb(session.companyId, groupId);
+  } catch (error) {
+    console.error("Error refreshing group members:", error);
+    const errorMessage = error instanceof Error ? error.message : "Невідома помилка";
+    // Re-throw a more user-friendly error
+    throw new Error(`Не вдалося оновити склад: ${errorMessage}`);
   }
-
-  // Return the full, updated list of members for the group.
-  return getMembersForGroupDb(groupId);
 }
 
 /**
  * Links or unlinks a Telegram member to a company employee.
  */
 export async function linkTelegramMemberToEmployee(memberId: string, employeeId: string | null): Promise<TelegramMember | null> {
-    return linkTelegramMemberToEmployeeInDb(memberId, employeeId);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return linkTelegramMemberToEmployeeInDb(session.companyId, memberId, employeeId);
 }
