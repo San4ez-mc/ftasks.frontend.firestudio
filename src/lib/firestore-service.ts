@@ -14,6 +14,7 @@ import type { Instruction } from '@/types/instruction';
 import type { CompanyProfile } from '@/types/company-profile';
 import type { Audit } from '@/types/audit';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
+import type { TelegramMember } from '@/types/telegram-member';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -27,6 +28,7 @@ const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
 const COMPANY_PROFILES_COLLECTION = 'company_profiles';
 const AUDITS_COLLECTION = 'audits';
 const TELEGRAM_LOGS_COLLECTION = 'telegramMessageLogs';
+const TELEGRAM_MEMBERS_COLLECTION = 'telegramMembers';
 
 
 const initialInstructions: Omit<Instruction, 'id'>[] = [
@@ -307,3 +309,28 @@ export async function getTelegramLogsByGroupId(groupId: string): Promise<Message
     // Return the most recent 20
     return logs.slice(0, 20);
 }
+
+
+// --- Telegram Members ---
+export const getMembersForGroup = (groupId: string) => getByQuery<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, 'groupId', groupId);
+
+export async function upsertTelegramMember(memberData: Omit<TelegramMember, 'id' | 'employeeId'>) {
+    firestoreGuard();
+    const membersRef = firestore.collection(TELEGRAM_MEMBERS_COLLECTION);
+    const q = membersRef.where('groupId', '==', memberData.groupId).where('tgUserId', '==', memberData.tgUserId).limit(1);
+    const snapshot = await q.get();
+
+    if (snapshot.empty) {
+        // Create new member, ensuring employeeId is null by default
+        await create<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, { ...memberData, employeeId: null });
+    } else {
+        // Update existing member (just in case their name/username changed), but preserve the existing employeeId
+        const docId = snapshot.docs[0].id;
+        const { tgUserId, groupId, ...updatableData } = memberData; // Don't overwrite the keys of the query
+        await update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, docId, updatableData);
+    }
+}
+
+export const linkTelegramMemberToEmployeeInDb = (memberId: string, employeeId: string | null) => {
+    return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, { employeeId });
+};

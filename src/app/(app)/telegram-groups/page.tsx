@@ -20,13 +20,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle, Send, Link as LinkIcon, RefreshCw, UserPlus, PlusCircle, X, ChevronsUpDown, Trash2, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -39,28 +32,14 @@ import {
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { Checkbox } from '@/components/ui/checkbox';
 import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getGroups, linkGroup, getLogsForGroup, sendMessageToGroup } from './actions';
+import { getGroups, linkGroup, getLogsForGroup, sendMessageToGroup, getGroupMembers, refreshGroupMembers, linkTelegramMemberToEmployee } from './actions';
+import { getEmployees } from '../company/actions';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
-
-
-// --- Mock Data (for details panel, to be replaced later) ---
-
-const mockTelegramMembers = [
-  { tg_user_id: '12345', name: 'Іван Петренко', username: 'ivan_p', status: 'linked', employee_id: 'emp-1' },
-  { tg_user_id: '67890', name: 'Марія Сидоренко', username: 'maria_s', status: 'created', employee_id: 'emp-2' },
-  { tg_user_id: '54321', name: 'Олена Ковальчук', username: 'olena_k', status: 'not_linked', employee_id: null },
-];
-
-const mockCompanyEmployees = [
-    { id: 'emp-1', name: 'Іван Петренко' },
-    { id: 'emp-2', name: 'Марія Сидоренко' },
-    { id: 'emp-3', name: 'Олена Ковальчук' },
-    { id: 'emp-4', name: 'Петро Іваненко' },
-];
+import type { TelegramMember } from '@/types/telegram-member';
+import type { Employee } from '@/types/company';
 
 
 // --- TOUR STEPS ---
@@ -261,15 +240,6 @@ export default function TelegramGroupsPage() {
 // --- Details Panel Component ---
 
 function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClose: () => void }) {
-    const { toast } = useToast();
-    
-    useEffect(() => {
-        toast({
-            title: "Оновлення складу",
-            description: `Автоматично оновлюємо список учасників для групи "${group.title}".`
-        });
-    }, [group.id, group.title, toast]);
-
     return (
         <div className="flex flex-col h-full">
             <header className="p-4 border-b flex items-center justify-between sticky top-0 bg-card z-10">
@@ -282,7 +252,7 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
                 />
                 {group?.id ? (
                     <>
-                        <MemberManagementCard members={mockTelegramMembers}/>
+                        <MemberManagementCard group={group}/>
                         <MessageLogCard group={group} />
                     </>
                 ) : (
@@ -327,10 +297,9 @@ function GroupStatusCard({ group }: { group: TelegramGroup }) {
     );
 }
 
-function EmployeeCombobox({ selectedEmployeeId, onSelect }: { selectedEmployeeId: string | null; onSelect: (employeeId: string) => void; }) {
+function EmployeeCombobox({ selectedEmployeeId, employees, onSelect }: { selectedEmployeeId?: string | null; employees: Employee[], onSelect: (employeeId: string | null) => void; }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(selectedEmployeeId || "");
-  const selectedEmployee = mockCompanyEmployees.find(e => e.id === value);
+  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -341,7 +310,7 @@ function EmployeeCombobox({ selectedEmployeeId, onSelect }: { selectedEmployeeId
           aria-expanded={open}
           className="w-[200px] justify-between h-8 text-xs"
         >
-          {selectedEmployee ? selectedEmployee.name : "Прив'язати до..."}
+          {selectedEmployee ? `${selectedEmployee.firstName} ${selectedEmployee.lastName}` : "Прив'язати до..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -350,24 +319,31 @@ function EmployeeCombobox({ selectedEmployeeId, onSelect }: { selectedEmployeeId
           <CommandInput placeholder="Пошук співробітника..." />
           <CommandEmpty>Співробітника не знайдено.</CommandEmpty>
           <CommandGroup>
-            {mockCompanyEmployees.map((employee) => (
+             <CommandItem
+                onSelect={() => {
+                  onSelect(null);
+                  setOpen(false);
+                }}
+              >
+                 <X className="mr-2 h-4 w-4" />
+                 Не прив'язувати
+             </CommandItem>
+            {employees.map((employee) => (
               <CommandItem
                 key={employee.id}
-                value={employee.id}
-                onSelect={(currentValue) => {
-                  const selectedId = currentValue === value ? "" : currentValue;
-                  setValue(selectedId);
-                  onSelect(selectedId);
+                value={`${employee.firstName} ${employee.lastName}`}
+                onSelect={() => {
+                  onSelect(employee.id);
                   setOpen(false);
                 }}
               >
                 <CheckCircle2
                   className={cn(
                     "mr-2 h-4 w-4",
-                    value === employee.id ? "opacity-100" : "opacity-0"
+                    selectedEmployeeId === employee.id ? "opacity-100" : "opacity-0"
                   )}
                 />
-                {employee.name}
+                {employee.firstName} {employee.lastName}
               </CommandItem>
             ))}
           </CommandGroup>
@@ -378,19 +354,63 @@ function EmployeeCombobox({ selectedEmployeeId, onSelect }: { selectedEmployeeId
 }
 
 
-function MemberManagementCard({ members }: { members: typeof mockTelegramMembers }) {
+function MemberManagementCard({ group }: { group: TelegramGroup }) {
+    const [members, setMembers] = useState<TelegramMember[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
+
+    const fetchMembers = () => {
+        startTransition(async () => {
+            const [fetchedMembers, fetchedEmployees] = await Promise.all([
+                getGroupMembers(group.id),
+                getEmployees()
+            ]);
+            setMembers(fetchedMembers);
+            setEmployees(fetchedEmployees);
+        });
+    }
+
+    useEffect(() => {
+        fetchMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [group.id]);
+    
+    const handleRefreshMembers = () => {
+        startTransition(async () => {
+            const updatedMembers = await refreshGroupMembers(group.id);
+            setMembers(updatedMembers);
+            toast({ title: "Склад оновлено!", description: "Список учасників синхронізовано." });
+        });
+    }
+
+    const handleLinkMember = (memberId: string, employeeId: string | null) => {
+        startTransition(async () => {
+            const updatedMember = await linkTelegramMemberToEmployee(memberId, employeeId);
+            if (updatedMember) {
+                setMembers(prev => prev.map(m => m.id === memberId ? updatedMember : m));
+                toast({ title: "Прив'язку оновлено."});
+            } else {
+                toast({ title: "Помилка", description: "Не вдалося оновити прив'язку.", variant: "destructive"});
+            }
+        });
+    }
+
     return (
          <Card id="member-management-card">
             <CardHeader>
                 <CardTitle>Склад Telegram-групи</CardTitle>
                 <CardDescription>Учасники групи та їх статус у компанії.</CardDescription>
                 <div className="flex gap-2 pt-2">
-                    <Button size="sm" variant="outline"><RefreshCw className="mr-2 h-4 w-4" /> Оновити склад</Button>
-                    <Button size="sm"><UserPlus className="mr-2 h-4 w-4" /> Імпортувати всіх</Button>
+                    <Button size="sm" variant="outline" onClick={handleRefreshMembers} disabled={isPending}>
+                        {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4" />}
+                        Оновити склад
+                    </Button>
                 </div>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
+                {isPending && !members.length ? <div className="text-center p-4"><Loader2 className="h-4 w-4 animate-spin mx-auto"/></div> : 
+                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -401,25 +421,21 @@ function MemberManagementCard({ members }: { members: typeof mockTelegramMembers
                         </TableHeader>
                         <TableBody>
                             {members.map(member => (
-                                <TableRow key={member.tg_user_id}>
+                                <TableRow key={member.id}>
                                     <TableCell>
-                                        <div className="font-medium">{member.name}</div>
-                                        <div className="text-xs text-muted-foreground">@{member.username}</div>
+                                        <div className="font-medium">{member.tgFirstName} {member.tgLastName}</div>
+                                        {member.tgUsername && <div className="text-xs text-muted-foreground">@{member.tgUsername}</div>}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={member.status === 'not_linked' ? 'destructive' : 'secondary'}>
-                                            {member.status === 'linked' && 'Прив\'язано'}
-                                            {member.status === 'created' && 'Створено'}
-                                            {member.status === 'not_linked' && 'Немає'}
+                                        <Badge variant={member.employeeId ? 'secondary' : 'outline'}>
+                                            {member.employeeId ? 'Прив\'язано' : 'Не прив\'язано'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
                                         <EmployeeCombobox 
-                                            selectedEmployeeId={member.employee_id}
-                                            onSelect={(employeeId) => {
-                                                console.log(`Linking TG user ${member.tg_user_id} to employee ${employeeId}`);
-                                                // Here you would call an action to update the link
-                                            }}
+                                            employees={employees}
+                                            selectedEmployeeId={member.employeeId}
+                                            onSelect={(employeeId) => handleLinkMember(member.id, employeeId)}
                                         />
                                     </TableCell>
                                 </TableRow>
@@ -427,6 +443,7 @@ function MemberManagementCard({ members }: { members: typeof mockTelegramMembers
                         </TableBody>
                     </Table>
                 </div>
+                }
             </CardContent>
         </Card>
     )

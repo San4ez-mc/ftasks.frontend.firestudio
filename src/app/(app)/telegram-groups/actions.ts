@@ -7,8 +7,12 @@ import {
   getTelegramGroupById,
   createTelegramLog,
   getTelegramLogsByGroupId,
+  getMembersForGroup as getMembersForGroupDb,
+  upsertTelegramMember,
+  linkTelegramMemberToEmployeeInDb,
 } from '@/lib/firestore-service';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
+import type { TelegramMember } from '@/types/telegram-member';
 
 
 /**
@@ -107,4 +111,43 @@ export async function sendMessageToGroup(groupId: string, text: string): Promise
  */
 export async function getLogsForGroup(groupId: string): Promise<MessageLog[]> {
     return getTelegramLogsByGroupId(groupId);
+}
+
+// --- Member Management Actions ---
+
+/**
+ * Fetches the list of members for a given group from the database.
+ */
+export async function getGroupMembers(groupId: string): Promise<TelegramMember[]> {
+    return getMembersForGroupDb(groupId);
+}
+
+/**
+ * Simulates fetching the latest member list from Telegram and updating the database.
+ */
+export async function refreshGroupMembers(groupId: string): Promise<TelegramMember[]> {
+  // In a real app, this would call the Telegram Bot API to get chat members.
+  // This is a complex operation and depends on bot permissions.
+  // Here, we simulate the result by upserting a mock list of users.
+  const mockFetchedMembers = [
+    { tgUserId: '345126254', tgFirstName: 'Oleksandr', tgLastName: 'Matsuk', tgUsername: 'olexandrmatsuk' },
+    { tgUserId: '67890', tgFirstName: 'Марія', tgLastName: 'Сидоренко', tgUsername: 'maria_s' },
+    { tgUserId: '54321', tgFirstName: 'Олена', tgLastName: 'Ковальчук', tgUsername: 'olena_k' },
+    { tgUserId: '99999', tgFirstName: 'Новий', tgLastName: 'Користувач', tgUsername: 'new_user' },
+  ];
+
+  // This loop creates/updates each member in the database.
+  for (const member of mockFetchedMembers) {
+    await upsertTelegramMember({ groupId, ...member });
+  }
+
+  // Return the full, updated list of members for the group.
+  return getMembersForGroupDb(groupId);
+}
+
+/**
+ * Links or unlinks a Telegram member to a company employee.
+ */
+export async function linkTelegramMemberToEmployee(memberId: string, employeeId: string | null): Promise<TelegramMember | null> {
+    return linkTelegramMemberToEmployeeInDb(memberId, employeeId);
 }
