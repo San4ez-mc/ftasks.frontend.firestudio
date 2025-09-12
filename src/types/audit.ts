@@ -13,6 +13,7 @@ export type WorkPlanItem = {
 
 export interface Audit {
     id: string;
+    companyId: string;
     createdAt: string; // ISO date string
     isCompleted: boolean;
     structuredSummary: AuditStructure;

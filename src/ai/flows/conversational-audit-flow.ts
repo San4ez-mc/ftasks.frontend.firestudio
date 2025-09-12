@@ -3,28 +3,44 @@
 /**
  * @fileOverview A conversational AI flow for conducting a business audit.
  *
- * - continueAudit - Handles the conversational turn-based audit process.
- * - ConversationalAuditInput - The input type for the flow.
- * - ConversationalAuditOutput - The return type for the flow.
+ * - getNextAuditStep - Analyzes conversation history and summary to determine the next question.
  */
 
 import {ai} from '@/ai/genkit';
 import {
-  ConversationalAuditInput,
-  ConversationalAuditOutput,
-  ConversationalAuditInputSchema,
-  ConversationalAuditOutputSchema,
+  AuditStructure,
   AuditStructureSchema,
   ConversationTurn,
   ConversationTurnSchema,
 } from '@/ai/types';
 import {z} from 'zod';
 
-export async function continueAudit(
-  input: ConversationalAuditInput
-): Promise<ConversationalAuditOutput> {
-  return conversationalAuditFlow(input);
+/**
+ * This function takes the current state of an audit conversation and returns the AI's next step.
+ * It's designed to be called from a server action that handles the database transactions.
+ * @param conversationHistory The full history of the conversation so far.
+ * @param currentSummary The current structured data gathered from the conversation.
+ * @returns An object containing the AI's next question and the updated structured summary.
+ */
+export async function getNextAuditStep(
+  conversationHistory: ConversationTurn[],
+  currentSummary: AuditStructure,
+): Promise<{ nextQuestion: string; updatedSummary: AuditStructure }> {
+  const { output } = await auditPrompt({
+      conversationHistory,
+      currentSummary,
+  });
+
+  if (!output) {
+      throw new Error("The audit AI did not return a valid response.");
+  }
+  
+  return {
+    nextQuestion: output.nextQuestion,
+    updatedSummary: output.updatedSummary,
+  };
 }
+
 
 const auditPrompt = ai.definePrompt({
   name: 'conversationalAuditPrompt',
@@ -100,61 +116,3 @@ You MUST conduct the entire conversation in UKRAINIAN.
 \`\`\`
 `,
 });
-
-
-const conversationalAuditFlow = ai.defineFlow(
-  {
-    name: 'conversationalAuditFlow',
-    inputSchema: ConversationalAuditInputSchema,
-    outputSchema: ConversationalAuditOutputSchema,
-  },
-  async ({userAudioDataUri, userText, conversationHistory, currentSummary}) => {
-    let userTranscript: string;
-
-    // Step 1: Get user's transcript from either audio or text
-    if (userAudioDataUri) {
-        const transcribeResponse = await ai.generate({
-            model: 'googleai/gemini-1.5-flash-latest',
-            prompt: [{media: {url: userAudioDataUri, contentType: 'audio/webm'}}, {text: 'Транскрибуй це аудіо українською мовою. Прибери будь-які слова-паразити та заповнювачі пауз, такі як "еее", "ммм", "нуу", щоб текст був чистим та лаконічним.'}],
-        });
-        userTranscript = transcribeResponse.text;
-    } else if (userText) {
-        userTranscript = userText;
-    } else {
-        throw new Error("No user input provided (either audio or text).");
-    }
-
-
-    // Step 2: Update conversation history with the new transcript
-    const updatedConversationHistory: ConversationTurn[] = [
-      ...conversationHistory,
-      {role: 'user' as const, text: userTranscript},
-    ];
-
-    // Step 3: Call the main conversational AI
-    const {output} = await auditPrompt({
-      conversationHistory: updatedConversationHistory,
-      currentSummary: currentSummary,
-    });
-    
-    if (!output) {
-        throw new Error("The audit AI did not return a valid response.");
-    }
-    
-    const { nextQuestion, updatedSummary } = output;
-
-    // Step 4: Add the AI's question to the history for the next turn
-    const finalConversationHistory: ConversationTurn[] = [
-      ...updatedConversationHistory,
-      {role: 'model' as const, text: nextQuestion},
-    ];
-    
-    return {
-      aiResponseText: nextQuestion,
-      updatedStructuredSummary: updatedSummary,
-      userTranscript: userTranscript,
-      updatedConversationHistory: finalConversationHistory,
-      isAuditComplete: false, 
-    };
-  }
-);
