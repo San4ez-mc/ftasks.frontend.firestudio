@@ -9,6 +9,7 @@ export interface TelegramGroup {
 
 export interface MessageLog {
     id: string;
+    companyId: string;
     groupId: string;
     timestamp: string; // ISO Date string
     content: string;
