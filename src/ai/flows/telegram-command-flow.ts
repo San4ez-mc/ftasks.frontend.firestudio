@@ -11,8 +11,8 @@
 import { ai } from '@/ai/genkit';
 import {
   TelegramCommandInput,
-  TelegramCommandOutput,
   TelegramCommandInputSchema,
+  TelegramCommandOutput,
   TelegramCommandOutputSchema,
 } from '@/ai/types';
 import { z } from 'zod';
@@ -30,7 +30,7 @@ const createTaskTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'create_task', parameters: input };
   }
 );
@@ -46,7 +46,7 @@ const createResultTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'create_result', parameters: input };
   }
 );
@@ -63,7 +63,7 @@ const viewTasksTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-   async (input) => {
+   async (input): Promise<TelegramCommandOutput> => {
     return { command: 'view_tasks', parameters: input };
   }
 );
@@ -77,7 +77,7 @@ const viewTaskDetailsTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'view_task_details', parameters: input };
   }
 );
@@ -89,7 +89,7 @@ const listEmployeesTool = ai.defineTool(
     inputSchema: z.object({}),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async () => {
+  async (): Promise<TelegramCommandOutput> => {
     return { command: 'list_employees' };
   }
 );
@@ -105,7 +105,7 @@ const editTaskTitleTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'edit_task_title', parameters: input };
   }
 );
@@ -120,7 +120,7 @@ const addCommentToTaskTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'add_comment_to_task', parameters: input };
   }
 );
@@ -136,7 +136,7 @@ const addCommentToResultTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'add_comment_to_result', parameters: input };
   }
 );
@@ -151,7 +151,7 @@ const updateTaskStatusTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'update_task_status', parameters: input };
   }
 );
@@ -166,7 +166,7 @@ const updateTaskDateTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'update_task_date', parameters: input };
   }
 );
@@ -178,7 +178,7 @@ const listTemplatesTool = ai.defineTool(
     inputSchema: z.object({}),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async () => {
+  async (): Promise<TelegramCommandOutput> => {
     return { command: 'list_templates' };
   }
 );
@@ -193,7 +193,7 @@ const createTemplateTool = ai.defineTool(
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<TelegramCommandOutput> => {
     return { command: 'create_template', parameters: input };
   }
 );
@@ -283,5 +283,3 @@ const telegramCommandFlow = ai.defineFlow(
     return parseTelegramCommand(input);
   }
 );
-
-    

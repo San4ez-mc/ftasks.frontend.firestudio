@@ -64,7 +64,14 @@ async function getDocAndValidateCompany<T>(collectionName: string, id: string, c
     }
 
     const data = doc.data();
-    if (data?.companyId !== companyId) {
+    
+    // Special case for company_profiles where the doc ID is the companyId
+    if (collectionName === COMPANY_PROFILES_COLLECTION) {
+        if (doc.id !== companyId) {
+            console.warn(`Attempted to access document in ${collectionName} with ID ${id} from wrong company ${companyId}.`);
+            return null;
+        }
+    } else if (data?.companyId !== companyId) {
         console.warn(`Attempted to access document in ${collectionName} with ID ${id} from wrong company ${companyId}.`);
         return null; // Security: do not return doc if companyId doesn't match
     }
@@ -158,7 +165,8 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
         batch.set(companyProfileRef, {
             name: companyName,
             description: `Компанія ${companyName}`,
-            adminId: user.id
+            adminId: user.id,
+            companyId: newCompanyRef.id,
         });
     }
 
