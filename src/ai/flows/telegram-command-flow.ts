@@ -31,8 +31,6 @@ const createTaskTool = ai.defineTool(
     outputSchema: TelegramCommandOutputSchema,
   },
   async (input) => {
-    // The tool's job is just to format the output for the webhook.
-    // The actual database operation happens in the webhook itself.
     return { command: 'create_task', parameters: input };
   }
 );
@@ -56,15 +54,31 @@ const createResultTool = ai.defineTool(
 const viewTasksTool = ai.defineTool(
   {
     name: 'view_tasks',
-    description: 'Переглядає задачі на певну дату для певного співробітника.',
+    description: "Переглядає задачі на певну дату або діапазон дат для певного співробітника, можливо з фільтром по статусу.",
     inputSchema: z.object({
-      assigneeName: z.string().optional().describe("Ім'я співробітника, чиї задачі потрібно переглянути."),
-      dueDate: z.string().optional().describe("Дата для перегляду завдань у форматі 'YYYY-MM-DD'."),
+      assigneeName: z.string().optional().describe("Ім'я співробітника, чиї задачі потрібно переглянути. Якщо 'мої', то це поточний користувач."),
+      startDate: z.string().optional().describe("Початкова дата для перегляду завдань у форматі 'YYYY-MM-DD'."),
+      endDate: z.string().optional().describe("Кінцева дата для перегляду завдань у форматі 'YYYY-MM-DD'."),
+      status: z.enum(['todo', 'done']).optional().describe("Статус задач для фільтрації: 'todo' (в роботі) або 'done' (виконано)."),
     }),
     outputSchema: TelegramCommandOutputSchema,
   },
    async (input) => {
     return { command: 'view_tasks', parameters: input };
+  }
+);
+
+const viewTaskDetailsTool = ai.defineTool(
+  {
+    name: 'view_task_details',
+    description: 'Показує детальну інформацію про конкретну задачу, знайдену за її назвою.',
+    inputSchema: z.object({
+      title: z.string().describe("Назва задачі, деталі якої потрібно показати."),
+    }),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async (input) => {
+    return { command: 'view_task_details', parameters: input };
   }
 );
 
@@ -96,6 +110,22 @@ const editTaskTitleTool = ai.defineTool(
   }
 );
 
+const addCommentToTaskTool = ai.defineTool(
+  {
+    name: 'add_comment_to_task',
+    description: 'Додає коментар до щоденної задачі.',
+    inputSchema: z.object({
+      targetTitle: z.string().describe("Назва задачі, до якої додається коментар."),
+      commentText: z.string().describe("Текст коментаря."),
+    }),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async (input) => {
+    return { command: 'add_comment_to_task', parameters: input };
+  }
+);
+
+
 const addCommentToResultTool = ai.defineTool(
   {
     name: 'add_comment_to_result',
@@ -111,6 +141,63 @@ const addCommentToResultTool = ai.defineTool(
   }
 );
 
+const updateTaskStatusTool = ai.defineTool(
+  {
+    name: 'update_task_status',
+    description: "Змінює статус задачі (наприклад, позначає її виконаною).",
+    inputSchema: z.object({
+      targetTitle: z.string().describe("Назва задачі, статус якої потрібно змінити."),
+      status: z.enum(['todo', 'done']).describe("Новий статус: 'todo' (в роботі) або 'done' (виконано)."),
+    }),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async (input) => {
+    return { command: 'update_task_status', parameters: input };
+  }
+);
+
+const updateTaskDateTool = ai.defineTool(
+  {
+    name: 'update_task_date',
+    description: "Переносить задачу на іншу дату.",
+    inputSchema: z.object({
+      targetTitle: z.string().describe("Назва задачі, яку потрібно перенести."),
+      newDueDate: z.string().describe("Нова дата виконання у форматі 'YYYY-MM-DD'."),
+    }),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async (input) => {
+    return { command: 'update_task_date', parameters: input };
+  }
+);
+
+const listTemplatesTool = ai.defineTool(
+  {
+    name: 'list_templates',
+    description: "Показує список доступних шаблонів задач.",
+    inputSchema: z.object({}),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async () => {
+    return { command: 'list_templates' };
+  }
+);
+
+const createTemplateTool = ai.defineTool(
+  {
+    name: 'create_template',
+    description: "Створює новий шаблон для автоматичної генерації задач.",
+    inputSchema: z.object({
+      title: z.string().describe("Назва для нового шаблону."),
+      repeatability: z.string().describe("Правило повторення, наприклад 'щоденно', 'щотижня'."),
+    }),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async (input) => {
+    return { command: 'create_template', parameters: input };
+  }
+);
+
 
 export async function parseTelegramCommand(input: TelegramCommandInput): Promise<TelegramCommandOutput> {
   // Check if user is asking for help
@@ -118,7 +205,7 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
   if (helpKeywords.some(kw => input.command.toLowerCase().includes(kw))) {
     return {
         command: 'show_help',
-        reply: `Я вмію:\n- Створювати задачі: 'створи задачу [назва] для [ім'я] на [дата]'.\n- Створювати результати.\n- Редагувати задачі: 'зміни задачу [стара назва] на [нова назва]'.\n- Додавати коментарі до результатів.\n- Показувати список співробітників.`
+        reply: `Я вмію:\n- Створювати задачі та результати.\n- Редагувати задачі (назву, статус, дату).\n- Додавати коментарі до задач та результатів.\n- Показувати списки задач, співробітників, шаблонів.`
     };
   }
   
@@ -127,19 +214,32 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
     name: 'telegramAgent',
     system: `Ти — інтелектуальний асистент для системи керування задачами Fineko. Твоє завдання — зрозуміти запит користувача українською мовою та викликати відповідний інструмент для його виконання.
 
-Важливі правила:
-1.  Сьогоднішня дата: ${new Date().toISOString().split('T')[0]}. Використовуй її для розрахунку відносних дат, таких як "сьогодні" або "завтра".
-2.  При виклику інструментів, що вимагають 'assigneeName', це ім'я ПОВИННО ТОЧНО збігатися з одним із імен у списку: ${input.employees.map(e => `"${e.name}"`).join(', ')}.
-3.  Якщо ти не впевнений, яке ім'я використовувати, або воно не збігається, не викликай інструмент. Замість цього дай відповідь з уточнюючим питанням.
-4.  Якщо ти не можеш зрозуміти намір користувача або жоден інструмент не підходить, дай відповідь з повідомленням про помилку.
-5.  Завжди відповідай українською мовою.`,
+**Важливі правила:**
+1.  **Сьогоднішня дата:** ${new Date().toISOString().split('T')[0]}. Використовуй її для розрахунку відносних дат, таких як "сьогодні" або "завтра".
+2.  **Контекст співробітників:** При виклику інструментів, що вимагають 'assigneeName', це ім'я ПОВИННО ТОЧНО збігатися з одним із імен у списку: ${input.employees.map(e => `"${e.name}"`).join(', ')}. Якщо користувач каже "мої задачі" або "для мене", використовуй ім'я поточного користувача. Якщо сказано "помічниця" чи інша роль, спробуй знайти найбільш відповідне ім'я зі списку.
+3.  **Контекст шаблонів:** Список доступних шаблонів: ${input.templates.map(t => `"${t.name}"`).join(', ')}.
+
+**Правила обробки неоднозначності:**
+1.  **Недостатньо параметрів:** Якщо користувач вказав дію (наприклад, "створи задачу"), але не надав обов'язкові параметри (наприклад, назву), **не викликай інструмент**. Замість цього, дай відповідь з **конкретним уточнюючим питанням**, яке допоможе заповнити прогалину.
+    *   *Приклад:* Користувач: "Створи задачу для Петра". Твоя відповідь: "Добре, створюю задачу для Петра. Яку назву дати задачі?"
+2.  **Неясний намір:** Якщо запит користувача можна трактувати по-різному (наприклад, "зроби звіт" може означати створення задачі або створення шаблону), **не викликай інструмент**. Замість цього, дай відповідь, яка **пропонує варіанти дій**.
+    *   *Приклад:* Користувач: "Зроби мені щотижневий звіт". Твоя відповідь: "Я можу створити разову задачу 'Зробити щотижневий звіт', або я можу створити шаблон, який буде автоматично створювати цю задачу щотижня. Що саме ви маєте на увазі?"
+3.  **Невідома команда:** Якщо запит взагалі не схожий на жоден з доступних інструментів, тільки тоді повертай стандартну відповідь про нерозуміння.
+
+Завжди відповідай українською мовою.`,
     tools: [
         createTaskTool,
         createResultTool,
         viewTasksTool,
+        viewTaskDetailsTool,
         listEmployeesTool,
         editTaskTitleTool,
-        addCommentToResultTool
+        addCommentToTaskTool,
+        addCommentToResultTool,
+        updateTaskStatusTool,
+        updateTaskDateTool,
+        listTemplatesTool,
+        createTemplateTool
     ],
   });
 
