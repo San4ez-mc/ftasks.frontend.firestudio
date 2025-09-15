@@ -81,7 +81,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     const assigneeName = params.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
                     const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
 
-                    const newTaskData: Omit<Task, 'id'> = {
+                    const newTaskData: Omit<Task, 'id' | 'companyId'> = {
                         title: params.title,
                         dueDate: params.dueDate || new Date().toISOString().split('T')[0],
                         status: 'todo',
@@ -104,7 +104,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     const twoWeeksFromNow = new Date();
                     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
-                    const newResultData: Omit<Result, 'id'> = {
+                    const newResultData: Omit<Result, 'id' | 'companyId'> = {
                         name: params.title,
                         status: 'Заплановано',
                         completed: false,
