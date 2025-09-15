@@ -11,6 +11,7 @@ type User = {
 
 export interface Task {
   id: string;
+  companyId: string;
   title: string;
   description?: string;
   dueDate: string;

@@ -1,6 +1,7 @@
 
 export interface TelegramMember {
     id: string; // Firestore doc ID
+    companyId: string;
     groupId: string;
     tgUserId: string;
     tgFirstName: string;

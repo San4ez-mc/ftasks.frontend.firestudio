@@ -6,6 +6,7 @@ export type InstructionAccess = {
 
 export interface Instruction {
   id: string;
+  companyId: string;
   title: string;
   department: string;
   summary: string;

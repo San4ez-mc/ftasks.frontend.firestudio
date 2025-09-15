@@ -38,6 +38,7 @@ export type ResultComment = {
 
 export interface Result {
   id: string;
+  companyId: string;
   name: string;
   status: string;
   completed: boolean;

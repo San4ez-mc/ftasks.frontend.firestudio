@@ -7,6 +7,7 @@ export type TaskGenerated = {
 
 export type Template = {
   id: string;
+  companyId: string;
   name: string;
   repeatability: string;
   startDate: string;

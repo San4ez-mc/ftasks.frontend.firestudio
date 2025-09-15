@@ -23,6 +23,7 @@ export type Lane = {
 
 export type Process = {
   id: string;
+  companyId: string;
   name: string;
   description: string;
   lanes: Lane[];
