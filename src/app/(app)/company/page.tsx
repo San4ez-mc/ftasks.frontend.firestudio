@@ -5,20 +5,21 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { PlusCircle, Search, Trash2, Upload, Save, X, Shield, Bot } from 'lucide-react';
+import { PlusCircle, Search, Trash2, Upload, Save, X, Shield, Bot, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import type { Employee } from '@/types/company';
 import type { CompanyProfile } from '@/types/company-profile';
-import { getEmployees, updateEmployee, getCompanyProfile, updateCompanyProfile } from './actions';
+import { getEmployees, updateEmployee, getCompanyProfile, updateCompanyProfile, createEmployee } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -61,7 +62,7 @@ const companyTourSteps: TourStep[] = [
     {
         elementId: 'invite-employee-button',
         title: 'Запрошення нових співробітників',
-        content: 'Натисніть цю кнопку, щоб надіслати запрошення новому члену команди приєднатися до вашого робочого простору.',
+        content: 'Натисніть цю кнопку, щоб надіслати запрошення новому члену команди або додати його вручну.',
         placement: 'left'
     },
     {
@@ -88,24 +89,22 @@ export default function CompanyPage() {
     const { toast } = useToast();
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-
-    // Hardcoded company ID for now
-    const companyId = 'company-1';
 
     useEffect(() => {
         startTransition(async () => {
             const [fetchedEmployees, fetchedProfile] = await Promise.all([
                 getEmployees(),
-                getCompanyProfile(companyId)
+                getCompanyProfile()
             ]);
             setEmployees(fetchedEmployees);
-            if (fetchedEmployees.length > 0) {
+            if (fetchedEmployees.length > 0 && !selectedEmployee) {
                 setSelectedEmployee(fetchedEmployees[0]);
             }
             setCompanyProfile(fetchedProfile);
         });
-    }, []);
+    }, [selectedEmployee]);
 
      useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -141,6 +140,20 @@ export default function CompanyPage() {
             }
         });
     };
+    
+    const handleEmployeeCreate = (newEmployeeData: Omit<Employee, 'id' | 'status' | 'notes' | 'groups' | 'synonyms' | 'avatar' | 'telegramUserId'> & { positionId: string }) => {
+        startTransition(async () => {
+            try {
+                const newEmployee = await createEmployee(newEmployeeData);
+                setEmployees(prev => [newEmployee, ...prev]);
+                setSelectedEmployee(newEmployee);
+                setIsAddDialogOpen(false);
+                toast({ title: "Успіх!", description: `Співробітника ${newEmployee.firstName} додано.` });
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося створити співробітника.", variant: "destructive"});
+            }
+        });
+    }
 
     const handleClosePanel = () => {
         setSelectedEmployee(null);
@@ -150,7 +163,7 @@ export default function CompanyPage() {
         if (!companyProfile) return;
         startTransition(async () => {
             try {
-                await updateCompanyProfile(companyId, {
+                await updateCompanyProfile({
                     name: companyProfile.name,
                     description: companyProfile.description,
                     adminId: companyProfile.adminId,
@@ -173,9 +186,12 @@ export default function CompanyPage() {
                 <header className="p-4 border-b">
                     <div className="flex items-center justify-between">
                          <h1 className="text-xl font-bold tracking-tight font-headline">Співробітники</h1>
-                         <Button id="invite-employee-button">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Запросити
-                        </Button>
+                         <AddEmployeeDialog 
+                            isOpen={isAddDialogOpen} 
+                            setIsOpen={setIsAddDialogOpen}
+                            onEmployeeCreate={handleEmployeeCreate}
+                            isPending={isPending}
+                        />
                     </div>
                      <div className="relative mt-2">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -222,7 +238,7 @@ export default function CompanyPage() {
                                     </Select>
                                  </div>
                                 <Button size="sm" onClick={handleCompanyInfoSave} disabled={isPending}>
-                                    <Save className="mr-2 h-4 w-4" />
+                                    {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                                     Зберегти
                                 </Button>
                             </CardContent>
@@ -297,6 +313,80 @@ export default function CompanyPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+
+function AddEmployeeDialog({ isOpen, setIsOpen, onEmployeeCreate, isPending }: {
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+    onEmployeeCreate: (data: any) => void;
+    isPending: boolean;
+}) {
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const formData = new FormData(event.currentTarget);
+        const data = {
+            firstName: formData.get('firstName') as string,
+            lastName: formData.get('lastName') as string,
+            positionId: formData.get('positionId') as string,
+            telegramUsername: formData.get('telegramUsername') as string,
+        };
+        onEmployeeCreate(data);
+    }
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button id="invite-employee-button">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Додати співробітника
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Додати нового співробітника</DialogTitle>
+                    <DialogDescription>Створіть профіль для нового члена команди. Він зможе увійти пізніше через Telegram.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit}>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label htmlFor="firstName">Ім'я</Label>
+                                <Input id="firstName" name="firstName" required />
+                            </div>
+                             <div>
+                                <Label htmlFor="lastName">Прізвище</Label>
+                                <Input id="lastName" name="lastName" required />
+                            </div>
+                        </div>
+                        <div>
+                            <Label htmlFor="positionId">Посада</Label>
+                            <Select name="positionId" required>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Оберіть посаду..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {mockPositions.map(pos => (
+                                        <SelectItem key={pos.id} value={pos.id}>{pos.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="telegramUsername">Нік в Telegram</Label>
+                            <Input id="telegramUsername" name="telegramUsername" placeholder="bez_sobaky" required />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="secondary" onClick={() => setIsOpen(false)}>Скасувати</Button>
+                        <Button type="submit" disabled={isPending}>
+                             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                             Додати
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
 

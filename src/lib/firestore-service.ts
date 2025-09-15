@@ -215,6 +215,7 @@ export const deleteTemplateFromDb = (companyId: string, id: string) => remove(TE
 
 // --- Employees ---
 export const getAllEmployeesForCompany = (companyId: string) => getByQuery<Employee>(EMPLOYEES_COLLECTION, 'companyId', companyId);
+export const createEmployeeInDb = (companyId: string, data: Omit<Employee, 'id'>) => create<Employee>(EMPLOYEES_COLLECTION, { ...data, companyId });
 export const updateEmployeeInDb = (companyId: string, id: string, updates: Partial<Employee>) => update<Employee>(EMPLOYEES_COLLECTION, id, companyId, updates);
 export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyId: string } | null> => {
     const links = await getByQuery<{ companyId: string }>(EMPLOYEES_COLLECTION, 'userId', userId);
