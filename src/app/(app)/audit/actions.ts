@@ -35,8 +35,7 @@ export async function getAudit(id: string): Promise<Audit | null> {
 
 export async function createAudit(): Promise<Audit> {
     const companyId = await getCompanyIdOrThrow();
-    const newAuditData: Omit<Audit, 'id'> = {
-        companyId,
+    const newAuditData: Omit<Audit, 'id' | 'companyId'> = {
         createdAt: new Date().toISOString(),
         isCompleted: false,
         isAiComplete: false,
@@ -196,3 +195,5 @@ export async function generateWorkPlan(summary: AuditStructure): Promise<WorkPla
     const plan = await generateWorkPlanFlow({ structuredSummary: summary });
     return plan;
 }
+
+    
