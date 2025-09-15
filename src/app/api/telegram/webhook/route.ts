@@ -15,6 +15,7 @@ import {
     findTelegramGroupByTgId,
     upsertTelegramMember,
     getMembersForGroupDb,
+    getAllTemplatesForCompany,
 } from '@/lib/firestore-service';
 import { sendTelegramMessage } from '@/lib/telegram-service';
 import type { Task } from '@/types/task';
@@ -62,14 +63,17 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
 
     try {
         const allEmployees = await getAllEmployeesForCompany(companyId);
-        const currentEmployee = allEmployees.find(e => e.id === finekoUser.id);
+        const allTemplates = await getAllTemplatesForCompany(companyId);
+        const currentEmployee = allEmployees.find(e => e.userId === finekoUser.id);
         const allowedCommands = currentEmployee?.telegramPermissions || [];
 
         const employeeList = allEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}` }));
+        const templateList = allTemplates.map(t => ({ id: t.id, name: t.name }));
 
         const aiResult = await parseTelegramCommand({
             command: text,
             employees: employeeList,
+            templates: templateList,
             allowedCommands: allowedCommands,
         });
 
