@@ -3,6 +3,7 @@
 'use server';
 
 import { firestore } from '@/lib/firebase-admin';
+import { FieldPath } from 'firebase-admin/firestore';
 import type { Task } from '@/types/task';
 import type { Result } from '@/types/result';
 import type { Template } from '@/types/template';
@@ -121,7 +122,7 @@ export async function getCompaniesForUser(userId: string): Promise<{id: string, 
     const companyIds = employeeLinks.map(link => link.companyId);
     
     firestoreGuard();
-    const companiesSnapshot = await firestore.collection(COMPANIES_COLLECTION).where(firestore.FieldPath.documentId(), 'in', companyIds).get();
+    const companiesSnapshot = await firestore.collection(COMPANIES_COLLECTION).where(FieldPath.documentId(), 'in', companyIds).get();
     
     return companiesSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
 }
@@ -334,3 +335,7 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
+
+    
+
+    
