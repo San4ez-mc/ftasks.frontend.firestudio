@@ -255,7 +255,7 @@ export default function CompanyPage() {
                         </TableHeader>
                         <TableBody>
                             {employees.map(emp => {
-                                const employeePositions = emp.positions.map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
+                                const employeePositions = (emp.positions || []).map(pId => mockPositions.find(p => p.id === pId)?.name).filter(Boolean);
                                 return (
                                     <TableRow
                                         key={emp.id}
@@ -429,7 +429,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
         onUpdate({ ...employee, ...formData });
     };
 
-    const employeePositions = formData.positions?.map(pId => mockPositions.find(p => p.id === pId)).filter(Boolean) || [];
+    const employeePositions = (formData.positions || []).map(pId => mockPositions.find(p => p.id === pId)).filter(Boolean);
 
     return (
         <div className="p-4 md:p-6 space-y-4 text-sm flex flex-col h-full">
@@ -506,7 +506,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                                     onClick={() => handlePositionChange(pos.id)}
                                     className={cn(
                                         "px-2 py-1 text-xs rounded-md border",
-                                        formData.positions?.includes(pos.id)
+                                        (formData.positions || []).includes(pos.id)
                                             ? "bg-primary text-primary-foreground border-transparent"
                                             : "bg-transparent hover:bg-accent"
                                     )}
@@ -529,7 +529,7 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                             <div key={command.id} className="flex items-center space-x-2">
                                 <Checkbox
                                     id={`perm-${command.id}`}
-                                    checked={formData.telegramPermissions?.includes(command.id)}
+                                    checked={(formData.telegramPermissions || []).includes(command.id)}
                                     onCheckedChange={(checked) => handlePermissionChange(command.id, !!checked)}
                                 />
                                 <Label htmlFor={`perm-${command.id}`} className="text-xs font-normal">

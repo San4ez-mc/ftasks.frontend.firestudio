@@ -99,7 +99,7 @@ export default function ResultsPage() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
         if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-            const clickedOnTrigger = (event.target as HTMLElement).closest('.group/parent');
+            const clickedOnTrigger = (event.target as HTMLElement).closest('[data-result-row-container]');
             if (!clickedOnTrigger) {
                 handleClosePanel();
             }
@@ -680,6 +680,7 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
 
     return (
       <div 
+        data-result-row-container
         className="group/parent text-sm border-b last:border-b-0 cursor-pointer"
         onClick={handleNameClick}
       >
