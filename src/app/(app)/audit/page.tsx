@@ -7,12 +7,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Loader2, Trash2 } from 'lucide-react';
 import type { Audit } from '@/types/audit';
-import { getAudits, createAudit } from './actions';
+import { getAudits, createAudit, deleteAudit } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { formatDateTime } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 export default function AuditsListPage() {
   const [audits, setAudits] = useState<Audit[]>([]);
@@ -41,6 +42,22 @@ export default function AuditsListPage() {
       }
     });
   };
+
+  const handleDeleteAudit = (auditId: string) => {
+    startTransition(async () => {
+        try {
+            await deleteAudit(auditId);
+            setAudits(audits.filter(a => a.id !== auditId));
+            toast({ title: "Успіх", description: "Аудит видалено."});
+        } catch (error) {
+             toast({
+                title: "Помилка",
+                description: "Не вдалося видалити аудит.",
+                variant: "destructive",
+            });
+        }
+    });
+  }
 
   const today = new Date().toISOString().split('T')[0];
   const hasAuditToday = audits.some(audit => audit.createdAt.startsWith(today));
@@ -82,7 +99,7 @@ export default function AuditsListPage() {
                   <TableRow>
                     <TableHead>Дата та час</TableHead>
                     <TableHead>Статус</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead className="text-right">Дії</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -90,12 +107,31 @@ export default function AuditsListPage() {
                     <TableRow key={audit.id}>
                       <TableCell className="font-medium">{formatDateTime(audit.createdAt)}</TableCell>
                       <TableCell>{audit.isCompleted ? 'Завершено' : 'В процесі'}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/audit/${audit.id}`}>
                             {audit.isCompleted ? 'Переглянути' : 'Продовжити'}
                           </Link>
                         </Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Ви впевнені?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Цю дію неможливо скасувати. Це назавжди видалить аудит від {formatDateTime(audit.createdAt)}.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteAudit(audit.id)}>Видалити</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))}
