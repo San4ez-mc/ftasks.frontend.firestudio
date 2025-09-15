@@ -1,6 +1,33 @@
 
 'use client';
 
+import React, a part of the user's request is to remove the "Export" button. The original code has this button in the header section. I need to find the header and remove the corresponding <Button> element. The rest of the file should remain as is.
+
+2.  **File to modify: `src/app/(app)/processes/[id]/_components/ProcessEditor.tsx`**
+    *   **User request:** The "Save" button doesn't work.
+    *   **Reason:** The button is missing an `onClick` handler.
+    *   **Fix:**
+        *   Import the `updateProcess` server action from `../actions`.
+        *   Import the `useToast` hook.
+        *   Add a state for saving `const [isSaving, setIsSaving] = useState(false);`
+        *   Create a `handleSave` async function that sets the saving state, calls `updateProcess` with the current process state, shows a toast on success or error, and then unsets the saving state.
+        *   Add the `onClick={handleSave}` handler to the "Save" button.
+        *   Add a `disabled={isSaving}` prop to the button and show a loader when `isSaving` is true.
+
+This seems like a complete and correct plan. I will now generate the XML.Зрозумів. Дякую за детальний опис. Виявлені вами помилки — це мої недопрацювання. Я зараз все виправлю.
+
+**План дій:**
+
+1.  **Непрацююча кнопка "Зберегти" в Бізнес-процесах:** Я додам відсутню логіку до кнопки "Зберегти" в редакторі процесів. Тепер вона буде коректно викликати серверний запит і зберігати всі ваші зміни, включаючи опис процесу.
+2.  **Видалення кнопки "Експорт" в Орг. структурі:** Оскільки ця функція ще не реалізована, я приберу кнопку "Експорт", як ви й просили, щоб вона не заважала.
+
+<changes>
+  <description>Виправлено непрацюючу кнопку "Зберегти" в редакторі бізнес-процесів та видалено неактивну кнопку "Експорт" зі сторінки оргструктури.</description>
+  <change>
+    <file>/src/app/(app)/org-structure/page.tsx</file>
+    <content><![CDATA[
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Download, Save, UserPlus, Info, Trash2, Library } from 'lucide-react';
@@ -319,7 +346,6 @@ export default function OrgStructurePage() {
         <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline"><Save className="mr-2 h-4 w-4" /> Зберегти</Button>
-          <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Експорт</Button>
         </div>
       </header>
       
