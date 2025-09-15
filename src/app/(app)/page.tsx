@@ -120,6 +120,8 @@ export default function TasksPage() {
   
   const handleTaskUpdate = (updatedTask: Task) => {
      startTransition(async () => {
+        const isAssigneeChanged = updatedTask.assignee.id !== selectedTask?.assignee.id;
+
         // Optimistic update
         setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
         if (selectedTask && selectedTask.id === updatedTask.id) {
@@ -128,6 +130,9 @@ export default function TasksPage() {
         
         try {
             await updateTask(updatedTask.id, updatedTask);
+            if (isAssigneeChanged) {
+                 toast({ title: "Відповідального змінено", description: `Задача "${updatedTask.title}" тепер призначена ${updatedTask.assignee.name}.` });
+            }
         } catch (error) {
             // Revert on error
             toast({ title: "Помилка", description: "Не вдалося оновити задачу.", variant: "destructive" });
@@ -234,7 +239,23 @@ export default function TasksPage() {
   const panelOpen = !!selectedTask;
 
   const { totalExpectedTime, filteredTasks } = useMemo(() => {
-    const totals = tasks.reduce(
+    let filtered = tasks;
+     if (currentUser && activeTab) {
+        switch(activeTab) {
+            case 'delegated':
+                filtered = tasks.filter(t => t.reporter.id === currentUser.id && t.assignee.id !== currentUser.id);
+                break;
+            case 'subordinates':
+                filtered = tasks.filter(t => t.reporter.id !== currentUser.id && t.assignee.id !== currentUser.id);
+                break;
+            case 'mine':
+            default:
+                filtered = tasks.filter(t => t.assignee.id === currentUser.id);
+                break;
+        }
+    }
+
+    const totals = filtered.reduce(
       (acc, task) => {
         if (task.status !== 'done') {
           acc.totalExpectedTime += task.expectedTime || 0;
@@ -244,8 +265,8 @@ export default function TasksPage() {
       },
       { totalExpectedTime: 0, totalActualTime: 0 }
     );
-    return { ...totals, filteredTasks: tasks };
-  }, [tasks]);
+    return { ...totals, filteredTasks: filtered };
+  }, [tasks, activeTab, currentUser]);
   
   const groupedTasks = useMemo(() => {
     if (activeTab === 'mine') {
@@ -261,7 +282,7 @@ export default function TasksPage() {
         return acc;
     }, {} as Record<string, { id?: string, name: string; avatar?: string; results: Task[] }>);
 
-  }, [filteredTasks, activeTab]);
+  }, [filteredTasks, activeTab, currentUser]);
   
   const totalExpectedHours = totalExpectedTime / 60;
   
@@ -380,7 +401,7 @@ export default function TasksPage() {
                 id="new-task-input"
                 ref={newTaskInputRef}
                 placeholder="Нова задача..." 
-                className="bg-card mt-2"
+                className="bg-card mt-2 rounded-none"
                 onKeyDown={handleNewTaskKeyDown}
              />
           </div>
