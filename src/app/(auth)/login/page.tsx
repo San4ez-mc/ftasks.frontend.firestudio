@@ -24,8 +24,8 @@ export default function LoginPage() {
   const handleQuickLogin = () => {
     // This is a temporary developer-only function.
     // It uses a hardcoded, non-revocable token for local testing.
-    // This token corresponds to user-1 (Oleksandr Matsuk), company-1.
-    const MOCK_PERMANENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJjb21wYW55SWQiOiJjb21wYW55LTEiLCJyZW1lbWJlck1lIjp0cnVlLCJpYXQiOjE3MjU5NzQ0MDAsImV4cCI6MTcyODU2NjQwMH0.P1W74x2VIp-1E8ZQOBnCx55a-Yp5N_NqA-n8Q2bF6iM";
+    // This token corresponds to user-1 (Oleksandr Matsuk), company-1 and is signed with the dev secret.
+    const MOCK_PERMANENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJjb21wYW55SWQiOiJjb21wYW55LTEiLCJyZW1lbWJlck1lIjp0cnVlLCJpYXQiOjE3MjYzNTg4MDB9.d7yK_d-pr2B8pE4Pz5z3yW7n0tF7b_k9T8V4qM6rZ0s";
     
     // Set token in both localStorage (for client-side API calls) and cookies (for middleware)
     localStorage.setItem('auth_token', MOCK_PERMANENT_TOKEN);
