@@ -1,3 +1,4 @@
+
 import { getProcess } from '../actions';
 import { mockUsers } from '@/data/process-mock';
 import ProcessEditor from './_components/ProcessEditor';
@@ -45,3 +46,5 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const process = await getProcess(id);
   return { title: process ? process.name : 'Бізнес-процес' };
 }
+
+    
