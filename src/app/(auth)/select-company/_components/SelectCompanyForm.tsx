@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getCompaniesForToken, selectCompany, createCompanyAndLogin } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 type Company = {
   id: string;
@@ -132,9 +132,15 @@ export default function SelectCompanyForm() {
                   </button>
                 ))}
               </div>
-              <Button variant="outline" onClick={() => setShowCreate(true)} className="w-full" disabled={isSubmitting}>
-                Створити нову компанію
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <Button variant="ghost" onClick={() => router.push('/login')} className="w-full sm:w-auto" disabled={isSubmitting}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Назад
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreate(true)} className="w-full flex-1" disabled={isSubmitting}>
+                    Створити нову компанію
+                </Button>
+              </div>
             </>
           ) : (
              <form onSubmit={handleCreateCompany} className="space-y-4">
