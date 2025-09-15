@@ -108,7 +108,7 @@ export async function continueAudit(input: ConversationalAuditInput): Promise<Co
     try {
         const aiResponse = await getNextAuditStep(updatedHistoryWithUser, currentAudit.structuredSummary);
 
-        const finalHistory = [...updatedHistoryWithUser, { role: 'model' as const, text: aiResponse.nextQuestion }];
+        const finalHistory = [...updatedHistoryWithUser, { role: 'model' as const, text: aiResponse.aiResponseText }];
         const finalSummary = aiResponse.updatedSummary;
         
         // 4. Save AI response to the database
@@ -122,7 +122,7 @@ export async function continueAudit(input: ConversationalAuditInput): Promise<Co
         return {
             success: true,
             data: {
-                aiResponseText: aiResponse.nextQuestion,
+                aiResponseText: aiResponse.aiResponseText,
                 userTranscript: userTranscript,
                 updatedStructuredSummary: finalSummary,
                 updatedConversationHistory: finalHistory,
@@ -158,7 +158,7 @@ export async function retryAiProcessing(auditId: string): Promise<ContinueAuditR
     // Attempt to get the AI's response again
     try {
         const aiResponse = await getNextAuditStep(currentAudit.conversationHistory, currentAudit.structuredSummary);
-        const finalHistory = [...currentAudit.conversationHistory, { role: 'model' as const, text: aiResponse.nextQuestion }];
+        const finalHistory = [...currentAudit.conversationHistory, { role: 'model' as const, text: aiResponse.aiResponseText }];
         const finalSummary = aiResponse.updatedSummary;
         
         // Save AI response to the database
@@ -171,7 +171,7 @@ export async function retryAiProcessing(auditId: string): Promise<ContinueAuditR
         return {
             success: true,
             data: {
-                aiResponseText: aiResponse.nextQuestion,
+                aiResponseText: aiResponse.aiResponseText,
                 userTranscript: lastUserTurn?.text || '',
                 updatedStructuredSummary: finalSummary,
                 updatedConversationHistory: finalHistory,
@@ -195,5 +195,3 @@ export async function generateWorkPlan(summary: AuditStructure): Promise<WorkPla
     const plan = await generateWorkPlanFlow({ structuredSummary: summary });
     return plan;
 }
-
-    
