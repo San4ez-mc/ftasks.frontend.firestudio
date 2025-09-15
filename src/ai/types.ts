@@ -45,23 +45,50 @@ const EmployeeSchema = z.object({
   name: z.string().describe('The full name of the employee.'),
 });
 
+const TemplateSchema = z.object({
+    id: z.string(),
+    name: z.string().describe('The name of the template.'),
+});
+
 export const TelegramCommandInputSchema = z.object({
   command: z.string().describe('The natural language command from the user.'),
   employees: z.array(EmployeeSchema).describe('A list of available employees to assign tasks/results to.'),
+  templates: z.array(TemplateSchema).describe('A list of available task templates.'),
   allowedCommands: z.array(z.string()).describe('A list of commands the user is permitted to execute.'),
 });
 export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
 
 export const TelegramCommandOutputSchema = z.object({
-  command: z.enum(['create_task', 'create_result', 'list_employees', 'view_tasks', 'edit_task_title', 'add_comment_to_result', 'show_help', 'unknown', 'clarify'])
+  command: z.enum([
+        'create_task', 
+        'create_result', 
+        'list_employees', 
+        'view_tasks', 
+        'edit_task_title', 
+        'add_comment_to_result',
+        'add_comment_to_task',
+        'view_task_details',
+        'list_templates',
+        'create_template',
+        'update_task_status',
+        'update_task_date',
+        'show_help', 
+        'unknown', 
+        'clarify'
+    ])
     .describe('The recognized command the user wants to execute.'),
   parameters: z.object({
     title: z.string().optional().describe('The title for the new task or result.'),
     assigneeName: z.string().optional().describe("The name of the employee to whom the task or result is assigned. Must be one of the names from the input employees list."),
     dueDate: z.string().optional().describe("The due date in 'YYYY-MM-DD' format."),
+    startDate: z.string().optional().describe("The start date for a query in 'YYYY-MM-DD' format."),
+    endDate: z.string().optional().describe("The end date for a query in 'YYYY-MM-DD' format."),
+    status: z.string().optional().describe("The status to filter tasks by (e.g., 'todo', 'done')."),
     targetTitle: z.string().optional().describe('The title of the existing task or result to modify.'),
     newTitle: z.string().optional().describe('The new title for the task being edited.'),
     commentText: z.string().optional().describe('The text of the comment to add to a result.'),
+    repeatability: z.string().optional().describe("The recurrence rule for a new template (e.g., 'daily', 'weekly')."),
+    newDueDate: z.string().optional().describe("The new due date for a task in 'YYYY-MM-DD' format."),
   }).optional().describe('The parameters extracted from the command.'),
   missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
   reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees", "show_help") or unknown.'),
