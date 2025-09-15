@@ -1,7 +1,7 @@
 
 import { getProcess } from '../actions';
 import { mockUsers } from '@/data/process-mock';
-import ProcessEditor from '@/components/processes/ProcessEditor';
+import ProcessEditor from './_components/ProcessEditor';
 import { notFound } from 'next/navigation';
 import { mockDepartments, mockDivisions, mockEmployees } from '@/data/org-structure-mock';
 import type { Department, Division, Employee, Section } from '@/types/org-structure';

@@ -16,7 +16,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import ProcessArrows from '@/components/processes/process-arrows';
 import type { Process, Lane, Step, User, StepStatus } from '@/types/process';
 import type { Section, Employee } from '@/types/org-structure';
-import { updateProcess } from '../../actions';
+import { updateProcess } from '@/app/(app)/processes/actions';
 import { useToast } from '@/hooks/use-toast';
 
 
