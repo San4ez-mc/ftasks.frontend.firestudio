@@ -515,7 +515,7 @@ function TemplateDetailsPanel({ template, onUpdate, onClose, onDelete }: { templ
                         </div>
                         <div>
                             <Label htmlFor="template-expected-result">Очікуваний результат</Label>
-                            <Textarea id="template-expected-result" value={template.expectedResult} onChange={e => handleFieldChange('expectedResult', e.target.value)} />
+                            <Textarea id="template-expected-result" value={template.expectedResult || ''} onChange={e => handleFieldChange('expectedResult', e.target.value)} />
                         </div>
                     </CardContent>
                 </Card>
