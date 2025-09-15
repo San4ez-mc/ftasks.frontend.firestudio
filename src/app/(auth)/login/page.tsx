@@ -24,8 +24,8 @@ export default function LoginPage() {
   const handleQuickLogin = () => {
     // This is a temporary developer-only function.
     // It uses a hardcoded, non-revocable token for local testing.
-    // In a real app, this would be highly insecure.
-    const MOCK_PERMANENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJjb21wYW55SWQiOiJjb21wYW55LTEiLCJyZW1lbWJlck1lIjp0cnVlLCJpYXQiOjE3MjU5NzQ0MDAsImV4cCI6MTcyODU2NjQwMH0.7a_7c6b5e9f8d4a3e2c1b0a9f8c7d6e5f4d3c2b1a0e9f8d7c6b5a4e3d2c1b0a9";
+    // This token corresponds to user-1 (Oleksandr Matsuk), company-1.
+    const MOCK_PERMANENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJjb21wYW55SWQiOiJjb21wYW55LTEiLCJyZW1lbWJlck1lIjp0cnVlLCJpYXQiOjE3MjU5NzQ0MDAsImV4cCI6MTcyODU2NjQwMH0.P1W74x2VIp-1E8ZQOBnCx55a-Yp5N_NqA-n8Q2bF6iM";
     
     // Set token in both localStorage (for client-side API calls) and cookies (for middleware)
     localStorage.setItem('auth_token', MOCK_PERMANENT_TOKEN);
