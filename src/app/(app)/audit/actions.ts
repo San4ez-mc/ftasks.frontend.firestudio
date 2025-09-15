@@ -39,6 +39,7 @@ export async function createAudit(): Promise<Audit> {
         companyId,
         createdAt: new Date().toISOString(),
         isCompleted: false,
+        isAiComplete: false,
         structuredSummary: {},
         conversationHistory: [
             {
@@ -114,7 +115,8 @@ export async function continueAudit(input: ConversationalAuditInput): Promise<Co
         // 4. Save AI response to the database
         await updateAuditInDb(companyId, input.auditId, { 
             conversationHistory: finalHistory,
-            structuredSummary: finalSummary
+            structuredSummary: finalSummary,
+            isAiComplete: aiResponse.isComplete,
         });
         
         // 5. Return the successful result
@@ -125,7 +127,7 @@ export async function continueAudit(input: ConversationalAuditInput): Promise<Co
                 userTranscript: userTranscript,
                 updatedStructuredSummary: finalSummary,
                 updatedConversationHistory: finalHistory,
-                isAuditComplete: false,
+                isAuditComplete: aiResponse.isComplete,
             }
         };
 
@@ -163,7 +165,8 @@ export async function retryAiProcessing(auditId: string): Promise<ContinueAuditR
         // Save AI response to the database
         await updateAuditInDb(companyId, auditId, { 
             conversationHistory: finalHistory,
-            structuredSummary: finalSummary
+            structuredSummary: finalSummary,
+            isAiComplete: aiResponse.isComplete,
         });
         
         return {
@@ -173,7 +176,7 @@ export async function retryAiProcessing(auditId: string): Promise<ContinueAuditR
                 userTranscript: lastUserTurn?.text || '',
                 updatedStructuredSummary: finalSummary,
                 updatedConversationHistory: finalHistory,
-                isAuditComplete: false,
+                isAuditComplete: aiResponse.isComplete,
             }
         };
 

@@ -20,12 +20,12 @@ import {z} from 'zod';
  * It's designed to be called from a server action that handles the database transactions.
  * @param conversationHistory The full history of the conversation so far.
  * @param currentSummary The current structured data gathered from the conversation.
- * @returns An object containing the AI's next question and the updated structured summary.
+ * @returns An object containing the AI's next question, the updated structured summary, and a completion flag.
  */
 export async function getNextAuditStep(
   conversationHistory: ConversationTurn[],
   currentSummary: AuditStructure,
-): Promise<{ nextQuestion: string; updatedSummary: AuditStructure }> {
+): Promise<{ nextQuestion: string; updatedSummary: AuditStructure, isComplete: boolean }> {
   const { output } = await auditPrompt({
       conversationHistory,
       currentSummary,
@@ -38,6 +38,7 @@ export async function getNextAuditStep(
   return {
     nextQuestion: output.nextQuestion,
     updatedSummary: output.updatedSummary,
+    isComplete: output.isComplete,
   };
 }
 
@@ -52,9 +53,10 @@ const auditPrompt = ai.definePrompt({
   },
   output: {
     schema: z.object({
-      nextQuestion: z.string().describe('The next concise question to ask the user to continue the audit. Must be in Ukrainian.'),
+      nextQuestion: z.string().describe('The next concise question to ask the user to continue the audit. Must be in Ukrainian. If the audit is complete, this can be a concluding remark.'),
       updatedSummary: AuditStructureSchema.describe('The updated JSON object with all new information from the user\'s last answer. Preserve existing data.'),
       thought: z.string().describe('Your brief thought process for why you are asking this question. In Ukrainian.'),
+      isComplete: z.boolean().describe("Set to true only when all questions in the audit plan have been sufficiently answered. Otherwise, set to false."),
     }),
   },
   prompt: `You are an expert business consultant conducting an audit of a company by having a conversation with the business owner. Your goal is to progressively fill out a structured JSON object with key business information.
@@ -76,6 +78,7 @@ You MUST conduct the entire conversation in UKRAINIAN.
 6.  If the user's answer is vague, ask a clarifying question in a friendly manner.
 7.  If the user goes off-topic, gently guide them back to the audit plan.
 8.  Keep your questions concise and ask only one question at a time.
+9.  When you have gathered sufficient information for ALL sections of the Audit Plan, set the 'isComplete' flag to true in your response and provide a concluding remark as the 'nextQuestion'. Otherwise, keep 'isComplete' false.
 
 **Audit Plan (Follow this order):**
 1.  **Company Profile:**

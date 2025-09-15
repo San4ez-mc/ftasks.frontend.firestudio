@@ -292,7 +292,7 @@ function OngoingAuditView({ audit, setAudit, onFinish }: { audit: Audit, setAudi
                     <StructuredSummaryView summary={audit.structuredSummary} />
                 </CardContent>
                  <div className="pt-4 border-t mt-4">
-                    <Button onClick={onFinish} disabled={isPending} className="w-full">
+                    <Button onClick={onFinish} disabled={isPending || !audit.isAiComplete} className="w-full">
                         {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                         Завершити аудит та згенерувати план
                     </Button>
