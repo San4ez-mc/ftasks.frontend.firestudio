@@ -3,6 +3,7 @@ export type EmployeeStatus = 'active' | 'vacation' | 'inactive';
 
 export interface Employee {
     id: string;
+    userId?: string; // Link to the global user account
     companyId: string;
     telegramUserId: string;
     telegramUsername: string;
