@@ -27,6 +27,7 @@ export let companies = [
 export let companyEmployees: Employee[] = [
     {
         id: 'emp-1',
+        companyId: 'company-1',
         telegramUserId: '345126254',
         telegramUsername: 'olexandrmatsuk',
         firstName: 'Oleksandr',
@@ -43,6 +44,7 @@ export let companyEmployees: Employee[] = [
     },
     {
         id: 'emp-2',
+        companyId: 'company-1',
         telegramUserId: 'tg-456',
         telegramUsername: 'maria_s',
         firstName: 'Марія',
@@ -59,6 +61,7 @@ export let companyEmployees: Employee[] = [
     },
      {
         id: 'emp-3',
+        companyId: 'company-1',
         telegramUserId: 'tg-789',
         telegramUsername: 'olena_k',
         firstName: 'Олена',
@@ -75,6 +78,7 @@ export let companyEmployees: Employee[] = [
     },
     {
         id: 'emp-4',
+        companyId: 'company-1',
         telegramUserId: 'tg-101',
         telegramUsername: 'petro_i',
         firstName: 'Петро',
@@ -91,6 +95,7 @@ export let companyEmployees: Employee[] = [
     },
      {
         id: 'emp-5',
+        companyId: 'company-1',
         telegramUserId: 'tg-112',
         telegramUsername: 'andriy_b',
         firstName: 'Андрій',
@@ -117,6 +122,7 @@ export let tasksDb: Task[] = [];
 export let resultsDb: Result[] = [
   {
     id: 'res-user-1',
+    companyId: 'company-1',
     name: 'Запустити робочу воронку продаж і отримати з неї клієнтів на консалтинг',
     status: 'В роботі',
     completed: false,
@@ -138,6 +144,7 @@ export let resultsDb: Result[] = [
   },
   {
     id: 'res-1',
+    companyId: 'company-1',
     name: 'Запустити рекламну кампанію в Google Ads',
     status: 'В роботі',
     completed: false,
@@ -164,6 +171,7 @@ export let resultsDb: Result[] = [
   },
   {
     id: 'res-2',
+    companyId: 'company-1',
     name: 'Розробити новий модуль аналітики',
     status: 'Заплановано',
     completed: false,
@@ -181,6 +189,7 @@ export let resultsDb: Result[] = [
   },
   {
     id: 'res-3',
+    companyId: 'company-1',
     name: 'Підготувати квартальний звіт для інвесторів',
     status: 'В роботі',
     completed: false,
@@ -202,6 +211,7 @@ export let resultsDb: Result[] = [
   },
    {
     id: 'res-4',
+    companyId: 'company-1',
     name: 'Оновити дизайн головної сторінки',
     status: 'Відкладено',
     completed: false,
@@ -219,6 +229,7 @@ export let resultsDb: Result[] = [
   },
   {
     id: 'res-5',
+    companyId: 'company-1',
     name: 'Провести A/B тестування цін',
     status: 'Виконано',
     completed: true,
@@ -239,6 +250,7 @@ export let resultsDb: Result[] = [
 export let templatesDb: Template[] = [
   { 
     id: '1', 
+    companyId: 'company-1',
     name: 'Щоденний звіт', 
     repeatability: 'Щоденно о 9:00', 
     startDate: '2024-08-01',
@@ -253,6 +265,7 @@ export let templatesDb: Template[] = [
   },
   { 
     id: '2', 
+    companyId: 'company-1',
     name: 'Щотижнева аналітика', 
     repeatability: 'Щотижня (Пн)', 
     startDate: '2024-07-29',
@@ -266,6 +279,7 @@ export let templatesDb: Template[] = [
   },
   { 
     id: '3', 
+    companyId: 'company-1',
     name: 'Підготовка до щомісячної зустрічі', 
     repeatability: 'Щомісяця (25 число)', 
     startDate: '2024-06-25',

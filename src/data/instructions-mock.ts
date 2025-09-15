@@ -4,6 +4,7 @@ import type { Instruction } from '@/types/instruction';
 export const mockInstructions: Instruction[] = [
   {
     id: 'instr-1',
+    companyId: 'company-1',
     title: 'Як правильно ставити щоденні задачі',
     department: 'Загальні',
     summary: 'Коротка інструкція по роботі з модулем щоденних задач в системі FINEKO.',
@@ -41,6 +42,7 @@ export const mockInstructions: Instruction[] = [
   },
   {
     id: 'instr-2',
+    companyId: 'company-1',
     title: 'Онбординг нового співробітника',
     department: 'Відділ персоналу',
     summary: 'Покроковий план дій для HR-менеджера при наймі нового члена команди.',

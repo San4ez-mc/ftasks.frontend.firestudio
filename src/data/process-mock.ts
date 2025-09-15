@@ -12,6 +12,7 @@ export const mockUsers: User[] = [
 
 export const mockInitialProcess: Process = {
   id: '1',
+  companyId: 'company-1',
   name: 'Процес найму та онбордингу нового співробітника',
   description: 'Повний цикл від створення вакансії до першого робочого дня та адаптації.',
   lanes: [
