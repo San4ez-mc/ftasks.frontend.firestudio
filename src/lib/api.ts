@@ -20,21 +20,25 @@ function getToken(): string | null {
 }
 
 /**
- * Sets the permanent authentication token in localStorage.
+ * Sets the permanent authentication token in localStorage and as a cookie.
  */
-function setToken(token: string): void {
+function setToken(token: string, rememberMe: boolean): void {
   if (typeof window !== 'undefined') {
     localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 30 days or 7 days
+    document.cookie = `${TOKEN_STORAGE_KEY}=${token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`;
   }
 }
 
 
 /**
- * Removes the authentication token from localStorage.
+ * Removes the authentication token from localStorage and cookies.
  */
 export function clearToken(): void {
     if (typeof window !== 'undefined') {
         localStorage.removeItem(TOKEN_STORAGE_KEY);
+        // Expire the cookie by setting its expiration date to the past
+        document.cookie = `${TOKEN_STORAGE_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     }
 }
 
@@ -45,6 +49,8 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
 
+  // For client-side requests, the browser will automatically send the cookie.
+  // For scenarios where we might still use localStorage token (e.g., legacy), we can keep this logic.
   const permanentToken = getToken();
   if (permanentToken && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${permanentToken}`);
@@ -89,8 +95,8 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
 /**
  * Exchanges the temporary token and selected company for a permanent session token.
  */
-export async function selectCompany(tempToken: string, companyId: string): Promise<{ token: string }> {
-    const response = await apiFetch<{ token: string }>('/auth/telegram/select-company', {
+export async function selectCompany(tempToken: string, companyId: string): Promise<{ token: string; rememberMe?: boolean }> {
+    const response = await apiFetch<{ token: string; rememberMe?: boolean }>('/auth/telegram/select-company', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${tempToken}`
@@ -99,7 +105,7 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
     });
     
     if (response.token) {
-        setToken(response.token);
+        setToken(response.token, response.rememberMe || false);
     }
     return response;
 }
@@ -107,8 +113,8 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
 /**
  * Creates a new company and logs the user in, returning a permanent token.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string }> {
-    const response = await apiFetch<{ token: string }>('/auth/telegram/create-company-and-login', {
+export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string; rememberMe?: boolean }> {
+    const response = await apiFetch<{ token: string; rememberMe?: boolean }>('/auth/telegram/create-company-and-login', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${tempToken}`
@@ -117,7 +123,7 @@ export async function createCompanyAndLogin(tempToken: string, companyName: stri
     });
     
     if (response.token) {
-        setToken(response.token);
+        setToken(response.token, response.rememberMe || false);
     }
     return response;
 }

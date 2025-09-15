@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken, createPermanentToken } from '@/lib/auth';
 import { db, companies, employees } from '@/lib/db';
+import { createCompanyAndAddUser } from '@/lib/firestore-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,6 @@ export async function POST(request: NextRequest) {
     }
     const { userId, rememberMe } = authResult;
 
-    // Fix: Ensure userId is not undefined before proceeding
     if (!userId) {
       return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
     }
@@ -22,27 +22,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'companyName is required' }, { status: 400 });
     }
 
-    // --- Database Logic (Mocked) ---
-    const newCompany = {
-      id: `company-${Date.now()}`,
-      name: companyName,
-      ownerId: userId,
-    };
-    companies.push(newCompany);
+    const { newCompanyId } = await createCompanyAndAddUser(userId, companyName);
 
-    const newEmployeeEntry = {
-      id: `emp-${Date.now()}`,
-      userId: userId,
-      companyId: newCompany.id,
-      status: 'active',
-      notes: 'Company creator',
-    };
-    employees.push(newEmployeeEntry);
-    // --- End Database Logic ---
-
-    const permanentToken = createPermanentToken(userId, newCompany.id, rememberMe || false);
+    const permanentToken = createPermanentToken(userId, newCompanyId, rememberMe || false);
     
-    return NextResponse.json({ token: permanentToken });
+    const response = NextResponse.json({ token: permanentToken, rememberMe: rememberMe || false });
+    
+    // Set the cookie in the response
+    const maxAge = (rememberMe || false) ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+    response.cookies.set('auth_token', permanentToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: maxAge,
+    });
+    
+    return response;
 
   } catch (error) {
     console.error('Create company error:', error);

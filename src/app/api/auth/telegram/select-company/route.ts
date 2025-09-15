@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken, createPermanentToken } from '@/lib/auth';
 import { db, employees } from '@/lib/db';
+import { isUserMemberOfCompany } from '@/lib/firestore-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,21 +20,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'companyId is required' }, { status: 400 });
     }
 
-    // Fix: Ensure userId is not undefined before proceeding
     if (!userId) {
       return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
     }
 
-    // --- Database Logic (Mocked) ---
-    const isMember = employees.some(e => e.userId === userId && e.companyId === companyId);
+    const isMember = await isUserMemberOfCompany(userId, companyId);
     if (!isMember) {
       return NextResponse.json({ message: 'User is not a member of this company' }, { status: 403 });
     }
-    // --- End Database Logic ---
 
     const permanentToken = createPermanentToken(userId, companyId, rememberMe || false);
 
-    return NextResponse.json({ token: permanentToken });
+    const response = NextResponse.json({ token: permanentToken, rememberMe: rememberMe || false });
+
+    // Set the cookie in the response
+    const maxAge = (rememberMe || false) ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+    response.cookies.set('auth_token', permanentToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: maxAge,
+    });
+    
+    return response;
 
   } catch (error) {
     console.error('Select company error:', error);
