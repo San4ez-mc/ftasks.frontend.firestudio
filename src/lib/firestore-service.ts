@@ -224,7 +224,18 @@ export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyI
 };
 
 // --- Company Profile ---
-export const getCompanyProfileFromDb = (companyId: string) => getDocAndValidateCompany<CompanyProfile>(COMPANY_PROFILES_COLLECTION, companyId, companyId);
+export const getCompanyProfileFromDb = async (companyId: string): Promise<CompanyProfile | null> => {
+    firestoreGuard();
+    // The document ID *is* the company ID for this collection, so we don't need a separate companyId check within the document.
+    const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+        return null;
+    }
+    
+    return { id: doc.id, ...doc.data() } as CompanyProfile;
+};
 export const updateCompanyProfileInDb = (companyId: string, updates: Partial<CompanyProfile>) => {
     firestoreGuard();
     const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
