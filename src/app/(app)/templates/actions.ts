@@ -18,7 +18,7 @@ export async function getTemplates(): Promise<Template[]> {
     return getAllTemplatesForCompany(session.companyId);
 }
 
-export async function createTemplate(templateData: Omit<Template, 'id'>): Promise<Template> {
+export async function createTemplate(templateData: Omit<Template, 'id' | 'companyId'>): Promise<Template> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
     return createTemplateInDb(session.companyId, templateData);

@@ -23,7 +23,7 @@ export async function getProcess(id: string): Promise<Process | null> {
     return getProcessById(session.companyId, id);
 }
 
-export async function createProcess(data: Omit<Process, 'id'>): Promise<Process> {
+export async function createProcess(data: Omit<Process, 'id' | 'companyId'>): Promise<Process> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
     return createProcessInDb(session.companyId, data);

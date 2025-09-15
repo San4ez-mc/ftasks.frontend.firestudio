@@ -141,7 +141,7 @@ export default function CompanyPage() {
         });
     };
     
-    const handleEmployeeCreate = (newEmployeeData: Omit<Employee, 'id' | 'status' | 'notes' | 'groups' | 'synonyms' | 'avatar' | 'telegramUserId'> & { positionId: string }) => {
+    const handleEmployeeCreate = (newEmployeeData: Parameters<typeof createEmployee>[0]) => {
         startTransition(async () => {
             try {
                 const newEmployee = await createEmployee(newEmployeeData);

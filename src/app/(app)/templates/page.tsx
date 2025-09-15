@@ -110,7 +110,7 @@ export default function TemplatesPage() {
   }, []);
 
 
-  const handleCreateTemplate = (templateData: Omit<Template, 'id'>) => {
+  const handleCreateTemplate = (templateData: Omit<Template, 'id' | 'companyId'>) => {
     startTransition(async () => {
         try {
             const created = await createTemplate(templateData);
@@ -318,7 +318,7 @@ function CreateTemplateDialog({isOpen, setIsOpen, results, initialData, onCreate
     setIsOpen: (open: boolean) => void;
     results: Result[];
     initialData: {name: string, resultId?: string, resultName?: string};
-    onCreate: (templateData: Omit<Template, 'id'>) => void;
+    onCreate: (templateData: Omit<Template, 'id' | 'companyId'>) => void;
 }) {
     const [name, setName] = useState('');
     const [linkedResultId, setLinkedResultId] = useState<string | undefined>(initialData.resultId);

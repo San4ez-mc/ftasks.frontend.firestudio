@@ -21,7 +21,7 @@ export async function getResults(): Promise<Result[]> {
 // The index parameter is a bit tricky with Firestore due to ordering. 
 // For now, we'll just add to the end.
 // A more robust solution would involve an 'order' field.
-export async function createResult(resultData: Omit<Result, 'id'>): Promise<Result> {
+export async function createResult(resultData: Omit<Result, 'id' | 'companyId'>): Promise<Result> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
     return createResultInDb(session.companyId, resultData);

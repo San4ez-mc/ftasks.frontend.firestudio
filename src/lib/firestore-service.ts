@@ -198,25 +198,25 @@ export async function removeEmployeeLink(userId: string, companyId: string): Pro
 
 // --- Tasks ---
 export const getAllTasksForCompany = (companyId: string) => getByQuery<Task>(TASKS_COLLECTION, 'companyId', companyId);
-export const createTaskInDb = (companyId: string, data: Omit<Task, 'id'>) => create<Task>(TASKS_COLLECTION, { ...data, companyId });
+export const createTaskInDb = (companyId: string, data: Omit<Task, 'id' | 'companyId'>) => create<Task>(TASKS_COLLECTION, { ...data, companyId });
 export const updateTaskInDb = (companyId: string, id: string, updates: Partial<Task>) => update<Task>(TASKS_COLLECTION, id, companyId, updates);
 export const deleteTaskFromDb = (companyId: string, id: string) => remove(TASKS_COLLECTION, id, companyId);
 
 // --- Results ---
 export const getAllResultsForCompany = (companyId: string) => getByQuery<Result>(RESULTS_COLLECTION, 'companyId', companyId);
-export const createResultInDb = (companyId: string, data: Omit<Result, 'id'>) => create<Result>(RESULTS_COLLECTION, { ...data, companyId });
+export const createResultInDb = (companyId: string, data: Omit<Result, 'id' | 'companyId'>) => create<Result>(RESULTS_COLLECTION, { ...data, companyId });
 export const updateResultInDb = (companyId: string, id: string, updates: Partial<Result>) => update<Result>(RESULTS_COLLECTION, id, companyId, updates);
 export const deleteResultFromDb = (companyId: string, id: string) => remove(RESULTS_COLLECTION, id, companyId);
 
 // --- Templates ---
 export const getAllTemplatesForCompany = (companyId: string) => getByQuery<Template>(TEMPLATES_COLLECTION, 'companyId', companyId);
-export const createTemplateInDb = (companyId: string, data: Omit<Template, 'id'>) => create<Template>(TEMPLATES_COLLECTION, { ...data, companyId });
+export const createTemplateInDb = (companyId: string, data: Omit<Template, 'id' | 'companyId'>) => create<Template>(TEMPLATES_COLLECTION, { ...data, companyId });
 export const updateTemplateInDb = (companyId: string, id: string, updates: Partial<Template>) => update<Template>(TEMPLATES_COLLECTION, id, companyId, updates);
 export const deleteTemplateFromDb = (companyId: string, id: string) => remove(TEMPLATES_COLLECTION, id, companyId);
 
 // --- Employees ---
 export const getAllEmployeesForCompany = (companyId: string) => getByQuery<Employee>(EMPLOYEES_COLLECTION, 'companyId', companyId);
-export const createEmployeeInDb = (companyId: string, data: Omit<Employee, 'id'>) => create<Employee>(EMPLOYEES_COLLECTION, { ...data, companyId });
+export const createEmployeeInDb = (companyId: string, data: Omit<Employee, 'id' | 'companyId'>) => create<Employee>(EMPLOYEES_COLLECTION, { ...data, companyId });
 export const updateEmployeeInDb = (companyId: string, id: string, updates: Partial<Employee>) => update<Employee>(EMPLOYEES_COLLECTION, id, companyId, updates);
 export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyId: string } | null> => {
     const links = await getByQuery<{ companyId: string }>(EMPLOYEES_COLLECTION, 'userId', userId);
@@ -234,21 +234,21 @@ export const updateCompanyProfileInDb = (companyId: string, updates: Partial<Com
 // --- Processes ---
 export const getAllProcessesForCompany = (companyId: string) => getByQuery<Process>(PROCESSES_COLLECTION, 'companyId', companyId);
 export const getProcessById = (companyId: string, id: string) => getDocAndValidateCompany<Process>(PROCESSES_COLLECTION, id, companyId);
-export const createProcessInDb = (companyId: string, data: Omit<Process, 'id'>) => create<Process>(PROCESSES_COLLECTION, { ...data, companyId });
+export const createProcessInDb = (companyId: string, data: Omit<Process, 'id' | 'companyId'>) => create<Process>(PROCESSES_COLLECTION, { ...data, companyId });
 export const updateProcessInDb = (companyId: string, id: string, updates: Partial<Process>) => update<Process>(PROCESSES_COLLECTION, id, companyId, updates);
 export const deleteProcessFromDb = (companyId: string, id: string) => remove(PROCESSES_COLLECTION, id, companyId);
 
 // --- Instructions ---
 export const getAllInstructionsForCompany = (companyId: string) => getByQuery<Instruction>(INSTRUCTIONS_COLLECTION, 'companyId', companyId);
 export const getInstructionById = (companyId: string, id: string) => getDocAndValidateCompany<Instruction>(INSTRUCTIONS_COLLECTION, id, companyId);
-export const createInstructionInDb = (companyId: string, data: Omit<Instruction, 'id'>) => create<Instruction>(INSTRUCTIONS_COLLECTION, { ...data, companyId });
+export const createInstructionInDb = (companyId: string, data: Omit<Instruction, 'id' | 'companyId'>) => create<Instruction>(INSTRUCTIONS_COLLECTION, { ...data, companyId });
 export const updateInstructionInDb = (companyId: string, id: string, updates: Partial<Instruction>) => update<Instruction>(INSTRUCTIONS_COLLECTION, id, companyId, updates);
 export const deleteInstructionFromDb = (companyId: string, id: string) => remove(INSTRUCTIONS_COLLECTION, id, companyId);
 
 // --- Audits ---
 export const getAllAuditsForCompany = (companyId: string) => getByQuery<Audit>(AUDITS_COLLECTION, 'companyId', companyId);
 export const getAuditById = (companyId: string, id: string) => getDocAndValidateCompany<Audit>(AUDITS_COLLECTION, id, companyId);
-export const createAuditInDb = (companyId: string, data: Omit<Audit, 'id'>) => create<Audit>(AUDITS_COLLECTION, { ...data, companyId });
+export const createAuditInDb = (companyId: string, data: Omit<Audit, 'id' | 'companyId'>) => create<Audit>(AUDITS_COLLECTION, { ...data, companyId });
 export const updateAuditInDb = (companyId: string, id: string, updates: Partial<Audit>) => update<Audit>(AUDITS_COLLECTION, id, companyId, updates);
 export const deleteAuditFromDb = (companyId: string, id: string) => remove(AUDITS_COLLECTION, id, companyId);
 
@@ -277,13 +277,12 @@ export const linkTelegramGroup = async (code: string, companyId: string): Promis
         if (!updatedGroup) throw new Error("Failed to update existing group.");
         return { group: updatedGroup, wasCreated: false };
     } else {
-        const newGroupData: Omit<TelegramGroup, 'id'> = {
+        const newGroupData: Omit<TelegramGroup, 'id' | 'companyId'> = {
             tgGroupId: codeData.tgGroupId,
             title: codeData.groupTitle,
-            companyId: companyId,
             linkedAt: new Date().toISOString(),
         };
-        const newGroup = await create<TelegramGroup>(GROUPS_COLLECTION, newGroupData);
+        const newGroup = await create<TelegramGroup>(GROUPS_COLLECTION, { ...newGroupData, companyId });
         return { group: newGroup, wasCreated: true };
     }
 };
@@ -296,7 +295,7 @@ export const findTelegramGroupByTgId = async (tgGroupId: string) => {
 }
 
 // --- Telegram Message Logs ---
-export const createTelegramLog = (companyId: string, data: Omit<MessageLog, 'id'>) => create<MessageLog>(TELEGRAM_LOGS_COLLECTION, { ...data, companyId });
+export const createTelegramLog = (companyId: string, data: Omit<MessageLog, 'id' | 'companyId'>) => create<MessageLog>(TELEGRAM_LOGS_COLLECTION, { ...data, companyId });
 
 export async function getTelegramLogsByGroupId(companyId: string, groupId: string): Promise<MessageLog[]> {
     firestoreGuard();
@@ -313,7 +312,7 @@ export async function getTelegramLogsByGroupId(companyId: string, groupId: strin
 // --- Telegram Members ---
 export const getMembersForGroupDb = (companyId: string, groupId: string) => getByQuery<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, 'groupId', groupId);
 
-export async function upsertTelegramMember(companyId: string, memberData: Omit<TelegramMember, 'id' | 'employeeId'>) {
+export async function upsertTelegramMember(companyId: string, memberData: Omit<TelegramMember, 'id' | 'companyId' | 'employeeId'>) {
     firestoreGuard();
     const membersRef = firestore.collection(TELEGRAM_MEMBERS_COLLECTION);
     const q = membersRef
@@ -335,7 +334,3 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
-
-    
-
-    

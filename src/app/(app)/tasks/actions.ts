@@ -44,10 +44,10 @@ export async function getTasksForDate(
 
 /**
  * Creates a new task.
- * @param taskData - The data for the new task, excluding the ID.
+ * @param taskData - The data for the new task, excluding the ID and companyId.
  * @returns A promise that resolves to the newly created task.
  */
-export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
+export async function createTask(taskData: Omit<Task, 'id' | 'companyId'>): Promise<Task> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
     return createTaskInDb(session.companyId, taskData);

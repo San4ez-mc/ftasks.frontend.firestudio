@@ -64,7 +64,7 @@ export default function InstructionsPage() {
     const title = formData.get('instrTitle') as string;
     
     if (title) {
-        const newInstructionData: Omit<Instruction, 'id'> = {
+        const newInstructionData: Omit<Instruction, 'id' | 'companyId'> = {
             title,
             department: formData.get('instrDept') as string,
             summary: formData.get('instrSummary') as string,

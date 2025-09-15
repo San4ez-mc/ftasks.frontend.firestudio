@@ -135,7 +135,7 @@ export default function ResultsPage() {
         const twoWeeksFromNow = new Date();
         twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
-        const newResultData: Omit<Result, 'id'> = {
+        const newResultData: Omit<Result, 'id' | 'companyId'> = {
             name: '',
             status: 'Заплановано',
             completed: false,
@@ -812,8 +812,3 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
-
-
-    
-
-    

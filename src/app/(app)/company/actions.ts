@@ -25,11 +25,11 @@ export async function updateEmployee(employeeId: string, updates: Partial<Employ
     return updateEmployeeInDb(session.companyId, employeeId, updates);
 }
 
-export async function createEmployee(employeeData: Omit<Employee, 'id' | 'status' | 'notes' | 'groups' | 'synonyms' | 'avatar' | 'telegramUserId'> & { positionId: string }): Promise<Employee> {
+export async function createEmployee(employeeData: Omit<Employee, 'id' | 'companyId' | 'status' | 'notes' | 'groups' | 'synonyms' | 'avatar' | 'telegramUserId'> & { positionId: string }): Promise<Employee> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
 
-    const newEmployeeData: Omit<Employee, 'id'> = {
+    const newEmployeeData: Omit<Employee, 'id' | 'companyId'> = {
         ...employeeData,
         positions: [employeeData.positionId],
         telegramUserId: `manual-${Date.now()}`, // Placeholder for manually added user

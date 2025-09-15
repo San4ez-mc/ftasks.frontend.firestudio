@@ -65,7 +65,7 @@ export default function ProcessesPage() {
     const name = formData.get('procName') as string;
     
     if (name) {
-        const newProcessData: Omit<Process, 'id'> = {
+        const newProcessData: Omit<Process, 'id' | 'companyId'> = {
             name,
             description: formData.get('procDesc') as string,
             lanes: [], // Start with empty lanes
