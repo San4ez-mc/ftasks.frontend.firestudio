@@ -144,26 +144,14 @@ export default function TasksPage() {
     });
   }
 
-  const handleTaskCreate = (taskData: Omit<Task, 'id'>) => {
+  const handleTaskCreate = (taskData: Omit<Task, 'id' | 'companyId'>) => {
       startTransition(async () => {
-        const tempId = `temp-${Date.now()}`;
-        const newTask: Task = { id: tempId, ...taskData };
-
-        // Optimistic update
-        setTasks(prevTasks => [newTask, ...prevTasks]);
-        setSelectedTask(newTask);
-
         try {
             const createdTask = await createTask(taskData);
-            // Replace temporary task with the real one from the server
-            setTasks(prevTasks => prevTasks.map(t => t.id === tempId ? createdTask : t));
-            if (selectedTask?.id === tempId) {
-                setSelectedTask(createdTask);
-            }
+            setTasks(prevTasks => [createdTask, ...prevTasks]);
+            setSelectedTask(createdTask);
         } catch (error) {
             toast({ title: "Помилка", description: "Не вдалося створити задачу.", variant: "destructive" });
-            // Revert on error
-            setTasks(prevTasks => prevTasks.filter(t => t.id !== tempId));
         }
     });
   }
@@ -185,7 +173,7 @@ export default function TasksPage() {
 
   const createNewTask = (title: string, resultName?: string) => {
     if(!currentUser) return;
-    const newTaskData: Omit<Task, 'id'> = {
+    const newTaskData: Omit<Task, 'id' | 'companyId'> = {
       title: title,
       dueDate: (currentDate || new Date()).toISOString().split('T')[0],
       status: 'todo',
@@ -442,3 +430,5 @@ export default function TasksPage() {
     </div>
   );
 }
+
+    
