@@ -198,6 +198,20 @@ const createTemplateTool = ai.defineTool(
   }
 );
 
+const allTools = [
+    createTaskTool,
+    createResultTool,
+    viewTasksTool,
+    viewTaskDetailsTool,
+    listEmployeesTool,
+    editTaskTitleTool,
+    addCommentToTaskTool,
+    addCommentToResultTool,
+    updateTaskStatusTool,
+    updateTaskDateTool,
+    listTemplatesTool,
+    createTemplateTool
+];
 
 export async function parseTelegramCommand(input: TelegramCommandInput): Promise<TelegramCommandOutput> {
   // Check if user is asking for help
@@ -227,20 +241,7 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
 3.  **Невідома команда:** Якщо запит взагалі не схожий на жоден з доступних інструментів, тільки тоді повертай стандартну відповідь про нерозуміння.
 
 Завжди відповідай українською мовою.`,
-    tools: [
-        createTaskTool,
-        createResultTool,
-        viewTasksTool,
-        viewTaskDetailsTool,
-        listEmployeesTool,
-        editTaskTitleTool,
-        addCommentToTaskTool,
-        addCommentToResultTool,
-        updateTaskStatusTool,
-        updateTaskDateTool,
-        listTemplatesTool,
-        createTemplateTool
-    ],
+    tools: allTools,
   });
 
   const { output } = await telegramAgent({
@@ -254,9 +255,12 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
   // Check if the output is a tool call
   if (output.isToolCall()) {
     const toolCall = output.toolCalls[0];
-    const tool = ai.lookupTool(toolCall.toolName);
-    const toolOutput = await tool(toolCall.args);
-    return toolOutput;
+    const tool = allTools.find(t => t.name === toolCall.toolName);
+    if (tool) {
+        const toolOutput = await tool(toolCall.args);
+        return toolOutput;
+    }
+     return { command: 'unknown', reply: `Помилка: інструмент '${toolCall.toolName}' не знайдено.` };
   }
 
   // Check if the output is text (clarification or error)
@@ -283,3 +287,5 @@ const telegramCommandFlow = ai.defineFlow(
     return parseTelegramCommand(input);
   }
 );
+
+    

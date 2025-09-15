@@ -1,4 +1,3 @@
-
 // src/lib/firestore-service.ts
 'use server';
 
@@ -151,29 +150,45 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
     firestoreGuard();
     const batch = firestore.batch();
 
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error(`User with ID ${userId} not found.`);
+    }
+
     // Create the company
     const newCompanyRef = firestore.collection(COMPANIES_COLLECTION).doc();
     batch.set(newCompanyRef, { name: companyName, ownerId: userId });
 
-    // Create the employee link
+    // Create the complete employee record
     const newEmployeeLinkRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
-    batch.set(newEmployeeLinkRef, { userId, companyId: newCompanyRef.id, status: 'active', notes: 'Company creator' });
+    batch.set(newEmployeeLinkRef, { 
+        userId: user.id, 
+        companyId: newCompanyRef.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        telegramUserId: user.telegramUserId || '',
+        telegramUsername: user.telegramUsername || '',
+        avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.telegramUsername}`,
+        status: 'active',
+        notes: 'Company creator',
+        positions: [],
+        groups: [],
+        synonyms: [],
+    });
     
     // Also create a company profile
-    const user = await getUserById(userId);
-    if(user) {
-        const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
-        batch.set(companyProfileRef, {
-            name: companyName,
-            description: `Компанія ${companyName}`,
-            adminId: user.id,
-            companyId: newCompanyRef.id,
-        });
-    }
+    const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
+    batch.set(companyProfileRef, {
+        name: companyName,
+        description: `Компанія ${companyName}`,
+        adminId: user.id,
+        companyId: newCompanyRef.id,
+    });
 
     await batch.commit();
     return { newCompanyId: newCompanyRef.id };
 }
+
 
 export async function removeEmployeeLink(userId: string, companyId: string): Promise<{ success: boolean; message: string }> {
     firestoreGuard();
@@ -404,3 +419,5 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
+
+    
