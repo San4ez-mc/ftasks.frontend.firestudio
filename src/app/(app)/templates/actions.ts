@@ -2,20 +2,36 @@
 'use server';
 
 import type { Template } from '@/types/template';
-import { getAllTemplates, createTemplateInDb, updateTemplateInDb, deleteTemplateFromDb } from '@/lib/firestore-service';
+import { 
+    getAllTemplatesForCompany, 
+    createTemplateInDb, 
+    updateTemplateInDb, 
+    deleteTemplateFromDb 
+} from '@/lib/firestore-service';
+import { getUserSession } from '@/lib/session';
 
 export async function getTemplates(): Promise<Template[]> {
-    return getAllTemplates();
+    const session = await getUserSession();
+    if (!session) {
+        return [];
+    }
+    return getAllTemplatesForCompany(session.companyId);
 }
 
 export async function createTemplate(templateData: Omit<Template, 'id'>): Promise<Template> {
-    return createTemplateInDb(templateData);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return createTemplateInDb(session.companyId, templateData);
 }
 
 export async function updateTemplate(templateId: string, updates: Partial<Template>): Promise<Template | null> {
-    return updateTemplateInDb(templateId, updates);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return updateTemplateInDb(session.companyId, templateId, updates);
 }
 
 export async function deleteTemplate(templateId: string): Promise<{ success: boolean }> {
-    return deleteTemplateFromDb(templateId);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return deleteTemplateFromDb(session.companyId, templateId);
 }
