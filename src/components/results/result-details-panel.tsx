@@ -98,7 +98,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
         onUpdate(localResult);
     }
      
-    const handleCreateTask = async (taskData: Omit<Task, 'id'>) => {
+    const handleCreateTask = async (taskData: Omit<Task, 'id' | 'companyId'>) => {
         try {
             const newTask = await createTaskAction(taskData);
             const newResultTask = { id: newTask.id, title: newTask.title, status: newTask.status };
@@ -547,7 +547,7 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef,
 
 
 // Helper component for Add Task Dialog
-function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result: Result; onTaskCreate: (taskData: Omit<Task, 'id'>) => void, triggerButton?: boolean }) {
+function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result: Result; onTaskCreate: (taskData: Omit<Task, 'id' | 'companyId'>) => void, triggerButton?: boolean }) {
     const [title, setTitle] = useState(result.name);
     const [assigneeId, setAssigneeId] = useState(result.assignee.id);
     const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
@@ -688,3 +688,6 @@ function AccessListCombobox({ allUsers, selectedUsers, onSelectionChange }: { al
         </Popover>
     )
 }
+
+
+    
