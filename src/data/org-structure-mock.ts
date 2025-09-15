@@ -22,7 +22,34 @@ export const mockEmployees: Employee[] = [
 ];
 
 export const mockDepartments: Department[] = [
-    // This can be kept empty initially, so user can build from templates
+    {
+        id: 'dept-hr',
+        name: 'Відділ персоналу',
+        divisionId: 'div-7',
+        ckp: 'Продуктивні співробітники, найняті та введені на посаду',
+        sections: [
+            { id: 'sec-1', name: 'Секція Рекрутингу', ckp: 'Кваліфіковані кандидати, готові до співбесіди', managerId: 'emp-3', employeeIds: ['emp-7'] },
+            { id: 'sec-2', name: 'Секція Онбордингу', ckp: 'Нові співробітники, що успішно пройшли адаптацію', managerId: 'emp-3', employeeIds: [] },
+        ]
+    },
+    {
+        id: 'dept-it',
+        name: 'IT Відділ',
+        divisionId: 'div-2',
+        ckp: 'Стабільно працююча IT-інфраструктура',
+        sections: [
+            { id: 'sec-3', name: 'Секція Підтримки', ckp: 'Вирішені запити користувачів', managerId: 'emp-6', employeeIds: [] },
+        ]
+    },
+     {
+        id: 'dept-finance',
+        name: 'Бухгалтерія',
+        divisionId: 'div-4',
+        ckp: 'Вчасно подана звітність та сплачені податки',
+        sections: [
+             { id: 'sec-4', name: 'Секція розрахунків', ckp: 'Проведені платежі та розрахунки з контрагентами', managerId: 'emp-5', employeeIds: [] },
+        ]
+    }
 ];
 
 export const departmentTemplates: Record<string, { name: string; ckp: string }[]> = {

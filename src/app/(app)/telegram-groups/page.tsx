@@ -153,9 +153,20 @@ function TelegramGroupsPageContent() {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Прив'язка нової групи</DialogTitle>
-                        <DialogDescription>Введіть код, який бот надіслав у вашу Telegram-групу.</DialogDescription>
+                        <DialogDescription asChild>
+                            <div className="space-y-3 text-sm">
+                               <p>Щоб отримати код, виконайте наступні кроки:</p>
+                               <ol className="list-decimal list-inside space-y-2 bg-muted p-3 rounded-md">
+                                    <li>Додайте бота <code className="font-mono bg-background px-1 py-0.5 rounded">@FinekoTasks_Bot</code> у вашу Telegram-групу.</li>
+                                    <li>Призначте бота адміністратором групи.</li>
+                                    <li>Напишіть у чат групи команду <code className="font-mono bg-background px-1 py-0.5 rounded">/start</code>.</li>
+                                    <li>Бот надішле у відповідь 6-значний код.</li>
+                               </ol>
+                               <p>Введіть отриманий код нижче.</p>
+                            </div>
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-2">
+                    <div className="pt-4 space-y-2">
                         <Label htmlFor="link-code">Код прив'язки групи</Label>
                         <Input id="link-code" placeholder="Введіть 6-значний код..." value={linkCode} onChange={(e) => setLinkCode(e.target.value)} disabled={isPending} />
                     </div>
