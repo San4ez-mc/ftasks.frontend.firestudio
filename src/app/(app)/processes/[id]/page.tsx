@@ -1,9 +1,8 @@
 
 import { getProcess } from '../actions';
-import { mockUsers } from '@/data/process-mock';
+import { getOrgStructureData } from '../../org-structure/actions';
 import ProcessEditor from './_components/ProcessEditor';
 import { notFound } from 'next/navigation';
-import { mockDepartments, mockDivisions, mockEmployees } from '@/data/org-structure-mock';
 import type { Department, Division, Employee, Section } from '@/types/org-structure';
 
 type ProcessesPageProps = {
@@ -14,22 +13,23 @@ export default async function Page({ params }: ProcessesPageProps) {
   const { id } = params;
 
   const process = await getProcess(id);
-  const users = mockUsers; // TODO: Replace with real user data fetch
-  const departments: Department[] = mockDepartments;
-  const divisions: Division[] = mockDivisions;
-  const employees: Employee[] = mockEmployees;
+
+  if (!process) {
+    notFound();
+  }
+
+  // Fetch real org structure data from Firestore
+  const { departments, employees } = await getOrgStructureData();
   
   const allSections: (Section & { departmentName: string })[] = departments.flatMap(dept => 
-      dept.sections.map(sec => ({
+      (dept.sections || []).map(sec => ({
           ...sec,
           departmentName: dept.name
       }))
   );
 
+  const users = employees.map(e => ({ id: e.id, name: e.name, avatar: e.avatar || '' }));
 
-  if (!process) {
-    notFound();
-  }
 
   return (
     <ProcessEditor 
@@ -46,5 +46,3 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   const process = await getProcess(id);
   return { title: process ? process.name : 'Бізнес-процес' };
 }
-
-    

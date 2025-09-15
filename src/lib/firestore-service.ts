@@ -1,4 +1,3 @@
-
 // src/lib/firestore-service.ts
 'use server';
 
@@ -15,6 +14,7 @@ import type { Audit } from '@/types/audit';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 import type { User } from '@/types/user';
+import type { Department, Division } from '@/types/org-structure';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -31,6 +31,8 @@ const TELEGRAM_LOGS_COLLECTION = 'telegramMessageLogs';
 const TELEGRAM_MEMBERS_COLLECTION = 'telegramMembers';
 const COMPANIES_COLLECTION = 'companies';
 const USERS_COLLECTION = 'users';
+const DIVISIONS_COLLECTION = 'divisions';
+const DEPARTMENTS_COLLECTION = 'departments';
 
 
 const firestoreGuard = () => {
@@ -241,6 +243,54 @@ export const updateCompanyProfileInDb = (companyId: string, updates: Partial<Com
     const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
     return docRef.update(updates).then(() => getCompanyProfileFromDb(companyId));
 };
+
+// --- Org Structure ---
+export const getDivisionsForCompany = (companyId: string) => getByQuery<Division>(DIVISIONS_COLLECTION, 'companyId', companyId);
+export const getDepartmentsForCompany = (companyId: string) => getByQuery<Department>(DEPARTMENTS_COLLECTION, 'companyId', companyId);
+
+export async function saveOrgStructure(companyId: string, divisions: Division[], departments: Department[]): Promise<{ success: boolean }> {
+    firestoreGuard();
+    const batch = firestore.batch();
+
+    // Get existing divisions and departments to find what to delete
+    const existingDivisions = await getDivisionsForCompany(companyId);
+    const existingDepartments = await getDepartmentsForCompany(companyId);
+
+    const newDivisionIds = new Set(divisions.map(d => d.id));
+    const newDepartmentIds = new Set(departments.map(d => d.id));
+
+    // Delete divisions that are no longer present
+    for (const div of existingDivisions) {
+        if (!newDivisionIds.has(div.id)) {
+            batch.delete(firestore.collection(DIVISIONS_COLLECTION).doc(div.id));
+        }
+    }
+
+    // Delete departments that are no longer present
+    for (const dept of existingDepartments) {
+        if (!newDepartmentIds.has(dept.id)) {
+            batch.delete(firestore.collection(DEPARTMENTS_COLLECTION).doc(dept.id));
+        }
+    }
+
+    // Set/Update divisions
+    for (const div of divisions) {
+        const { id, ...data } = div;
+        const ref = firestore.collection(DIVISIONS_COLLECTION).doc(id);
+        batch.set(ref, { ...data, companyId });
+    }
+
+    // Set/Update departments
+    for (const dept of departments) {
+        const { id, ...data } = dept;
+        const ref = firestore.collection(DEPARTMENTS_COLLECTION).doc(id);
+        batch.set(ref, { ...data, companyId });
+    }
+    
+    await batch.commit();
+    return { success: true };
+}
+
 
 // --- Processes ---
 export const getAllProcessesForCompany = (companyId: string) => getByQuery<Process>(PROCESSES_COLLECTION, 'companyId', companyId);

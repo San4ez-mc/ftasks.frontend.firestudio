@@ -1,23 +1,23 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Download, Save, UserPlus, Info, Trash2, Library } from 'lucide-react';
-import { mockDivisions, mockDepartments, mockEmployees, departmentTemplates, sectionTemplates } from '@/data/org-structure-mock';
+import { Plus, Save, UserPlus, Info, Trash2, Loader2 } from 'lucide-react';
+import { departmentTemplates, sectionTemplates } from '@/data/org-structure-mock';
 import type { Department, Employee, Division, Section } from '@/types/org-structure';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
+import { getOrgStructureData, saveOrgData } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 // --- SectionCard Component ---
@@ -48,14 +48,16 @@ function SectionCard({ section, employees, onUpdate }: { section: Section; emplo
     
     return (
         <Card className="bg-muted/50" id={`section-card-${section.id}`}>
-            <CardHeader className="p-2">
-                <Input 
-                    value={section.name}
-                    onChange={(e) => handleFieldChange('name', e.target.value)}
-                    className="text-sm font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent"
-                />
-            </CardHeader>
-            <CardContent className="p-2 pt-0 text-xs space-y-2">
+            <CardContent className="p-2 text-xs space-y-2">
+                 <div>
+                    <Label htmlFor={`name-${section.id}`} className="text-xs font-semibold text-muted-foreground">Назва секції</Label>
+                    <Input 
+                        id={`name-${section.id}`}
+                        value={section.name}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        className="text-sm font-semibold border-none shadow-none p-0 h-auto focus-visible:ring-0 bg-transparent"
+                    />
+                 </div>
                  <div>
                     <Label htmlFor={`ckp-${section.id}`} className="text-xs font-semibold text-muted-foreground">ЦКП</Label>
                     <Textarea 
@@ -170,13 +172,17 @@ function DepartmentCard({ department, onUpdate, onDragStart, allEmployees }: { d
             draggable
             onDragStart={onDragStart}
         >
-            <CardHeader className="p-3">
-                <Input 
-                    value={department.name}
-                    onChange={(e) => handleFieldChange('name', e.target.value)}
-                    className="text-base font-bold border-none shadow-none p-0 h-auto focus-visible:ring-0"
-                />
-                 <div className="flex items-center gap-1 mt-1">
+            <CardContent className="p-3 text-sm space-y-3">
+                 <div>
+                    <Label htmlFor={`dept-name-${department.id}`} className="text-xs font-semibold text-muted-foreground">Назва відділу</Label>
+                    <Input 
+                        id={`dept-name-${department.id}`}
+                        value={department.name}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        className="text-base font-bold border-none shadow-none p-0 h-auto focus-visible:ring-0"
+                    />
+                 </div>
+                 <div className="flex items-center gap-1">
                     <Label htmlFor={`ckp-${department.id}`} className="text-xs font-semibold text-muted-foreground">ЦКП відділу</Label>
                      <TooltipProvider>
                         <Tooltip>
@@ -197,8 +203,6 @@ function DepartmentCard({ department, onUpdate, onDragStart, allEmployees }: { d
                     onChange={(e) => handleFieldChange('ckp', e.target.value)}
                     className="text-xs h-auto min-h-[40px] border-dashed"
                 />
-            </CardHeader>
-            <CardContent className="p-3 pt-0 text-sm space-y-3">
                 <div className="space-y-2">
                     {department.sections.map(section => (
                         <SectionCard 
@@ -249,12 +253,27 @@ const orgStructureTourSteps: TourStep[] = [
 
 
 export default function OrgStructurePage() {
-  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
-  const [divisions, setDivisions] = useState<Division[]>(mockDivisions);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
   const [draggedDeptId, setDraggedDeptId] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState<string | null>(null);
   const [draggedItemHeight, setDraggedItemHeight] = useState(0);
+  const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    startTransition(async () => {
+        try {
+            const { divisions, departments, employees } = await getOrgStructureData();
+            setDivisions(divisions);
+            setDepartments(departments);
+            setEmployees(employees);
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося завантажити орг. структуру.", variant: "destructive"});
+        }
+    });
+  }, [toast]);
 
   const handleAddDepartment = (divisionId: string, name?: string, ckp?: string) => {
     const newDepartment: Department = {
@@ -303,9 +322,19 @@ export default function OrgStructurePage() {
     setDraggedItemHeight(0);
   };
   
-  // Create a sample department card ID for the tour if none exist
-  const firstDeptId = departments.length > 0 ? departments[0].id : 'dept-1';
-  const firstSectionId = departments.length > 0 && departments[0].sections.length > 0 ? departments[0].sections[0].id : 'sec-1';
+  const handleSaveChanges = () => {
+    startTransition(async () => {
+        try {
+            await saveOrgData(divisions, departments);
+            toast({ title: "Успіх!", description: "Організаційну структуру збережено."});
+        } catch (error) {
+            toast({ title: "Помилка", description: "Не вдалося зберегти зміни.", variant: "destructive"});
+        }
+    });
+  };
+
+  const firstDeptId = departments[0]?.id || 'dept-1';
+  const firstSectionId = departments[0]?.sections[0]?.id || 'sec-1';
 
 
   return (
@@ -318,13 +347,17 @@ export default function OrgStructurePage() {
       <header className="flex-shrink-0 bg-background border-b p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight font-headline">Організаційна структура</h1>
         <div className="flex items-center gap-2">
-          <Button variant="outline"><Save className="mr-2 h-4 w-4" /> Зберегти</Button>
+          <Button onClick={handleSaveChanges} disabled={isPending}>
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+             Зберегти
+          </Button>
         </div>
       </header>
       
       <ScrollArea className="flex-1">
         <div className="p-4 flex flex-row items-start gap-4">
-            {divisions.map(division => {
+            {isPending && divisions.length === 0 ? <Loader2 className="mx-auto my-12 h-8 w-8 animate-spin" /> :
+            divisions.sort((a, b) => a.order - b.order).map(division => {
                 const divisionDepartments = departments.filter(d => d.divisionId === division.id);
                 return (
                     <div 
