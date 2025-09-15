@@ -2,7 +2,13 @@
 'use server';
 
 import type { Task } from '@/types/task';
-import { getAllTasks, createTaskInDb, updateTaskInDb, deleteTaskFromDb } from '@/lib/firestore-service';
+import { 
+    getAllTasksForCompany, 
+    createTaskInDb, 
+    updateTaskInDb, 
+    deleteTaskFromDb 
+} from '@/lib/firestore-service';
+import { getUserSession } from '@/lib/session';
 
 // --- SERVER ACTIONS ---
 
@@ -18,7 +24,10 @@ export async function getTasksForDate(
     userId: string, 
     filter: 'mine' | 'delegated' | 'subordinates'
 ): Promise<Task[]> {
-    const allTasks = await getAllTasks();
+    const session = await getUserSession();
+    if (!session) return [];
+
+    const allTasks = await getAllTasksForCompany(session.companyId);
     const dateFilteredTasks = allTasks.filter(task => task.dueDate === date);
 
     switch(filter) {
@@ -39,7 +48,9 @@ export async function getTasksForDate(
  * @returns A promise that resolves to the newly created task.
  */
 export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
-    return createTaskInDb(taskData);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return createTaskInDb(session.companyId, taskData);
 }
 
 /**
@@ -49,7 +60,9 @@ export async function createTask(taskData: Omit<Task, 'id'>): Promise<Task> {
  * @returns A promise that resolves to the updated task, or null if not found.
  */
 export async function updateTask(taskId: string, updates: Partial<Task>): Promise<Task | null> {
-    return updateTaskInDb(taskId, updates);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return updateTaskInDb(session.companyId, taskId, updates);
 }
 
 /**
@@ -58,5 +71,7 @@ export async function updateTask(taskId: string, updates: Partial<Task>): Promis
  * @returns A promise that resolves to an object indicating success.
  */
 export async function deleteTask(taskId: string): Promise<{ success: boolean }> {
-    return deleteTaskFromDb(taskId);
+    const session = await getUserSession();
+    if (!session) throw new Error("Not authenticated");
+    return deleteTaskFromDb(session.companyId, taskId);
 }
