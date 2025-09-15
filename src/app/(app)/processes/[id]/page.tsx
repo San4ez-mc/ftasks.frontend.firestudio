@@ -1,4 +1,3 @@
-
 import { getProcess } from '../actions';
 import { mockUsers } from '@/data/process-mock';
 import ProcessEditor from './_components/ProcessEditor';
