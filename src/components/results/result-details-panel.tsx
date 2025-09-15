@@ -2,6 +2,7 @@
 'use client';
 import type { Result, SubResult, User, ResultComment } from '@/types/result';
 import type { Task, TaskType } from '@/types/task';
+import type { Employee } from '@/types/company';
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,7 +31,6 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogT
 import { createTask as createTaskAction } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { companyEmployees } from '@/lib/db';
 
 
 type ResultDetailsPanelProps = {
@@ -38,10 +38,8 @@ type ResultDetailsPanelProps = {
   onUpdate: (result: Result) => void;
   onClose: () => void;
   onDelete: (resultId: string) => void;
+  allEmployees: Employee[];
 };
-
-const mockUsers: User[] = companyEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
-
 
 const typeOptions: { value: TaskType; label: string; color: string }[] = [
   { value: 'important-urgent', label: 'Важлива, термінова', color: 'bg-red-500' },
@@ -51,12 +49,14 @@ const typeOptions: { value: TaskType; label: string; color: string }[] = [
 ];
 
 
-export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete }: ResultDetailsPanelProps) {
+export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete, allEmployees }: ResultDetailsPanelProps) {
     const [localResult, setLocalResult] = useState(result);
     const nameInputRef = React.useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const lastAddedSubResultId = useRef<string | null>(null);
     const subResultInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+    const userList = allEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
 
     useEffect(() => {
         setLocalResult(result);
@@ -150,7 +150,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <DialogAddTask result={result} onTaskCreate={handleCreateTask} />
+                            <DialogAddTask result={result} onTaskCreate={handleCreateTask} userList={userList} />
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={handleCreateTemplate}>Створити шаблон</DropdownMenuItem>
                         <DropdownMenuItem>Дублювати</DropdownMenuItem>
@@ -216,18 +216,18 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                          <Select 
-                            value={result.assignee.id} 
+                            value={result.assignee?.id} 
                             onValueChange={(userId) => {
-                                const user = mockUsers.find(u => u.id === userId);
+                                const user = userList.find(u => u.id === userId);
                                 if (user) onUpdate({...result, assignee: user})
                             }}>
                             <SelectTrigger className="h-8 text-xs w-auto border-none p-0 focus:ring-0">
                                 <SelectValue asChild>
-                                    <Avatar className="h-8 w-8 cursor-pointer"><AvatarImage src={result.assignee.avatar} /></Avatar>
+                                    <Avatar className="h-8 w-8 cursor-pointer"><AvatarImage src={result.assignee?.avatar} /></Avatar>
                                 </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                                {mockUsers.map(user => (
+                                {userList.map(user => (
                                     <SelectItem key={user.id} value={user.id}>
                                          <div className="flex items-center gap-2">
                                             <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
@@ -238,16 +238,16 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                             </SelectContent>
                         </Select>
                         <div>
-                            <p className="font-medium">{result.assignee.name}</p>
+                            <p className="font-medium">{result.assignee?.name || 'Не призначено'}</p>
                             <p className="text-xs text-muted-foreground">Відповідальний</p>
                         </div>
                     </div>
                      <div className="flex items-center gap-2 text-right">
                          <div>
-                            <p className="font-medium">{result.reporter.name}</p>
+                            <p className="font-medium">{result.reporter?.name || 'Невідомо'}</p>
                             <p className="text-xs text-muted-foreground">Постановник</p>
                         </div>
-                        <Avatar className="h-8 w-8"><AvatarImage src={result.reporter.avatar} /></Avatar>
+                        <Avatar className="h-8 w-8"><AvatarImage src={result.reporter?.avatar} /></Avatar>
                     </div>
                 </div>
 
@@ -268,7 +268,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                 <div>
                     <Label className="text-xs text-muted-foreground flex items-center gap-2 mb-2"><Users className="h-4 w-4"/> Доступи</Label>
                     <AccessListCombobox
-                        allUsers={mockUsers}
+                        allUsers={userList}
                         selectedUsers={result.accessList || []}
                         onSelectionChange={handleAccessListChange}
                     />
@@ -296,6 +296,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                         onBlur={handleSubResultsBlur}
                         lastAddedIdRef={lastAddedSubResultId}
                         inputRefs={subResultInputRefs}
+                        userList={userList}
                     />
                 </div>
 
@@ -309,7 +310,7 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                                <p className="flex-1">{task.title}</p>
                             </div>
                         ))}
-                         <DialogAddTask result={result} onTaskCreate={handleCreateTask} triggerButton />
+                         <DialogAddTask result={result} onTaskCreate={handleCreateTask} userList={userList} triggerButton />
                     </div>
                 </div>
                 
@@ -354,9 +355,9 @@ export default function ResultDetailsPanel({ result, onUpdate, onClose, onDelete
                     <div className="space-y-4">
                         {result.comments?.map(comment => (
                             <div key={comment.id} className="flex gap-3">
-                                <Avatar className="h-8 w-8"><AvatarImage src={comment.author.avatar} /></Avatar>
+                                <Avatar className="h-8 w-8"><AvatarImage src={comment.author?.avatar} /></Avatar>
                                 <div>
-                                    <p className="font-medium text-xs">{comment.author.name} <span className="text-xs text-muted-foreground ml-2">{comment.timestamp}</span></p>
+                                    <p className="font-medium text-xs">{comment.author?.name} <span className="text-xs text-muted-foreground ml-2">{comment.timestamp}</span></p>
                                     <p className="text-xs bg-muted p-2 rounded-md mt-1">{comment.text}</p>
                                 </div>
                             </div>
@@ -386,16 +387,17 @@ type SubResultListProps = {
     onBlur: () => void;
     lastAddedIdRef: React.MutableRefObject<string | null>;
     inputRefs: React.MutableRefObject<Record<string, HTMLInputElement | null>>;
+    userList: User[];
     level?: number;
 }
 
-function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef, inputRefs, level = 0 }: SubResultListProps) {
+function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef, inputRefs, userList, level = 0 }: SubResultListProps) {
     const handleAddSubResult = (parentSubResultId?: string) => {
         const newSubResult: SubResult = {
             id: `sub-${Date.now()}`,
             name: '',
             completed: false,
-            assignee: mockUsers[0],
+            assignee: userList[0],
             deadline: new Date().toISOString().split('T')[0],
         };
         lastAddedIdRef.current = newSubResult.id;
@@ -481,7 +483,7 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef,
                             <Select 
                                 value={sr.assignee?.id}
                                 onValueChange={(userId) => {
-                                    const user = mockUsers.find(u => u.id === userId);
+                                    const user = userList.find(u => u.id === userId);
                                     if(user) {
                                         handleChange(sr.id, 'assignee', user);
                                         onBlur();
@@ -493,7 +495,7 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef,
                                     </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {mockUsers.map(user => (
+                                    {userList.map(user => (
                                         <SelectItem key={user.id} value={user.id}>
                                             <div className="flex items-center gap-2">
                                                 <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>
@@ -532,6 +534,7 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef,
                             level={level + 1}
                             lastAddedIdRef={lastAddedIdRef}
                             inputRefs={inputRefs}
+                            userList={userList}
                         />
                     )}
                 </div>
@@ -547,14 +550,14 @@ function SubResultList({ subResults, onSubResultsChange, onBlur, lastAddedIdRef,
 
 
 // Helper component for Add Task Dialog
-function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result: Result; onTaskCreate: (taskData: Omit<Task, 'id' | 'companyId'>) => void, triggerButton?: boolean }) {
+function DialogAddTask({ result, onTaskCreate, userList, triggerButton = false }: { result: Result; onTaskCreate: (taskData: Omit<Task, 'id' | 'companyId'>) => void, userList: User[], triggerButton?: boolean }) {
     const [title, setTitle] = useState(result.name);
-    const [assigneeId, setAssigneeId] = useState(result.assignee.id);
+    const [assigneeId, setAssigneeId] = useState(result.assignee?.id);
     const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
     const [type, setType] = useState<TaskType>('important-not-urgent');
 
     const handleSubmit = () => {
-        const assignee = mockUsers.find(u => u.id === assigneeId) || result.assignee;
+        const assignee = userList.find(u => u.id === assigneeId) || result.assignee;
         
         onTaskCreate({
             title,
@@ -594,7 +597,7 @@ function DialogAddTask({ result, onTaskCreate, triggerButton = false }: { result
                         <Select value={assigneeId} onValueChange={setAssigneeId}>
                             <SelectTrigger><SelectValue/></SelectTrigger>
                             <SelectContent>
-                                {mockUsers.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                                {userList.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -688,8 +691,3 @@ function AccessListCombobox({ allUsers, selectedUsers, onSelectionChange }: { al
         </Popover>
     )
 }
-
-
-    
-
-    

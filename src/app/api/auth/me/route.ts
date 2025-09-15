@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { db, users, companies, employees } from '@/lib/db';
+import { getUserById, getCompaniesForUser } from '@/lib/firestore-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,21 +18,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
     }
 
-    // --- Database Logic (Mocked) ---
-    // ЗАВДАННЯ ДЛЯ БЕКЕНД-РОЗРОБНИКА:
-    // Замінити цей блок на реальні запити до бази даних, використовуючи клієнт з `src/lib/real-db.ts`.
-    // Приклад:
-    // const userResult = await dbClient.query('SELECT * FROM users WHERE id = $1', [userId]);
-    // const user = userResult.rows[0];
-    const user = users.find(u => u.id === userId);
+    const user = await getUserById(userId);
     if (!user) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
-
-    const userEmployeeEntries = employees.filter(e => e.userId === userId);
-    const userCompanyIds = userEmployeeEntries.map(e => e.companyId);
-    const userCompanies = companies.filter(c => userCompanyIds.includes(c.id));
-    // --- End Database Logic ---
+    
+    const userCompanies = await getCompaniesForUser(userId);
 
     const response = {
       id: user.id,

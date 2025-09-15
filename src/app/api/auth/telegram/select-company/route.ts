@@ -4,7 +4,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken, createPermanentToken } from '@/lib/auth';
-import { db, employees } from '@/lib/db';
 import { isUserMemberOfCompany } from '@/lib/firestore-service';
 
 export async function POST(request: NextRequest) {

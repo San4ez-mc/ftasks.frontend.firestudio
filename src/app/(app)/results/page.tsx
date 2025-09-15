@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import ResultDetailsPanel from '@/components/results/result-details-panel';
 import type { Result, SubResult } from '@/types/result';
+import type { Employee } from '@/types/company';
 import { cn, formatDate } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
@@ -20,13 +21,12 @@ import { Separator } from '@/components/ui/separator';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getResults, createResult, updateResult, deleteResult } from './actions';
+import { getEmployees } from '../company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { companyEmployees } from '@/lib/db';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
-const currentUser = companyEmployees.find(e => e.id === 'emp-2'); 
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
 
 
@@ -70,6 +70,8 @@ export default function ResultsPage() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [selectedResult, setSelectedResult] = useState<Result | null>(null);
   const [results, setResults] = useState<Result[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState('mine');
   const [statusFilter, setStatusFilter] = useState<string[]>(allStatuses);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,19 +84,23 @@ export default function ResultsPage() {
     if (savedMode === 'table' || savedMode === 'cards') {
       setViewMode(savedMode as 'table' | 'cards');
     }
+    
+    startTransition(async () => {
+        const [fetchedResults, fetchedEmployees] = await Promise.all([
+            getResults(),
+            getEmployees()
+        ]);
+        setResults(fetchedResults);
+        setEmployees(fetchedEmployees);
+        // This is a mock for the current user. In a real app, this would come from a session.
+        setCurrentUser(fetchedEmployees.find(e => e.id === 'emp-2') || null); 
+    });
   }, []);
 
   const handleViewModeChange = (mode: 'table' | 'cards') => {
     localStorage.setItem('resultsViewMode', mode);
     setViewMode(mode);
   };
-
-  useEffect(() => {
-    startTransition(async () => {
-        const fetchedResults = await getResults();
-        setResults(fetchedResults);
-    });
-  }, []);
   
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -337,6 +343,7 @@ export default function ResultsPage() {
               handlePostponeResult={handlePostponeResult}
               collapsedResults={collapsedResults}
               toggleCollapse={toggleResultCollapse}
+              employees={employees}
             />
           ) : (
             <ResultsCards results={filteredResults} onResultSelect={setSelectedResult} onResultUpdate={handleResultUpdate} />
@@ -348,7 +355,7 @@ export default function ResultsPage() {
         "flex-shrink-0 bg-card border-l transition-all duration-300 ease-in-out overflow-hidden w-full md:w-0",
         selectedResult ? "md:w-1/2 lg:min-w-[520px]" : "hidden"
       )}>
-        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} onDelete={handleDeleteResult} />}
+        {selectedResult && <ResultDetailsPanel key={selectedResult.id} result={selectedResult} onUpdate={handleResultUpdate} onClose={handleClosePanel} onDelete={handleDeleteResult} allEmployees={employees} />}
       </div>
        <Button id="create-result-fab" onClick={() => handleCreateNewResult()} className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-20">
           <Plus className="h-8 w-8" />
@@ -374,6 +381,7 @@ type ResultsTableProps = {
   handlePostponeResult: (result: Result) => void;
   collapsedResults: string[];
   toggleCollapse: (id: string) => void;
+  employees: Employee[];
 };
 
 
@@ -390,7 +398,8 @@ function ResultsTable({
   handleDeleteResult,
   handlePostponeResult,
   collapsedResults,
-  toggleCollapse
+  toggleCollapse,
+  employees
 }: ResultsTableProps) {
   
   
@@ -513,7 +522,7 @@ function ResultsTable({
                       <div className="flex items-center gap-3 p-2 border-b">
                           <Avatar>
                               <AvatarImage src={group.avatar} />
-                              <AvatarFallback>{group.name.charAt(0)}</AvatarFallback>
+                              <AvatarFallback>{group.name?.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <h3 className="font-semibold text-base">{group.name}</h3>
                       </div>
@@ -758,10 +767,10 @@ function ResultRow({ result, onResultSelect, onResultUpdate, createNewResult, se
                         <p className="uppercase text-muted-foreground/70 text-[10px]">{activeTab === 'mine' || activeTab === 'delegated' ? 'Виконавець' : 'Постановник'}</p>
                         <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
-                                <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
-                                <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={result.assignee?.avatar} alt={result.assignee?.name} />
+                                <AvatarFallback>{result.assignee?.name?.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span className="text-xs hidden lg:inline">{result.assignee.name}</span>
+                            <span className="text-xs hidden lg:inline">{result.assignee?.name}</span>
                         </div>
                     </div>
                 </div>
@@ -800,10 +809,10 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
                         <div className="flex items-center justify-between">
                              <div className="flex items-center gap-2">
                                 <Avatar className="h-8 w-8">
-                                    <AvatarImage src={result.assignee.avatar} alt={result.assignee.name} />
-                                    <AvatarFallback>{result.assignee.name.charAt(0)}</AvatarFallback>
+                                    <AvatarImage src={result.assignee?.avatar} alt={result.assignee?.name} />
+                                    <AvatarFallback>{result.assignee?.name?.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <span className="text-xs">{result.assignee.name}</span>
+                                <span className="text-xs">{result.assignee?.name}</span>
                             </div>
                             <Badge variant={result.completed ? 'secondary' : (result.status === 'Відкладено' ? 'outline' : 'default')}>{result.completed ? 'Виконано' : result.status}</Badge>
                         </div>

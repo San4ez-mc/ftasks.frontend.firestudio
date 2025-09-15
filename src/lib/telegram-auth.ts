@@ -1,6 +1,5 @@
 
 import jwt from 'jsonwebtoken';
-import { db, users, companies, employees as employeeLinks } from '@/lib/db'; // Mock DB
 import { firestore } from './firebase-admin';
 import type { User } from '@/types/user';
 

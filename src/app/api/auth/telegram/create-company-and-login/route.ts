@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken, createPermanentToken } from '@/lib/auth';
-import { db, companies, employees } from '@/lib/db';
 import { createCompanyAndAddUser } from '@/lib/firestore-service';
 
 export async function POST(request: NextRequest) {

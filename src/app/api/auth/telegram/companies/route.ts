@@ -4,7 +4,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { db, users, companies, employees } from '@/lib/db';
+import { getCompaniesForUser } from '@/lib/firestore-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,11 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
     }
 
-    // --- Database Logic (Mocked) ---
-    const userEmployeeEntries = employees.filter(e => e.userId === userId);
-    const userCompanyIds = userEmployeeEntries.map(e => e.companyId);
-    const userCompanies = companies.filter(c => userCompanyIds.includes(c.id));
-    // --- End Database Logic ---
+    const userCompanies = await getCompaniesForUser(userId);
 
     return NextResponse.json(userCompanies);
 
