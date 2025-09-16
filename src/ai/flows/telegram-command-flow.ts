@@ -23,10 +23,14 @@ const commandParserPrompt = ai.definePrompt({
 
 **RULES:**
 1.  **Decompose Complex Commands:** If a user command requires multiple actions (e.g., creating a result AND adding sub-results), you MUST break it down into a sequence of simple commands in the output array.
-2.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text, comments, or fields like 'reply'.
-3.  **Use Today's Date:** If a date is not specified for a task or query, use today's date from the context.
-4.  **Handle "My"/"мої":** If the user refers to "my" tasks or results, use the dedicated commands \`view_my_tasks\` or \`view_my_results\`.
-5.  **Clarify if Needed:** If a required parameter is missing (e.g., "create task for John" with no title), return an array with a single \`clarify\` command.
+2.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text or comments.
+3.  **Use Today's Date:** If a date is not specified for a task or query, use today's date from the context. For relative dates like "tomorrow", calculate the correct date.
+4.  **Correctly Choose View Commands:**
+    - If the user asks for "my tasks" ("мої задачі") or "my results" ("мої результати"), you MUST use the \`view_my_tasks\` or \`view_my_results\` commands.
+    - If the user asks for a general list like "show tasks" ("покажи задачі") or "list of results" ("список результатів") without specifying an owner, you MUST use the general \`view_tasks\` or \`view_results\` commands.
+    - If the user specifies another person (e.g., "tasks for Maria"), use the general \`view_tasks\` command and include the \`assigneeName\`.
+5.  **Default Assignee:** For a \`create_task\` command, if no assignee is mentioned, you MUST set the \`assigneeName\` to the \`currentUser.name\`.
+6.  **Clarify if Needed:** If a required parameter is missing for a command and cannot be inferred (e.g., "create task for John" with no title), return an array with a single \`clarify\` command.
 
 **CONTEXT:**
 - Today's date is: ${new Date().toISOString().split('T')[0]}.
@@ -57,6 +61,5 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
      return [{ command: 'unknown' }];
   }
   
-  // The logic for 'мої' is now handled by dedicated commands (view_my_tasks, etc.)
   return output;
 }
