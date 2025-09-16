@@ -24,10 +24,10 @@ const commandParserPrompt = ai.definePrompt({
 
 **RULES:**
 1.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text or comments.
-2.  **Extract Full Raw Text:** For ALL commands, you MUST copy the entire user's original command text into the 'text' field. Do not shorten or modify it.
+2.  **Keyword Priority:** The word 'шаблон' (template) STRONGLY and ALWAYS implies the 'create_template' command. Do not mistake it for 'create_task'.
 3.  **Keywords for 'create_result':** The words 'ціль' or 'результат' STRONGLY and ALWAYS imply the 'create_result' command. Do not mistake it for 'create_task'.
-4.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task), return the 'clarify' command.
-5.  **Handle "My"/"мої":** If the user refers to "my" tasks or results, use the dedicated commands \`view_my_tasks\` or \`view_my_results\`.
+4.  **Extract Full Raw Text:** For ALL commands, you MUST copy the entire user's original command text into the 'text' field. Do not shorten or modify it.
+5.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task), return the 'clarify' command.
 6.  **Correctly Choose View Commands:**
     - If the user asks for "my tasks" ("мої задачі") or "my results" ("мої результати"), you MUST use the \`view_my_tasks\` or \`view_my_results\` commands.
     - If the user asks for a general list like "show tasks" ("покажи задачі") or "list of results" ("список результатів") without specifying an owner, you MUST use the general \`view_tasks\` or \`view_results\` commands.
@@ -59,3 +59,4 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
   
   return output;
 }
+
