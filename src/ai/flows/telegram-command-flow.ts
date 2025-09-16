@@ -257,10 +257,7 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
     };
   }
   
-  // Define the main agent prompt that will use the tools.
-  const telegramAgent = ai.definePrompt({
-    name: 'telegramAgent',
-    system: `Ти — інтелектуальний асистент для системи керування задачами Fineko. Твоє завдання — зрозуміти запит користувача українською мовою та викликати відповідний інструмент для його виконання.
+  const systemPrompt = `Ти — інтелектуальний асистент для системи керування задачами Fineko. Твоє завдання — зрозуміти запит користувача українською мовою та викликати відповідний інструмент для його виконання.
 
 **Важливі правила:**
 1.  **Сьогоднішня дата:** ${new Date().toISOString().split('T')[0]}. Використовуй її для розрахунку відносних дат, таких як "сьогодні" або "завтра".
@@ -274,13 +271,16 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
     *   *Приклад:* Користувач: "Зроби мені щотижневий звіт". Твоя відповідь: "Я можу створити разову задачу 'Зробити щотижневий звіт', або я можу створити шаблон, який буде автоматично створювати цю задачу щотижня. Що саме ви маєте на увазі?"
 3.  **Невідома команда:** Якщо запит взагалі не схожий на жоден з доступних інструментів, тільки тоді повертай стандартну відповідь про нерозуміння.
 
-Завжди відповідай українською мовою.`,
-    tools: allTools,
+Завжди відповідай українською мовою.`;
+  
+  const response = await ai.generate({
+      model: 'googleai/gemini-1.5-flash-latest',
+      system: systemPrompt,
+      prompt: input.command,
+      tools: allTools,
   });
 
-  const { output } = await telegramAgent({
-    prompt: input.command,
-  });
+  const output = response.output;
 
   if (!output) {
      return { command: 'unknown', reply: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." };
@@ -321,3 +321,5 @@ const telegramCommandFlow = ai.defineFlow(
     return parseTelegramCommand(input);
   }
 );
+
+    
