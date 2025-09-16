@@ -270,7 +270,9 @@ export default function CompanyPage() {
                                             <div className="flex items-center gap-3">
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage src={emp.avatar} alt={emp.firstName} />
-                                                    <AvatarFallback>{emp.firstName[0]}{emp.lastName[0]}</AvatarFallback>
+                                                    <AvatarFallback>
+                                                      {(emp.firstName?.[0] || '')}{(emp.lastName?.[0] || '')}
+                                                    </AvatarFallback>
                                                 </Avatar>
                                                 <span>{emp.firstName} {emp.lastName}</span>
                                             </div>
@@ -438,7 +440,9 @@ function EmployeeDetails({ employee, onUpdate, onClose }: { employee: Employee; 
                      <div className="relative group">
                         <Avatar className="h-16 w-16">
                             <AvatarImage src={formData.avatar} alt={`${formData.firstName} ${formData.lastName}`} />
-                            <AvatarFallback className="text-xl">{formData.firstName?.[0]}{formData.lastName?.[0]}</AvatarFallback>
+                            <AvatarFallback className="text-xl">
+                                {(formData.firstName?.[0] || '')}{(formData.lastName?.[0] || '')}
+                            </AvatarFallback>
                         </Avatar>
                         <label htmlFor="avatar-upload" className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-full cursor-pointer">
                             <Upload className="h-6 w-6" />
