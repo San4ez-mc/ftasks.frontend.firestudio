@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
@@ -182,7 +183,9 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
         }
     } catch (error) {
         console.error("Error processing natural language command:", error);
-        await sendTelegramMessage(chat.id, { text: "Виникла помилка під час обробки вашого запиту." });
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        const errorStack = error instanceof Error && error.stack ? `\n\nStack: ${error.stack}` : '';
+        await sendTelegramMessage(chat.id, { text: `🔴 Помилка:\n\n${errorMessage}${errorStack}` });
     }
 }
 
