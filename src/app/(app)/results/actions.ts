@@ -1,4 +1,3 @@
-
 'use server';
 
 import type { Result } from '@/types/result';
