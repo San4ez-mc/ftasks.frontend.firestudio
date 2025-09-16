@@ -249,7 +249,7 @@ export default function TasksPage() {
   
   const panelOpen = !!selectedTask;
 
-  const { totalExpectedTime, filteredTasks } = useMemo(() => {
+  const { totalExpectedTime, totalActualTime, filteredTasks } = useMemo(() => {
     let filtered = tasks;
      if (currentUser && activeTab) {
         switch(activeTab) {
@@ -399,7 +399,7 @@ export default function TasksPage() {
                                     <TableRow>
                                         <TableCell colSpan={ showTypeColumn ? 3 : 2 } className="font-bold">Всього</TableCell>
                                         <TableCell className={cn("font-bold text-xs", panelOpen && "hidden")}>{formatTime(totalExpectedTime)}</TableCell>
-                                        <TableCell className={cn("font-bold text-xs", panelOpen && "hidden")}>{formatTime(tasks.reduce((acc, t) => acc + (t.actualTime || 0), 0))}</TableCell>
+                                        <TableCell className={cn("font-bold text-xs", panelOpen && "hidden")}>{formatTime(totalActualTime)}</TableCell>
                                         <TableCell className={cn(panelOpen && "hidden")}></TableCell>
                                     </TableRow>
                                 </TableFooter>
