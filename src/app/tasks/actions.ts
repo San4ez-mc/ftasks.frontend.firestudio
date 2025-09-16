@@ -2,11 +2,11 @@
 'use server';
 
 import type { Task } from '@/types/task';
-import { 
-    getAllTasksForCompany, 
-    createTaskInDb, 
-    updateTaskInDb, 
-    deleteTaskFromDb 
+import {
+    getAllTasksForCompany,
+    createTaskInDb,
+    updateTaskInDb,
+    deleteTaskFromDb
 } from '@/lib/firestore-service';
 import { getUserSession } from '@/lib/session';
 
@@ -20,8 +20,8 @@ import { getUserSession } from '@/lib/session';
  * @returns A promise that resolves to an array of tasks.
  */
 export async function getTasksForDate(
-    date: string, 
-    userId: string, 
+    date: string,
+    userId: string,
     filter: 'mine' | 'delegated' | 'subordinates'
 ): Promise<Task[]> {
     const session = await getUserSession();
@@ -37,7 +37,7 @@ export async function getTasksForDate(
         case 'delegated':
             return dateFilteredTasks.filter(t => t.reporter?.id === userId && t.assignee?.id !== userId);
         case 'subordinates':
-            // This logic assumes a flat hierarchy for now. 
+            // This logic assumes a flat hierarchy for now.
             // A real implementation would check against an org structure.
             return dateFilteredTasks.filter(t => t.reporter?.id !== userId && t.assignee?.id !== userId);
         case 'mine':
