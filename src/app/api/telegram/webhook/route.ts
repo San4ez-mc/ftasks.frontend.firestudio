@@ -19,11 +19,12 @@ import {
     createTemplateInDb,
 } from '@/lib/firestore-service';
 import { sendTelegramMessage } from '@/lib/telegram-service';
-import type { Task } from '@/types/task';
+import type { Task, TaskType } from '@/types/task';
 import type { Result, SubResult } from '@/types/result';
 import { ai } from '@/ai/genkit';
 import type { Template } from '@/types/template';
 import { formatDate } from '@/lib/utils';
+import { formatTime } from '@/lib/timeUtils';
 
 
 interface TelegramUser {
@@ -52,29 +53,41 @@ const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 
 
 // --- Formatting Functions ---
-function formatTaskForTelegram(task: Task): string {
+const taskTypeLabels: Record<TaskType, string> = {
+    'important-urgent': 'Важлива, термінова',
+    'important-not-urgent': 'Важлива, нетермінова',
+    'not-important-urgent': 'Неважлива, термінова',
+    'not-important-not-urgent': 'Неважлива, нетермінова',
+};
+
+function formatTaskForTelegram(task: Task, action: 'created' | 'updated'): string {
+    const actionText = action === 'created' ? 'створена' : 'оновлена';
     return `
-*📝 Задача створена/оновлена*
+*📝 Задача ${actionText}*
 *Назва:* ${task.title}
 *Виконавець:* ${task.assignee.name}
 *Постановник:* ${task.reporter.name}
-*Дедлайн:* ${formatDate(task.dueDate)}
-*Статус:* ${task.status}
-*Тип:* ${task.type}
+*Дата виконання:* ${formatDate(task.dueDate)}
+*Статус:* ${task.status === 'todo' ? 'В роботі' : 'Виконано'}
+*Тип:* ${taskTypeLabels[task.type]}
+*Очікуваний час:* ${formatTime(task.expectedTime)}
+*Очікуваний результат:* ${task.expectedResult || 'Не вказано'}
     `.trim();
 }
 
-function formatResultForTelegram(result: Result): string {
+function formatResultForTelegram(result: Result, action: 'created' | 'updated'): string {
+    const actionText = action === 'created' ? 'створено' : 'оновлено';
     let subResultsText = '';
     if (result.subResults && result.subResults.length > 0) {
         subResultsText = `\n*Підрезультати:*\n` + result.subResults.map(sr => `- ${sr.name}`).join('\n');
     }
     return `
-*🎯 Результат створено/оновлено*
+*🎯 Результат ${actionText}*
 *Назва:* ${result.name}
 *Виконавець:* ${result.assignee.name}
 *Дедлайн:* ${formatDate(result.deadline)}
 *Статус:* ${result.status}
+*Очікуваний результат:* ${result.expectedResult || 'Не вказано'}
 ${subResultsText}
     `.trim();
 }
@@ -201,11 +214,12 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         status: 'todo',
                         type: 'important-not-urgent',
                         expectedTime: 30,
+                        expectedResult: 'Очікуваний результат генерується GPT',
                         assignee: { id: assignee.id, name: assigneeName, avatar: assignee.avatar || '' },
                         reporter: { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}`, avatar: currentEmployee.avatar || '' },
                     };
                     const createdTask = await createTaskInDb(companyId, newTaskData);
-                    await sendTelegramMessage(chat.id, { text: formatTaskForTelegram(createdTask) });
+                    await sendTelegramMessage(chat.id, { text: formatTaskForTelegram(createdTask, 'created') });
                     break;
                 }
                 
@@ -229,7 +243,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         comments: [],
                         accessList: [],
                         description: '',
-                        expectedResult: '',
+                        expectedResult: 'Очікуваний результат генерується GPT',
                     };
                     const createdResult = await createResultInDb(companyId, newResultData);
                     
@@ -241,9 +255,9 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                            completed: false,
                        }));
                        const finalResult = await updateResultInDb(companyId, createdResult.id, { subResults: newSubResults });
-                       if (finalResult) await sendTelegramMessage(chat.id, { text: formatResultForTelegram(finalResult) });
+                       if (finalResult) await sendTelegramMessage(chat.id, { text: formatResultForTelegram(finalResult, 'created') });
                     } else {
-                        await sendTelegramMessage(chat.id, { text: formatResultForTelegram(createdResult) });
+                        await sendTelegramMessage(chat.id, { text: formatResultForTelegram(createdResult, 'created') });
                     }
                     break;
                 }
@@ -251,15 +265,25 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 case 'view_tasks': {
                     const allTasks = await getAllTasksForCompany(companyId);
                     const date = parseDate(commandText || 'сьогодні');
-                    const targetEmployee = (aiResult.assigneeId ? allEmployees.find(e => e.id === aiResult.assigneeId) : currentEmployee) || currentEmployee;
+                    
+                    let targetEmployee = currentEmployee;
+                    if (aiResult.assigneeId) {
+                        const foundEmployee = allEmployees.find(e => e.id === aiResult.assigneeId);
+                        if (foundEmployee) {
+                            targetEmployee = foundEmployee;
+                        } else {
+                            await sendTelegramMessage(chat.id, { text: `🤔 Співробітника не знайдено. Перевірте ім'я.` });
+                            return;
+                        }
+                    }
                     
                     const filteredTasks = allTasks.filter(t => t.dueDate === date && t.assignee?.id === targetEmployee.id);
                     
                     if (filteredTasks.length === 0) {
-                        await sendTelegramMessage(chat.id, { text: `✅ Задач для ${targetEmployee.firstName} ${targetEmployee.lastName} на ${date} не знайдено.` });
+                        await sendTelegramMessage(chat.id, { text: `✅ Задач для ${targetEmployee.firstName} на ${formatDate(date)} не знайдено.` });
                     } else {
                         const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title}`).join('\n');
-                        await sendTelegramMessage(chat.id, { text: `Ось задачі для ${targetEmployee.firstName} на ${date}:\n${taskList}` });
+                        await sendTelegramMessage(chat.id, { text: `Ось задачі для ${targetEmployee.firstName} на ${formatDate(date)}:\n${taskList}` });
                     }
                     break;
                 }
@@ -275,10 +299,10 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     }
                     
                     if (filteredTasks.length === 0) {
-                        await sendTelegramMessage(chat.id, { text: `✅ Ваших задач на ${date} не знайдено.` });
+                        await sendTelegramMessage(chat.id, { text: `✅ Ваших задач на ${formatDate(date)} не знайдено.` });
                     } else {
                         const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title}`).join('\n');
-                        await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${date}:\n${taskList}` });
+                        await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${formatDate(date)}:\n${taskList}` });
                     }
                     break;
                 }
