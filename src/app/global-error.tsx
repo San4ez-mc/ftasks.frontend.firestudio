@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -51,6 +52,7 @@ export default function GlobalError({
                     <pre className="mt-2 whitespace-pre-wrap break-words">
                         <code>
                             {error.message}
+                            {error.digest && `\n\nDigest: ${error.digest}`}
                             {error.stack && `\n\n${error.stack}`}
                         </code>
                     </pre>

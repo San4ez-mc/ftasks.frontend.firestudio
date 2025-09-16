@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, Suspense, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -66,8 +66,7 @@ const telegramTourSteps: TourStep[] = [
     },
 ];
 
-// --- Main Page Component Wrapper for Suspense ---
-function TelegramGroupsPageContent() {
+export default function TelegramGroupsPage() {
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<TelegramGroup | null>(null);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
@@ -235,14 +234,6 @@ function TelegramGroupsPageContent() {
       </div>
     </div>
   );
-}
-
-export default function TelegramGroupsPage() {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>}>
-        <TelegramGroupsPageContent />
-    </Suspense>
-  )
 }
 
 
