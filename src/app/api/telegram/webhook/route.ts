@@ -62,15 +62,19 @@ const taskTypeLabels: Record<TaskType, string> = {
 
 function formatTaskForTelegram(task: Task, action: 'created' | 'updated'): string {
     const actionText = action === 'created' ? 'створена' : 'оновлена';
+    let executionTimeText = '';
+    if (task.executionTime) {
+        executionTimeText = `\n*Час виконання:* ${task.executionTime}`;
+    }
+
     return `
 *📝 Задача ${actionText}*
 *Назва:* ${task.title}
 *Виконавець:* ${task.assignee.name}
 *Постановник:* ${task.reporter.name}
-*Дата виконання:* ${formatDate(task.dueDate)}
-*Статус:* ${task.status === 'todo' ? 'В роботі' : 'Виконано'}
+*Дата виконання:* ${formatDate(task.dueDate)}${executionTimeText}
+*Тривалість:* ${formatTime(task.expectedTime)}
 *Тип:* ${taskTypeLabels[task.type]}
-*Очікуваний час:* ${formatTime(task.expectedTime)}
 *Очікуваний результат:* ${task.expectedResult || 'Не вказано'}
     `.trim();
 }
@@ -122,15 +126,23 @@ const parseDate = (text: string): string => {
     if (lowerText.includes('сьогодні')) {
         return new Date().toISOString().split('T')[0];
     }
+    if (lowerText.includes('п\'ятницю') || lowerText.includes('пт')) {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
+        const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
+        const friday = new Date(today);
+        friday.setDate(today.getDate() + (daysUntilFriday === 0 ? 7 : daysUntilFriday)); // if today is Friday, go to next Friday
+        return friday.toISOString().split('T')[0];
+    }
     const dateMatch = text.match(/\d{4}-\d{2}-\d{2}/);
     if (dateMatch) {
         return dateMatch[0];
     }
      // Match for dd.mm.yyyy or dd.mm.yy
-    const shortDateMatch = text.match(/(\d{2})\.(\d{2})\.(\d{2,4})/);
+    const shortDateMatch = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{2,4})/);
     if (shortDateMatch) {
-        const day = shortDateMatch[1];
-        const month = shortDateMatch[2];
+        const day = shortDateMatch[1].padStart(2, '0');
+        const month = shortDateMatch[2].padStart(2, '0');
         let year = shortDateMatch[3];
         if (year.length === 2) {
             year = `20${year}`;
@@ -139,6 +151,11 @@ const parseDate = (text: string): string => {
     }
 
     return new Date().toISOString().split('T')[0]; // Default to today
+};
+
+const parseExecutionTime = (text: string): string | null => {
+    const timeMatch = text.match(/(?:о|at)\s*(\d{1,2}:\d{2})/i);
+    return timeMatch ? timeMatch[1] : null;
 };
 
 
@@ -206,11 +223,13 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     const assignee = (aiResult.assigneeId ? allEmployees.find(e => e.id === aiResult.assigneeId) : currentEmployee) || currentEmployee;
                     
                     const dueDate = parseDate(commandText);
+                    const executionTime = parseExecutionTime(commandText);
                     const assigneeName = `${assignee.firstName} ${assignee.lastName}`;
 
                     const newTaskData: Omit<Task, 'id' | 'companyId'> = {
                         title: title,
                         dueDate: dueDate,
+                        executionTime: executionTime || undefined,
                         status: 'todo',
                         type: 'important-not-urgent',
                         expectedTime: 30,
@@ -263,7 +282,6 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 }
                 
                 case 'view_tasks': {
-                    const allTasks = await getAllTasksForCompany(companyId);
                     const date = parseDate(commandText || 'сьогодні');
                     
                     let targetEmployee = currentEmployee;
@@ -277,6 +295,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         }
                     }
                     
+                    const allTasks = await getAllTasksForCompany(companyId);
                     const filteredTasks = allTasks.filter(t => t.dueDate === date && t.assignee?.id === targetEmployee.id);
                     
                     if (filteredTasks.length === 0) {

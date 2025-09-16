@@ -17,6 +17,7 @@ export interface Task {
   title: string;
   description?: string;
   dueDate: string;
+  executionTime?: string; // e.g., "15:00"
   status: TaskStatus;
   type: TaskType;
   expectedTime: number; // in minutes
