@@ -19,23 +19,9 @@ import { z, type ZodType } from 'zod';
 
 // --- Tool Schemas ---
 
-// Define the type for a single sub-result, which can contain more sub-results of the same type
-type SubResultCreate = {
-  name: string;
-  subResults?: SubResultCreate[];
-};
-
-// Create the Zod schema with the explicit type annotation
-const SubResultCreateSchema: ZodType<SubResultCreate> = z.lazy(() =>
-  z.object({
-    name: z.string().describe("Назва підрезультату."),
-    subResults: z.array(SubResultCreateSchema).optional().describe("Масив дочірніх підрезультатів."),
-  })
-);
-
 const CreateResultInputSchema = z.object({
       title: z.string().describe("Основна назва результату/цілі."),
-      subResults: z.array(SubResultCreateSchema).optional().describe("Масив вкладених підрезультатів. Кожен підрезультат може мати власний масив `subResults`."),
+      subResults: z.any().optional().describe("Масив вкладених підрезультатів. Модель повинна сама розпізнати вкладену структуру з тексту. Наприклад, для 'ціль А, підрезультати Б, В. в Б є Б1, Б2' значення має бути [{ name: 'Б', subResults: [{name: 'Б1'}, {name: 'Б2'}] }, { name: 'В' }]"),
       assigneeName: z.string().optional().describe("Ім'я співробітника, якому призначається результат."),
       dueDate: z.string().optional().describe("Дедлайн для результату у форматі 'YYYY-MM-DD'."),
     });
@@ -327,5 +313,3 @@ const telegramCommandFlow = ai.defineFlow(
     return parseTelegramCommand(input);
   }
 );
-
-    
