@@ -1,4 +1,6 @@
 
+import type { ResultComment } from './result';
+
 export type TaskStatus = 'todo' | 'in-progress' | 'done';
 
 export type TaskType = 'important-urgent' | 'important-not-urgent' | 'not-important-urgent' | 'not-important-not-urgent';
@@ -25,4 +27,5 @@ export interface Task {
   reporter: User;
   resultId?: string;
   resultName?: string;
+  comments?: ResultComment[];
 }
