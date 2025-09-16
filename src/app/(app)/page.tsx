@@ -2,6 +2,7 @@
 'use client';
 
 import type { Task } from '@/types/task';
+import type { Employee } from '@/types/company';
 import { useState, useRef, useEffect, useMemo, useTransition } from 'react';
 import { Plus, AlertTriangle, Clock, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,13 +19,11 @@ import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)/tasks/actions';
+import { getEmployees } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { companyEmployees } from '@/lib/db';
 import { Textarea } from '@/components/ui/textarea';
-
-
-const currentUser = companyEmployees.find(e => e.id === 'emp-2'); // Mock current user is Maria S.
+import { getMe } from '@/lib/api';
 
 // --- TOUR STEPS ---
 
@@ -73,10 +72,34 @@ export default function TasksPage() {
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [currentUser, setCurrentUser] = useState<Employee | null>(null);
+
 
   useEffect(() => {
     // Set the date only on the client side to avoid hydration mismatch
     setCurrentDate(new Date());
+    
+    startTransition(async () => {
+        try {
+            const [fetchedEmployees, me] = await Promise.all([
+                getEmployees(),
+                getMe()
+            ]);
+            setEmployees(fetchedEmployees);
+            const currentUserEmployee = fetchedEmployees.find(e => e.userId === me.id);
+            setCurrentUser(currentUserEmployee || null);
+        } catch (error) {
+            console.error("Failed to fetch initial page data", error);
+            toast({
+                title: "Помилка завантаження",
+                description: "Не вдалося завантажити дані користувача та співробітників.",
+                variant: "destructive",
+            });
+        }
+    });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -86,7 +109,7 @@ export default function TasksPage() {
             setTasks(fetchedTasks);
         });
     }
-  }, [currentDate, activeTab]);
+  }, [currentDate, activeTab, currentUser]);
 
   useEffect(() => {
     if (selectedTask && taskTitleInputRef.current) {
@@ -268,7 +291,7 @@ export default function TasksPage() {
         }
         acc[key].results.push(task);
         return acc;
-    }, {} as Record<string, { id?: string, name: string; avatar?: string; results: Task[] }>);
+      }, {} as Record<string, { id?: string, name: string; avatar?: string; results: Task[] }>);
 
   }, [filteredTasks, activeTab, currentUser]);
   
@@ -415,6 +438,7 @@ export default function TasksPage() {
                   onUpdate={handleTaskUpdate}
                   onClose={handleClosePanel}
                   onDelete={handleTaskDelete}
+                  allEmployees={employees}
               />
           )}
       </div>
@@ -430,5 +454,3 @@ export default function TasksPage() {
     </div>
   );
 }
-
-    

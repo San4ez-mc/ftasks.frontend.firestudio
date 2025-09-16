@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(userCompanies);
 
-  } catch (error)
+  } catch (error) {
     console.error('Get companies error:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }

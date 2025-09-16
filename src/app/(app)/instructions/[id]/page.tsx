@@ -3,6 +3,7 @@ import { getInstructionById } from '@/lib/firestore-service';
 import InstructionEditor from './_components/InstructionEditor';
 import { notFound, redirect } from 'next/navigation';
 import { getUserSession } from '@/lib/session';
+import { getEmployees } from '@/app/(app)/company/actions';
 
 type InstructionsPageProps = {
   params: { id: string };
@@ -17,6 +18,7 @@ export default async function Page({ params }: InstructionsPageProps) {
   }
 
   const instruction = await getInstructionById(session.companyId, id);
+  const allEmployees = await getEmployees();
 
   if (!instruction) {
     notFound();
@@ -25,6 +27,7 @@ export default async function Page({ params }: InstructionsPageProps) {
   return (
     <InstructionEditor
       instruction={instruction}
+      allEmployees={allEmployees}
     />
   );
 }

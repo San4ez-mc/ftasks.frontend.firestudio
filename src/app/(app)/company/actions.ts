@@ -19,13 +19,21 @@ export async function getEmployees(): Promise<Employee[]> {
     return getAllEmployeesForCompany(session.companyId);
 }
 
+export async function getCurrentEmployee(): Promise<Employee | null> {
+    const session = await getUserSession();
+    if (!session) return null;
+    const allEmployees = await getAllEmployeesForCompany(session.companyId);
+    const currentEmployee = allEmployees.find(e => e.userId === session.userId);
+    return currentEmployee || null;
+}
+
 export async function updateEmployee(employeeId: string, updates: Partial<Employee>): Promise<Employee | null> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
     return updateEmployeeInDb(session.companyId, employeeId, updates);
 }
 
-export async function createEmployee(employeeData: Omit<Employee, 'id' | 'companyId' | 'status' | 'notes' | 'groups' | 'synonyms' | 'avatar' | 'telegramUserId'> & { positionId: string }): Promise<Employee> {
+export async function createEmployee(employeeData: Omit<Employee, 'id' | 'companyId' | 'status' | 'notes' | 'groups' | 'synonyms' | 'avatar' | 'telegramUserId' | 'userId'> & { positionId: string }): Promise<Employee> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
 

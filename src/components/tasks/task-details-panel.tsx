@@ -1,6 +1,7 @@
 
 'use client';
 import type { Task, TaskType } from '@/types/task';
+import type { Employee } from '@/types/company';
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -30,13 +31,13 @@ import {
 import { parseTime, formatTime } from '@/lib/timeUtils';
 import { deleteTask } from '@/app/(app)/tasks/actions';
 import { useToast } from '@/hooks/use-toast';
-import { companyEmployees } from '@/lib/db';
 
 type TaskDetailsPanelProps = {
   task: Task;
   onUpdate: (task: Task) => void;
   onClose: () => void;
   onDelete: (taskId: string) => void;
+  allEmployees: Employee[];
 };
 
 const typeOptions: { value: TaskType; label: string; color: string }[] = [
@@ -46,19 +47,19 @@ const typeOptions: { value: TaskType; label: string; color: string }[] = [
   { value: 'not-important-not-urgent', label: 'Неважлива, нетермінова', color: 'bg-yellow-600' },
 ];
 
-const mockUsers = companyEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
-
 const mockResults = [
     { id: 'res-1', name: 'Запустити рекламну кампанію в Google Ads' },
     { id: 'res-2', name: 'Розробити новий модуль аналітики' },
 ]
 
-export default function TaskDetailsPanel({ task, onUpdate, onClose, onDelete }: TaskDetailsPanelProps) {
+export default function TaskDetailsPanel({ task, onUpdate, onClose, onDelete, allEmployees }: TaskDetailsPanelProps) {
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [expectedTime, setExpectedTime] = useState(formatTime(task.expectedTime));
   const { toast } = useToast();
+  
+  const userList = allEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
   
   useEffect(() => {
       setTitle(task.title);
@@ -176,7 +177,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose, onDelete }: 
                  <Select 
                     value={task.assignee.id} 
                     onValueChange={(userId) => {
-                        const user = mockUsers.find(u => u.id === userId);
+                        const user = userList.find(u => u.id === userId);
                         if (user) onUpdate({...task, assignee: { id: user.id, name: user.name, avatar: user.avatar }})
                     }}
                  >
@@ -189,7 +190,7 @@ export default function TaskDetailsPanel({ task, onUpdate, onClose, onDelete }: 
                         </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                        {mockUsers.map(user => (
+                        {userList.map(user => (
                             <SelectItem key={user.id} value={user.id}>
                                  <div className="flex items-center gap-2">
                                     <Avatar className="h-6 w-6"><AvatarImage src={user.avatar} /></Avatar>

@@ -11,25 +11,25 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Instruction, InstructionAccess } from '@/types/instruction';
 import { updateInstruction } from '../../actions';
 import { useToast } from '@/hooks/use-toast';
-import { companyEmployees } from '@/lib/db';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import type { Employee } from '@/types/company';
 
 type InstructionEditorProps = {
   instruction: Instruction;
+  allEmployees: Employee[];
 };
 
-const allUsers = companyEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
-
-
-export default function InstructionEditor({ instruction: initialInstruction }: InstructionEditorProps) {
+export default function InstructionEditor({ instruction: initialInstruction, allEmployees }: InstructionEditorProps) {
   const router = useRouter();
   const [instruction, setInstruction] = useState<Instruction>(initialInstruction);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const allUsers = allEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}`, avatar: e.avatar }));
 
   useEffect(() => {
     setInstruction(initialInstruction);
