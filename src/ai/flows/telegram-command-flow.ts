@@ -20,38 +20,22 @@ const commandParserPrompt = ai.definePrompt({
   name: 'telegramCommandParserPrompt',
   input: { schema: TelegramCommandInputSchema },
   output: { schema: TelegramCommandListSchema },
-  prompt: `You are a command classifier. Your only job is to identify the most likely command from the user's text and extract the rest of the text.
+  prompt: `You are a command classifier. Your only job is to identify the most likely command from the user's text and extract the entire raw text of the command.
 
 **RULES:**
 1.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text or comments.
 2.  **Identify the Best Command:** From the list of available commands, choose the ONE that best matches the user's intent.
 3.  **Keywords for 'create_result':** The words 'ціль' or 'результат' STRONGLY and ALWAYS imply the 'create_result' command. Do not mistake it for 'create_task'.
-4.  **Extract Raw Text for List Commands:** For simple list commands (like "list employees" or "show results"), you MUST copy the entire user's command into the 'text' field.
-5.  **Handle Ambiguity:** If the command is completely unclear, return an array with a single 'unknown' command.
-
-**Available Commands:**
-- create_task
-- create_result
-- list_employees
-- view_tasks
-- view_my_tasks
-- view_results
-- view_my_results
-- edit_task_title
-- add_comment_to_result
-- add_comment_to_task
-- view_task_details
-- list_templates
-- create_template
-- update_task_status
-- update_task_date
-- show_help
+4.  **Extract Full Raw Text:** For ALL commands, you MUST copy the entire user's original command text into the 'text' field. Do not shorten or modify it.
+5.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task), return the 'clarify' command.
+6.  **Handle "My"/"мої":** If the user refers to "my" tasks or results, use the dedicated commands \`view_my_tasks\` or \`view_my_results\`.
+7.  **General vs. "My":** If the user asks for a list without specifying an owner (e.g., "show tasks," "list of results"), use the general view command (`view_tasks`, `view_results`).
 
 **EXAMPLES:**
 
 User command: "Створи задачу 'Підготувати звіт' для Марії на завтра"
 Your JSON Output:
-[{ "command": "create_task", "text": "'Підготувати звіт' для Марії на завтра" }]
+[{ "command": "create_task", "text": "Створи задачу 'Підготувати звіт' для Марії на завтра" }]
 
 User command: "Покажи список результатів"
 Your JSON Output:

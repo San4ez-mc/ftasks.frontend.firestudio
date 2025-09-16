@@ -33,7 +33,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створи задачу "Підготувати звіт"',
         expected: [{
             command: 'create_task',
-            text: '"Підготувати звіт"',
+            text: 'Створи задачу "Підготувати звіт"',
         }]
     },
     {
@@ -41,7 +41,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створи задачу \'Підготувати щотижневий звіт\' для Марії Сидоренко на завтра',
         expected: [{
             command: 'create_task',
-            text: '\'Підготувати щотижневий звіт\' для Марії Сидоренко на завтра',
+            text: 'Створи задачу \'Підготувати щотижневий звіт\' для Марії Сидоренко на завтра',
         }]
     },
     {
@@ -49,7 +49,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Покажи мої невиконані задачі',
         expected: [{
             command: 'view_my_tasks',
-            text: 'невиконані задачі',
+            text: 'Покажи мої невиконані задачі',
         }]
     },
     {
@@ -84,8 +84,8 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         description: 'Should ask for clarification if task title is missing',
         input: 'Створити задачу для Петра',
         expected: [{
-            command: 'create_task',
-            text: 'для Петра'
+            command: 'clarify',
+            text: 'Створити задачу для Петра'
         }]
     },
     {
@@ -93,7 +93,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створити результат "Запустити нову маркетингову кампанію"',
         expected: [{
             command: 'create_result',
-            text: '"Запустити нову маркетингову кампанію"'
+            text: 'Створити результат "Запустити нову маркетингову кампанію"'
         }]
     },
     {
@@ -101,7 +101,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створи шаблон "Щоденний звіт" з повторенням щодня',
         expected: [{
             command: 'create_template',
-            text: '"Щоденний звіт" з повторенням щодня'
+            text: 'Створи шаблон "Щоденний звіт" з повторенням щодня'
         }]
     },
     {
@@ -109,7 +109,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: `Покажи задачі на ${tomorrow}`,
         expected: [{
             command: 'view_tasks',
-            text: `на ${tomorrow}`,
+            text: `Покажи задачі на ${tomorrow}`,
         }]
     },
     {
