@@ -17,7 +17,25 @@ import {
 } from '@/ai/types';
 import { z } from 'zod';
 
-// Define tools for each possible user action. The AI will choose which of these to call.
+// --- Tool Schemas ---
+
+// Recursive schema for nested sub-results
+const SubResultCreateSchema = z.lazy(() =>
+  z.object({
+    name: z.string().describe("Назва підрезультату."),
+    subResults: z.array(SubResultCreateSchema).optional().describe("Масив дочірніх підрезультатів."),
+  })
+);
+
+const CreateResultInputSchema = z.object({
+      title: z.string().describe("Основна назва результату/цілі."),
+      subResults: z.array(SubResultCreateSchema).optional().describe("Масив вкладених підрезультатів. Кожен підрезультат може мати власний масив `subResults`."),
+      assigneeName: z.string().optional().describe("Ім'я співробітника, якому призначається результат."),
+      dueDate: z.string().optional().describe("Дедлайн для результату у форматі 'YYYY-MM-DD'."),
+    });
+
+
+// --- Tool Definitions ---
 
 const createTaskTool = ai.defineTool(
   {
@@ -38,12 +56,11 @@ const createTaskTool = ai.defineTool(
 const createResultTool = ai.defineTool(
   {
     name: 'create_result',
-    description: 'Створює новий довгостроковий результат або ціль.',
-     inputSchema: z.object({
-      title: z.string().describe("Назва результату, яку потрібно створити."),
-      assigneeName: z.string().optional().describe("Ім'я співробітника, якому призначається результат."),
-      dueDate: z.string().optional().describe("Дедлайн для результату у форматі 'YYYY-MM-DD'."),
-    }),
+    description: `Створює новий довгостроковий результат або ціль, можливо з вкладеними підрезультатами. 
+Правильно парсить структуру. 
+Приклад 1: "ціль А, підрезультати Б, В". Результат: { title: "А", subResults: [{ name: "Б" }, { name: "В" }] }.
+Приклад 2: "ціль А, підрезультати Б, В. в Б є Б1, Б2". Результат: { title: "А", subResults: [{ name: "Б", subResults: [{name: "Б1"}, {name: "Б2"}] }, { name: "В" }] }.`,
+    inputSchema: CreateResultInputSchema,
     outputSchema: TelegramCommandOutputSchema,
   },
   async (input): Promise<TelegramCommandOutput> => {
@@ -236,7 +253,7 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
   if (helpKeywords.some(kw => input.command.toLowerCase().includes(kw))) {
     return {
         command: 'show_help',
-        reply: `Я вмію:\n- Створювати задачі та результати.\n- Редагувати задачі (назву, статус, дату).\n- Додавати коментарі до задач та результатів.\n- Показувати списки задач, співробітників, шаблонів.`
+        reply: `Я вмію:\n- Створювати задачі та результати (включно з вкладеними).\n- Редагувати задачі (назву, статус, дату).\n- Додавати коментарі до задач та результатів.\n- Показувати списки задач, результатів, співробітників, шаблонів.`
     };
   }
   
@@ -304,5 +321,3 @@ const telegramCommandFlow = ai.defineFlow(
     return parseTelegramCommand(input);
   }
 );
-
-    

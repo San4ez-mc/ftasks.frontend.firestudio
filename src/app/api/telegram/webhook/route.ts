@@ -20,7 +20,7 @@ import {
 } from '@/lib/firestore-service';
 import { sendTelegramMessage } from '@/lib/telegram-service';
 import type { Task } from '@/types/task';
-import type { Result } from '@/types/result';
+import type { Result, SubResult } from '@/types/result';
 import { ai } from '@/ai/genkit';
 import type { Template } from '@/types/template';
 
@@ -110,6 +110,16 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     const twoWeeksFromNow = new Date();
                     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
+                    const transformToDbSubResults = (items: any[] | undefined): SubResult[] => {
+                        if (!items || items.length === 0) return [];
+                        return items.map(item => ({
+                            id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                            name: item.name,
+                            completed: false,
+                            subResults: item.subResults ? transformToDbSubResults(item.subResults) : []
+                        }));
+                    };
+
                     const newResultData: Omit<Result, 'id' | 'companyId'> = {
                         name: params.title,
                         status: 'Заплановано',
@@ -119,10 +129,14 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
                         description: '',
                         expectedResult: '',
-                        subResults: [], tasks: [], templates: [], comments: [], accessList: [],
+                        subResults: transformToDbSubResults(params.subResults), 
+                        tasks: [], 
+                        templates: [], 
+                        comments: [], 
+                        accessList: [],
                     };
                     const createdResult = await createResultInDb(companyId, newResultData);
-                    await sendTelegramMessage(chat.id, { text: `🎯 Результат створено: "${createdResult.name}" для ${assigneeName}.` });
+                    await sendTelegramMessage(chat.id, { text: `🎯 Результат "${createdResult.name}" та його підрезультати було створено.` });
                 } else {
                      await sendTelegramMessage(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
                 }
@@ -237,12 +251,12 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     break;
                 }
                 const allTasks = await getAllTasksForCompany(companyId);
-                const task = allTasks.find(t => t.title.toLowerCase() === params.title?.toLowerCase());
+                const task = allTasks.find(t => t.title && t.title.toLowerCase() === params.title?.toLowerCase());
                 if (task) {
                     const details = `
 *Задача:* ${task.title}
 *Статус:* ${task.status}
-*Виконавець:* ${task.assignee.name}
+*Виконавець:* ${task.assignee?.name || 'Не призначено'}
 *Дедлайн:* ${task.dueDate}
 *Опис:* ${task.description || 'Немає'}
                     `.trim();
@@ -256,7 +270,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             case 'add_comment_to_task': {
                 if (params?.targetTitle && params.commentText) {
                     const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToComment = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                    const taskToComment = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
                     if (taskToComment) {
                         const newComment = {
                             id: `comment-${Date.now()}`,
@@ -279,7 +293,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             case 'update_task_status': {
                 if (params?.targetTitle && params.status && ['todo', 'done'].includes(params.status)) {
                     const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToUpdate = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                    const taskToUpdate = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
                     if (taskToUpdate) {
                         await updateTaskInDb(companyId, taskToUpdate.id, { status: params.status as 'todo' | 'done' });
                         await sendTelegramMessage(chat.id, { text: `✅ Статус задачі "${params.targetTitle}" оновлено на "${params.status}".` });
@@ -295,7 +309,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             case 'update_task_date': {
                 if (params?.targetTitle && params.newDueDate) {
                     const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToUpdate = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                    const taskToUpdate = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
                     if (taskToUpdate) {
                         await updateTaskInDb(companyId, taskToUpdate.id, { dueDate: params.newDueDate });
                         await sendTelegramMessage(chat.id, { text: `✅ Дату задачі "${params.targetTitle}" перенесено на ${params.newDueDate}.` });
@@ -335,13 +349,6 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 break;
             }
             
-            case 'view_task_details':
-            case 'add_comment_to_task':
-            case 'update_task_status':
-            case 'update_task_date':
-            case 'list_templates':
-            case 'create_template':
-                // Intentionally fall through to default case
             case 'show_help':
                 await sendTelegramMessage(chat.id, { text: aiResult.reply || "Я можу допомогти вам з керуванням завдань та результатів." });
                 break;
