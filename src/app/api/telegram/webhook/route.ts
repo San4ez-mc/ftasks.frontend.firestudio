@@ -336,7 +336,14 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                      if (results.length === 0) {
                         await sendTelegramMessage(chat.id, { text: `✅ Результатів не знайдено.` });
                     } else {
-                        const resultList = results.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
+                        const resultList = results.map(r => {
+                            let resultText = `- ${r.completed ? '✅' : '🎯'} ${r.name}`;
+                            if (r.subResults && r.subResults.length > 0) {
+                                const subResultsText = r.subResults.map(sr => `  - ${sr.completed ? '✅' : '📝'} ${sr.name}`).join('\n');
+                                resultText += `\n${subResultsText}`;
+                            }
+                            return resultText;
+                        }).join('\n\n');
                         await sendTelegramMessage(chat.id, { text: `${title}:\n${resultList}` });
                     }
                     break;
