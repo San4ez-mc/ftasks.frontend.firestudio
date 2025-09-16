@@ -162,6 +162,67 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву результату та текст коментаря.` });
                 }
                 break;
+            
+            case 'view_tasks': {
+                const allTasks = await getAllTasksForCompany(companyId);
+                let filteredTasks = allTasks;
+
+                const today = new Date().toISOString().split('T')[0];
+                const startDate = params?.startDate || today;
+                const endDate = params?.endDate || startDate;
+                filteredTasks = filteredTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
+                
+                let assigneeName = params?.assigneeName;
+                if (assigneeName === 'мої' || !assigneeName) {
+                    assigneeName = `${finekoUser.firstName} ${finekoUser.lastName}`;
+                }
+                const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                if (assignee) {
+                    filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === assignee.id);
+                }
+                
+                if (params?.status) {
+                    filteredTasks = filteredTasks.filter(t => t.status === params.status);
+                }
+
+                if (filteredTasks.length === 0) {
+                    await sendTelegramMessage(chat.id, { text: `✅ Задач на ${startDate} для ${assigneeName} не знайдено.` });
+                } else {
+                    const taskList = filteredTasks.map(t => {
+                        const status = t.status === 'done' ? '✅' : '📝';
+                        const title = t.title || 'Без назви';
+                        return `- ${status} ${title}`;
+                    }).join('\n');
+                    await sendTelegramMessage(chat.id, { text: `Ось задачі для ${assigneeName} на ${startDate}:\n${taskList}` });
+                }
+                break;
+            }
+
+            case 'view_results': {
+                const allResults = await getAllResultsForCompany(companyId);
+                let filteredResults = allResults;
+
+                let assigneeName = params?.assigneeName;
+                if (assigneeName === 'мої' || !assigneeName) {
+                    assigneeName = `${finekoUser.firstName} ${finekoUser.lastName}`;
+                }
+                const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                if (assignee) {
+                    filteredResults = filteredResults.filter(r => r.assignee && r.assignee.id === assignee.id);
+                }
+
+                if (params?.status) {
+                    filteredResults = filteredResults.filter(r => r.status === params.status);
+                }
+
+                if (filteredResults.length === 0) {
+                    await sendTelegramMessage(chat.id, { text: `✅ Результатів для ${assigneeName} не знайдено.` });
+                } else {
+                    const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
+                    await sendTelegramMessage(chat.id, { text: `Ось результати для ${assigneeName}:\n${resultList}` });
+                }
+                break;
+            }
 
             case 'list_employees':
                 const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
@@ -184,7 +245,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
     } catch (error) {
         console.error("Error processing natural language command:", error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        const errorStack = error instanceof Error && error.stack ? `\n\nStack: ${error.stack}` : '';
+        const errorStack = error instanceof Error ? `\n\nStack: ${error.stack}` : '';
         await sendTelegramMessage(chat.id, { text: `🔴 Помилка:\n\n${errorMessage}${errorStack}` });
     }
 }
@@ -270,7 +331,9 @@ export async function POST(request: NextRequest) {
 
             } catch (error) {
                 console.error("Error processing voice message:", error);
-                await sendTelegramMessage(chat.id, { text: "Виникла помилка під час обробки вашого голосового повідомлення." });
+                const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+                const errorStack = error instanceof Error ? `\n\nStack: ${error.stack}` : '';
+                await sendTelegramMessage(chat.id, { text: `🔴 Помилка обробки аудіо:\n\n${errorMessage}${errorStack}` });
                 return NextResponse.json({ status: 'error', message: 'Failed to process voice command.' });
             }
         }
@@ -343,6 +406,16 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     console.error('Critical error in webhook handler:', errorMessage, error);
+    // Try to send a message back to the user if we have a chat ID, but this might fail.
+    try {
+        const body = await request.json().catch(() => ({}));
+        const chatId = body?.message?.chat?.id;
+        if (chatId) {
+            await sendTelegramMessage(chatId, { text: `Критична помилка на сервері. Зверніться до адміністратора.` });
+        }
+    } catch (sendError) {
+        console.error("Failed to send critical error message to user:", sendError);
+    }
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
 }

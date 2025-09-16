@@ -68,6 +68,22 @@ const viewTasksTool = ai.defineTool(
   }
 );
 
+const viewResultsTool = ai.defineTool(
+  {
+    name: 'view_results',
+    description: "Переглядає довгострокові результати для певного співробітника, можливо з фільтром по статусу.",
+    inputSchema: z.object({
+      assigneeName: z.string().optional().describe("Ім'я співробітника, чиї результати потрібно переглянути. Якщо 'мої', то це поточний користувач."),
+      status: z.string().optional().describe("Статус результатів для фільтрації (наприклад, 'В роботі', 'Виконано')."),
+    }),
+    outputSchema: TelegramCommandOutputSchema,
+  },
+  async (input): Promise<TelegramCommandOutput> => {
+    return { command: 'view_results', parameters: input };
+  }
+);
+
+
 const viewTaskDetailsTool = ai.defineTool(
   {
     name: 'view_task_details',
@@ -202,6 +218,7 @@ const allTools = [
     createTaskTool,
     createResultTool,
     viewTasksTool,
+    viewResultsTool,
     viewTaskDetailsTool,
     listEmployeesTool,
     editTaskTitleTool,
