@@ -33,7 +33,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створи задачу "Підготувати звіт"',
         expected: [{
             command: 'create_task',
-            parameters: { title: 'Підготувати звіт', assigneeName: 'Марія Сидоренко' }
+            text: '"Підготувати звіт"',
         }]
     },
     {
@@ -41,11 +41,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створи задачу \'Підготувати щотижневий звіт\' для Марії Сидоренко на завтра',
         expected: [{
             command: 'create_task',
-            parameters: {
-                title: 'Підготувати щотижневий звіт',
-                assigneeName: 'Марія Сидоренко',
-                dueDate: tomorrow,
-            }
+            text: '\'Підготувати щотижневий звіт\' для Марії Сидоренко на завтра',
         }]
     },
     {
@@ -53,11 +49,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Покажи мої невиконані задачі',
         expected: [{
             command: 'view_my_tasks',
-            parameters: {
-                status: 'todo',
-                startDate: today,
-                endDate: today,
-            }
+            text: 'невиконані задачі',
         }]
     },
     {
@@ -66,16 +58,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         expected: [
             {
                 command: 'create_result',
-                parameters: {
-                    title: 'Збільшити конверсію сайту на 15%',
-                }
-            },
-            {
-                command: 'add_sub_results',
-                parameters: {
-                    parentResultTitle: 'Збільшити конверсію сайту на 15%',
-                    subResultNames: ["проаналізувати трафік", "оновити головну сторінку"],
-                }
+                text: '\'Збільшити конверсію сайту на 15%\', підрезультати: "проаналізувати трафік", "оновити головну сторінку"',
             }
         ]
     },
@@ -85,16 +68,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         expected: [
             {
                 command: 'create_result',
-                parameters: {
-                    title: 'Підготувати квартальний звіт',
-                }
-            },
-            {
-                command: 'add_sub_results',
-                parameters: {
-                   parentResultTitle: 'Підготувати квартальний звіт',
-                   subResultNames: ["Зібрати дані", "Створити презентацію", "аналітика з GA", "дані з CRM"],
-                }
+                text: 'Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM'
             }
         ]
     },
@@ -103,13 +77,15 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'список співробітників',
         expected: [{
             command: 'list_employees',
+            text: 'співробітників'
         }]
     },
     {
         description: 'Should ask for clarification if task title is missing',
         input: 'Створити задачу для Петра',
         expected: [{
-            command: 'clarify',
+            command: 'create_task',
+            text: 'для Петра'
         }]
     },
     {
@@ -117,7 +93,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створити результат "Запустити нову маркетингову кампанію"',
         expected: [{
             command: 'create_result',
-            parameters: { title: 'Запустити нову маркетингову кампанію' }
+            text: '"Запустити нову маркетингову кампанію"'
         }]
     },
     {
@@ -125,10 +101,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Створи шаблон "Щоденний звіт" з повторенням щодня',
         expected: [{
             command: 'create_template',
-            parameters: {
-                title: 'Щоденний звіт',
-                repeatability: 'щодня'
-            }
+            text: '"Щоденний звіт" з повторенням щодня'
         }]
     },
     {
@@ -136,10 +109,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: `Покажи задачі на ${tomorrow}`,
         expected: [{
             command: 'view_tasks',
-            parameters: {
-                startDate: tomorrow,
-                endDate: tomorrow,
-            }
+            text: `на ${tomorrow}`,
         }]
     },
     {
@@ -147,6 +117,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Покажи список результатів',
         expected: [{
             command: 'view_results',
+            text: 'список результатів'
         }]
     },
     {
@@ -154,6 +125,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Які є шаблони?',
         expected: [{
             command: 'list_templates',
+            text: 'Які є шаблони?'
         }]
     }
 ];
@@ -207,14 +179,8 @@ async function runTests() {
             // We only compare the fields present in the 'expected' object
             const partialResults = results.map(result => {
                 const partialResult: Partial<TelegramCommandOutput> = { command: result.command };
-                if (result.parameters && testCase.expected.find(exp => exp.command === result.command)?.parameters) {
-                    partialResult.parameters = {};
-                    const expectedParams = testCase.expected.find(exp => exp.command === result.command)!.parameters!;
-                    for (const key in expectedParams) {
-                        if (Object.prototype.hasOwnProperty.call(result.parameters, key)) {
-                            (partialResult.parameters as any)[key] = (result.parameters as any)[key];
-                        }
-                    }
+                if (result.text && testCase.expected.find(exp => exp.command === result.command)?.text) {
+                    partialResult.text = result.text;
                 }
                 return partialResult;
             });

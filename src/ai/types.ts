@@ -88,23 +88,7 @@ export const TelegramCommandOutputSchema = z.object({
         'clarify'
     ])
     .describe('The recognized command the user wants to execute.'),
-  parameters: z.object({
-    title: z.string().optional().describe('The title for the new task or result.'),
-    assigneeName: z.string().optional().describe("The name of the employee."),
-    dueDate: z.string().optional().describe("The due date in 'YYYY-MM-DD' format."),
-    startDate: z.string().optional().describe("The start date for a query in 'YYYY-MM-DD' format."),
-    endDate: z.string().optional().describe("The end date for a query in 'YYYY-MM-DD' format."),
-    status: z.string().optional().describe("The status to filter tasks by (e.g., 'todo', 'done')."),
-    targetTitle: z.string().optional().describe('The title of the existing task or result to modify.'),
-    newTitle: z.string().optional().describe('The new title for the task being edited.'),
-    commentText: z.string().optional().describe('The text of the comment to add to a result.'),
-    repeatability: z.string().optional().describe("The recurrence rule for a new template (e.g., 'daily', 'weekly')."),
-    newDueDate: z.string().optional().describe("The new due date for a task in 'YYYY-MM-DD' format."),
-    // For the new add_sub_results command
-    parentResultTitle: z.string().optional().describe("The title of the parent result to which sub-results should be added."),
-    subResultNames: z.array(z.string()).optional().describe("A simple array of names for new sub-results."),
-  }).optional().describe('The parameters extracted from the command.'),
-  missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
+  text: z.string().optional().describe('The raw text associated with the command for backend processing.'),
 });
 export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
 export const TelegramCommandListSchema = z.array(TelegramCommandOutputSchema);
