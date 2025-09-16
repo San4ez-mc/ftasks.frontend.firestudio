@@ -21,20 +21,6 @@ export default function LoginPage() {
     return `${TELEGRAM_BOT_BASE_URL}?start=${payload}`;
   };
 
-  const handleQuickLogin = () => {
-    // This is a temporary developer-only function.
-    // It uses a hardcoded, non-revocable token for local testing.
-    // This token corresponds to user-1 (Oleksandr Matsuk), company-1 and is signed with the dev secret.
-    const MOCK_PERMANENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEiLCJjb21wYW55SWQiOiJjb21wYW55LTEiLCJyZW1lbWJlck1lIjp0cnVlLCJpYXQiOjE3MjYzNTg4MDB9.d7yK_d-pr2B8pE4Pz5z3yW7n0tF7b_k9T8V4qM6rZ0s";
-    
-    // Set token in both localStorage (for client-side API calls) and cookies (for middleware)
-    localStorage.setItem('auth_token', MOCK_PERMANENT_TOKEN);
-    document.cookie = `auth_token=${MOCK_PERMANENT_TOKEN}; path=/; max-age=2592000`; // max-age=30 days
-
-    // Use window.location.href to force a full page reload, which is necessary for the middleware to re-evaluate the auth state.
-    window.location.href = '/';
-  }
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/40">
       <Card className="w-full max-w-sm">
@@ -48,11 +34,6 @@ export default function LoginPage() {
               Увійти через Telegram
             </Link>
           </Button>
-           {/* --- Development Only Button --- */}
-          <Button onClick={handleQuickLogin} variant="secondary" className="w-full">
-            Швидкий вхід (для розробки)
-          </Button>
-          {/* ----------------------------- */}
           <div className="flex items-center space-x-2">
             <Label
               htmlFor="remember-me"
