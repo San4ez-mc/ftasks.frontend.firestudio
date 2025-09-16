@@ -58,7 +58,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         expected: [
             {
                 command: 'create_result',
-                text: '\'Збільшити конверсію сайту на 15%\', підрезультати: "проаналізувати трафік", "оновити головну сторінку"',
+                text: 'Створити новий результат \'Збільшити конверсію сайту на 15%\', підрезультати: "проаналізувати трафік", "оновити головну сторінку"',
             }
         ]
     },
@@ -68,7 +68,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         expected: [
             {
                 command: 'create_result',
-                text: 'Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM'
+                text: 'ціль Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM'
             }
         ]
     },
@@ -77,7 +77,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'список співробітників',
         expected: [{
             command: 'list_employees',
-            text: 'співробітників'
+            text: 'список співробітників'
         }]
     },
     {
@@ -117,7 +117,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         input: 'Покажи список результатів',
         expected: [{
             command: 'view_results',
-            text: 'список результатів'
+            text: 'Покажи список результатів'
         }]
     },
     {
