@@ -186,6 +186,30 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 }
                 break;
             
+            case 'view_my_tasks': {
+                const allTasks = await getAllTasksForCompany(companyId);
+                const today = new Date().toISOString().split('T')[0];
+                const startDate = params?.startDate || today;
+                const endDate = params?.endDate || startDate;
+                let filteredTasks = allTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
+                filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === currentEmployee.id);
+                 if (params?.status) {
+                    filteredTasks = filteredTasks.filter(t => t.status === params.status);
+                }
+
+                if (filteredTasks.length === 0) {
+                    await sendTelegramMessage(chat.id, { text: `✅ Ваших задач на ${startDate} не знайдено.` });
+                } else {
+                    const taskList = filteredTasks.map(t => {
+                        const status = t.status === 'done' ? '✅' : '📝';
+                        const title = t.title || 'Без назви';
+                        return `- ${status} ${title}`;
+                    }).join('\n');
+                    await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${startDate}:\n${taskList}` });
+                }
+                break;
+            }
+
             case 'view_tasks': {
                 const allTasks = await getAllTasksForCompany(companyId);
                 let filteredTasks = allTasks;
@@ -196,12 +220,11 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 filteredTasks = filteredTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
                 
                 let assigneeName = params?.assigneeName;
-                if (!assigneeName) {
-                    assigneeName = `${finekoUser.firstName} ${finekoUser.lastName}`;
-                }
-                const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
-                if (assignee) {
-                    filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === assignee.id);
+                if (assigneeName) {
+                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                    if (assignee) {
+                        filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === assignee.id);
+                    }
                 }
                 
                 if (params?.status) {
@@ -209,14 +232,31 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 }
 
                 if (filteredTasks.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: `✅ Задач на ${startDate} для ${assigneeName} не знайдено.` });
+                    await sendTelegramMessage(chat.id, { text: `✅ Задач на ${startDate} для ${assigneeName || 'всіх'} не знайдено.` });
                 } else {
                     const taskList = filteredTasks.map(t => {
                         const status = t.status === 'done' ? '✅' : '📝';
                         const title = t.title || 'Без назви';
                         return `- ${status} ${title}`;
                     }).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось задачі для ${assigneeName} на ${startDate}:\n${taskList}` });
+                    await sendTelegramMessage(chat.id, { text: `Ось задачі для ${assigneeName || 'всіх'} на ${startDate}:\n${taskList}` });
+                }
+                break;
+            }
+            
+             case 'view_my_results': {
+                const allResults = await getAllResultsForCompany(companyId);
+                let filteredResults = allResults.filter(r => r.assignee && r.assignee.id === currentEmployee.id);
+
+                if (params?.status) {
+                    filteredResults = filteredResults.filter(r => r.status === params.status);
+                }
+
+                if (filteredResults.length === 0) {
+                    await sendTelegramMessage(chat.id, { text: `✅ Ваших результатів не знайдено.` });
+                } else {
+                    const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
+                    await sendTelegramMessage(chat.id, { text: `Ось ваші результати:\n${resultList}` });
                 }
                 break;
             }
@@ -226,12 +266,11 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 let filteredResults = allResults;
 
                 let assigneeName = params?.assigneeName;
-                if (assigneeName === 'мої' || !assigneeName) {
-                    assigneeName = `${finekoUser.firstName} ${finekoUser.lastName}`;
-                }
-                const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
-                if (assignee) {
-                    filteredResults = filteredResults.filter(r => r.assignee && r.assignee.id === assignee.id);
+                if (assigneeName) {
+                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                    if (assignee) {
+                        filteredResults = filteredResults.filter(r => r.assignee && r.assignee.id === assignee.id);
+                    }
                 }
 
                 if (params?.status) {
@@ -239,10 +278,10 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 }
 
                 if (filteredResults.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: `✅ Результатів для ${assigneeName} не знайдено.` });
+                    await sendTelegramMessage(chat.id, { text: `✅ Результатів для ${assigneeName || 'всіх'} не знайдено.` });
                 } else {
                     const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось результати для ${assigneeName}:\n${resultList}` });
+                    await sendTelegramMessage(chat.id, { text: `Ось результати для ${assigneeName || 'всіх'}:\n${resultList}` });
                 }
                 break;
             }
@@ -357,7 +396,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             }
             
             case 'show_help':
-                await sendTelegramMessage(chat.id, { text: aiResult.reply || "Я можу допомогти вам з керуванням завдань та результатів." });
+                await sendTelegramMessage(chat.id, { text: aiResult.missingInfo || "Я вмію:\n- Створювати задачі та результати.\n- Показувати списки задач, результатів, співробітників, шаблонів." });
                 break;
 
             case 'clarify':
@@ -366,7 +405,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
 
             case 'unknown':
             default:
-                await sendTelegramMessage(chat.id, { text: aiResult.reply || "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
+                await sendTelegramMessage(chat.id, { text: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
                 break;
         }
     } catch (error) {

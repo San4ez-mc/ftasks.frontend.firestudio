@@ -20,18 +20,43 @@ const commandParserPrompt = ai.definePrompt({
   name: 'telegramCommandParserPrompt',
   input: { schema: TelegramCommandInputSchema },
   output: { schema: TelegramCommandOutputSchema },
-  prompt: `You are a command parser for the Fineko task management system. Your ONLY purpose is to convert user text into a JSON object that strictly adheres to the provided output schema.
+  prompt: `You are a command parser for the Fineko task management system. Your ONLY purpose is to convert user text into a JSON object that strictly adheres to the provided output schema. DO NOT add any other text, comments, or fields like 'reply'.
 
-**RULES:**
-1.  Analyze the user's command text.
-2.  Use the provided context (current date, employee list, current user) to fill the JSON fields correctly.
-3.  If required information is missing for a command (e.g., "create task for John" with no title), you MUST set the command field to "clarify" and provide a clear question in the "missingInfo" field.
-4.  Your output MUST be ONLY the JSON object and nothing else. Do NOT add any other text, comments, or fields like 'reply'.
-5.  Accurately parse nested sub-results based on the provided schema.
+**EXAMPLES OF CORRECT JSON OUTPUT:**
+
+1.  User command: "Покажи мої невиконані задачі"
+    JSON Output:
+    {
+      "command": "view_my_tasks",
+      "parameters": {
+        "status": "todo",
+        "startDate": "${new Date().toISOString().split('T')[0]}",
+        "endDate": "${new Date().toISOString().split('T')[0]}"
+      }
+    }
+
+2.  User command: "ціль Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM"
+    JSON Output:
+    {
+      "command": "create_result",
+      "parameters": {
+        "title": "Підготувати квартальний звіт",
+        "subResults": [
+          {
+            "name": "Зібрати дані",
+            "subResults": [
+              { "name": "аналітика з GA" },
+              { "name": "дані з CRM" }
+            ]
+          },
+          { "name": "Створити презентацію" }
+        ]
+      }
+    }
 
 **CONTEXT:**
 - Today's date is: ${new Date().toISOString().split('T')[0]}. Use this to resolve relative dates like "today", "tomorrow", or when no date is specified for a task/result query.
-- Current user: {{json currentUser}}. Use this when the user says "my" or "мої".
+- Current user: {{json currentUser}}.
 - Available employees: {{json employees}}.
 - Available templates: {{json templates}}.
 
@@ -55,11 +80,6 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
 
   if (!output) {
      return { command: 'unknown' };
-  }
-  
-  // Post-processing to resolve 'мої' to the current user's name
-  if (output.parameters?.assigneeName === 'мої') {
-      output.parameters.assigneeName = input.currentUser.name;
   }
   
   return output;

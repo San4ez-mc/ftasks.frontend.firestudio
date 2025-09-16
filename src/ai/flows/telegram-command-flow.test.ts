@@ -51,9 +51,8 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         description: 'Should view user\'s own tasks for today',
         input: 'Покажи мої невиконані задачі',
         expected: {
-            command: 'view_tasks',
+            command: 'view_my_tasks',
             parameters: {
-                assigneeName: 'Марія Сидоренко',
                 status: 'todo',
                 startDate: today,
                 endDate: today,
