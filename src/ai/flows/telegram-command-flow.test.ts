@@ -23,6 +23,8 @@ const mockTemplates = [
     { id: 'tpl-1', name: 'Щотижневий звіт' },
 ];
 
+const today = new Date().toISOString().split('T')[0];
+
 // Define all test cases
 const testCases: { description: string; input: string; expected: Partial<TelegramCommandOutput> }[] = [
     {
@@ -53,8 +55,8 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
             parameters: {
                 assigneeName: 'Марія Сидоренко',
                 status: 'todo',
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: new Date().toISOString().split('T')[0],
+                startDate: today,
+                endDate: today,
             }
         }
     },
@@ -92,18 +94,62 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
             }
         }
     },
-     {
+    {
         description: 'Should correctly identify a command to list employees',
         input: 'список співробітників',
         expected: {
             command: 'list_employees',
         }
     },
-     {
+    {
         description: 'Should ask for clarification if task title is missing',
         input: 'Створити задачу для Петра',
         expected: {
             command: 'clarify',
+        }
+    },
+    {
+        description: 'Should create a simple result without sub-results',
+        input: 'Створити результат "Запустити нову маркетингову кампанію"',
+        expected: {
+            command: 'create_result',
+            parameters: { title: 'Запустити нову маркетингову кампанію' }
+        }
+    },
+    {
+        description: 'Should create a simple template',
+        input: 'Створи шаблон "Щоденний звіт" з повторенням щодня',
+        expected: {
+            command: 'create_template',
+            parameters: {
+                title: 'Щоденний звіт',
+                repeatability: 'щодня'
+            }
+        }
+    },
+    {
+        description: 'Should view tasks for a specific date',
+        input: `Покажи задачі на ${new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]}`,
+        expected: {
+            command: 'view_tasks',
+            parameters: {
+                startDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0],
+                endDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]
+            }
+        }
+    },
+    {
+        description: 'Should view a list of results',
+        input: 'Покажи список результатів',
+        expected: {
+            command: 'view_results',
+        }
+    },
+    {
+        description: 'Should view a list of templates',
+        input: 'Які є шаблони?',
+        expected: {
+            command: 'list_templates',
         }
     }
 ];

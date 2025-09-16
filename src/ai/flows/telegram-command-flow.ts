@@ -16,59 +16,24 @@ import {
   TelegramCommandOutputSchema,
 } from '@/ai/types';
 
-
 const commandParserPrompt = ai.definePrompt({
   name: 'telegramCommandParserPrompt',
   input: { schema: TelegramCommandInputSchema },
   output: { schema: TelegramCommandOutputSchema },
-  prompt: `You are a command parser for the Fineko task management system.
-  
-Your sole purpose is to convert the user's natural language command into a structured JSON object based on the provided output schema. DO NOT add any extra fields like "reply". Your output MUST be only the JSON object.
-
-**EXAMPLES OF CORRECT JSON OUTPUT:**
-
-1.  User command: "Покажи мої невиконані задачі"
-    JSON Output:
-    {
-      "command": "view_tasks",
-      "parameters": {
-        "assigneeName": "мої",
-        "status": "todo",
-        "startDate": "${new Date().toISOString().split('T')[0]}",
-        "endDate": "${new Date().toISOString().split('T')[0]}"
-      }
-    }
-
-2.  User command: "ціль Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM"
-    JSON Output:
-    {
-      "command": "create_result",
-      "parameters": {
-        "title": "Підготувати квартальний звіт",
-        "subResults": [
-          {
-            "name": "Зібрати дані",
-            "subResults": [
-              { "name": "аналітика з GA" },
-              { "name": "дані з CRM" }
-            ]
-          },
-          { "name": "Створити презентацію" }
-        ]
-      }
-    }
-
-**CONTEXT:**
-- Today's date is: ${new Date().toISOString().split('T')[0]}. Use this to resolve relative dates like "today" or "tomorrow".
-- Available employees: {{json employees}}.
-- Available templates: {{json templates}}.
-- Current user: {{json currentUser}}.
+  prompt: `You are a command parser for the Fineko task management system. Your ONLY purpose is to convert user text into a JSON object that strictly adheres to the provided output schema.
 
 **RULES:**
-1.  If the command is clear, generate the corresponding JSON object.
-2.  If the command is ambiguous or missing required information (e.g., "create task for John" with no title), set the command field to "clarify" and provide a question in the "missingInfo" field.
-3.  If you cannot understand the command at all, set the command to "unknown" and provide a helpful reply.
-4.  For 'create_result', correctly parse the nested structure of sub-results from the text.
+1.  Analyze the user's command text.
+2.  Use the provided context (current date, employee list, current user) to fill the JSON fields correctly.
+3.  If required information is missing for a command (e.g., "create task for John" with no title), you MUST set the command field to "clarify" and provide a clear question in the "missingInfo" field.
+4.  Your output MUST be ONLY the JSON object and nothing else. Do NOT add any other text, comments, or fields like 'reply'.
+5.  Accurately parse nested sub-results based on the provided schema.
+
+**CONTEXT:**
+- Today's date is: ${new Date().toISOString().split('T')[0]}. Use this to resolve relative dates like "today", "tomorrow", or when no date is specified for a task/result query.
+- Current user: {{json currentUser}}. Use this when the user says "my" or "мої".
+- Available employees: {{json employees}}.
+- Available templates: {{json templates}}.
 
 **User command:** "{{command}}"
 `,
@@ -81,17 +46,18 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
   if (helpKeywords.some(kw => input.command.toLowerCase().includes(kw))) {
     return {
         command: 'show_help',
-        reply: `Я вмію:\n- Створювати задачі та результати (включно з вкладеними).\n- Редагувати задачі (назву, статус, дату).\n- Додавати коментарі до задач та результатів.\n- Показувати списки задач, результатів, співробітників, шаблонів.`
+        parameters: {},
+        missingInfo: `Я вмію:\n- Створювати задачі та результати (включно з вкладеними).\n- Редагувати задачі (назву, статус, дату).\n- Додавати коментарі до задач та результатів.\n- Показувати списки задач, результатів, співробітників, шаблонів.`
     };
   }
   
   const { output } = await commandParserPrompt(input);
 
   if (!output) {
-     return { command: 'unknown', reply: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." };
+     return { command: 'unknown' };
   }
   
-  // If the AI returns 'мої', replace it with the actual current user's name.
+  // Post-processing to resolve 'мої' to the current user's name
   if (output.parameters?.assigneeName === 'мої') {
       output.parameters.assigneeName = input.currentUser.name;
   }

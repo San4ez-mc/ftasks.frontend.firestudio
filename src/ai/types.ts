@@ -65,15 +65,14 @@ export const TelegramCommandInputSchema = z.object({
 export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
 
 
-// Define a recursive schema for sub-results
-type SubResult = {
-  name: string;
-  subResults?: SubResult[];
-};
+// Define a non-recursive, two-level deep schema for sub-results to ensure stability.
+const SubResultL2Schema = z.object({
+    name: z.string().describe("The name of the nested sub-result."),
+});
 
-const SubResultSchema: z.ZodType<SubResult> = z.object({
-  name: z.string().describe('The name of the sub-result.'),
-  subResults: z.lazy(() => z.array(SubResultSchema)).optional().describe('A nested array of sub-results.'),
+const SubResultL1Schema = z.object({
+    name: z.string().describe("The name of the sub-result."),
+    subResults: z.array(SubResultL2Schema).optional().describe("A nested array of sub-results (one level deep)."),
 });
 
 
@@ -109,10 +108,9 @@ export const TelegramCommandOutputSchema = z.object({
     commentText: z.string().optional().describe('The text of the comment to add to a result.'),
     repeatability: z.string().optional().describe("The recurrence rule for a new template (e.g., 'daily', 'weekly')."),
     newDueDate: z.string().optional().describe("The new due date for a task in 'YYYY-MM-DD' format."),
-    subResults: z.array(SubResultSchema).optional().describe('An array of nested sub-results for creation.'),
+    subResults: z.array(SubResultL1Schema).optional().describe('An array of nested sub-results for creation.'),
   }).optional().describe('The parameters extracted from the command.'),
   missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
-  reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees", "show_help") or unknown.'),
 });
 export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
 
