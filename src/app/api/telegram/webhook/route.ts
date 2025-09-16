@@ -78,7 +78,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
         const templateList = allTemplates.map(t => ({ id: t.id, name: t.name }));
         const currentUserForAI = { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}` };
 
-        const aiResult = await parseTelegramCommand({
+        const aiResults = await parseTelegramCommand({
             command: text,
             employees: employeeList,
             templates: templateList,
@@ -86,327 +86,338 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             currentUser: currentUserForAI,
         });
 
-        const params = aiResult.parameters;
+        for (const aiResult of aiResults) {
+            const params = aiResult.parameters;
 
-        switch (aiResult.command) {
-            case 'create_task':
-                if (params?.title) {
-                    const assigneeName = params.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
-                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+            switch (aiResult.command) {
+                case 'create_task':
+                    if (params?.title) {
+                        const assigneeName = params.assigneeName || currentUserForAI.name;
+                        const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
 
-                    const newTaskData: Omit<Task, 'id' | 'companyId'> = {
-                        title: params.title,
-                        dueDate: params.dueDate || new Date().toISOString().split('T')[0],
-                        status: 'todo',
-                        type: 'important-not-urgent',
-                        expectedTime: 30,
-                        assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { id: 'unknown', name: assigneeName },
-                        reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
-                    };
-                    const createdTask = await createTaskInDb(companyId, newTaskData);
-                    await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
-                } else {
-                     await sendTelegramMessage(chat.id, { text: "Не вдалося створити задачу. Спробуйте ще раз, вказавши назву." });
-                }
-                break;
-            
-            case 'create_result':
-                 if (params?.title) {
-                    const assigneeName = params.assigneeName || `${finekoUser.firstName} ${finekoUser.lastName}`;
-                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
-                    const twoWeeksFromNow = new Date();
-                    twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
-
-                    const transformToDbSubResults = (items: any[] | undefined): SubResult[] => {
-                        if (!items || items.length === 0) return [];
-                        return items.map(item => ({
-                            id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                            name: item.name,
-                            completed: false,
-                            subResults: item.subResults ? transformToDbSubResults(item.subResults) : []
-                        }));
-                    };
-
-                    const newResultData: Omit<Result, 'id' | 'companyId'> = {
-                        name: params.title,
-                        status: 'Заплановано',
-                        completed: false,
-                        deadline: params.dueDate || twoWeeksFromNow.toISOString().split('T')[0],
-                        assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { name: assigneeName, id: '' },
-                        reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
-                        description: '',
-                        expectedResult: '',
-                        subResults: transformToDbSubResults(params.subResults), 
-                        tasks: [], 
-                        templates: [], 
-                        comments: [], 
-                        accessList: [],
-                    };
-                    const createdResult = await createResultInDb(companyId, newResultData);
-                    await sendTelegramMessage(chat.id, { text: `🎯 Результат "${createdResult.name}" та його підрезультати було створено.` });
-                } else {
-                     await sendTelegramMessage(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
-                }
-                break;
-            
-            case 'edit_task_title':
-                if (params?.targetTitle && params.newTitle) {
-                    const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToEdit = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
-                    if (taskToEdit) {
-                        await updateTaskInDb(companyId, taskToEdit.id, { title: params.newTitle });
-                        await sendTelegramMessage(chat.id, { text: `✅ Назву задачі оновлено на "${params.newTitle}".` });
-                    } else {
-                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
-                    }
-                } else {
-                    await sendTelegramMessage(chat.id, { text: `🤔 Для зміни назви задачі, вкажіть поточну та нову назву.` });
-                }
-                break;
-
-            case 'add_comment_to_result':
-                 if (params?.targetTitle && params.commentText) {
-                    const allResults = await getAllResultsForCompany(companyId);
-                    const resultToComment = allResults.find(r => r.name.toLowerCase() === params.targetTitle?.toLowerCase());
-                    if (resultToComment) {
-                        const newComment = {
-                            id: `comment-${Date.now()}`,
-                            text: params.commentText,
-                            author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
-                            timestamp: new Date().toLocaleString('uk-UA')
+                        const newTaskData: Omit<Task, 'id' | 'companyId'> = {
+                            title: params.title,
+                            dueDate: params.dueDate || new Date().toISOString().split('T')[0],
+                            status: 'todo',
+                            type: 'important-not-urgent',
+                            expectedTime: 30,
+                            assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { id: 'unknown', name: assigneeName },
+                            reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
                         };
-                        const updatedComments = [...(resultToComment.comments || []), newComment];
-                        await updateResultInDb(companyId, resultToComment.id, { comments: updatedComments });
-                        await sendTelegramMessage(chat.id, { text: `💬 Коментар додано до результату "${params.targetTitle}".` });
+                        const createdTask = await createTaskInDb(companyId, newTaskData);
+                        await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
                     } else {
-                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено результат з назвою "${params.targetTitle}".` });
+                        await sendTelegramMessage(chat.id, { text: "Не вдалося створити задачу. Спробуйте ще раз, вказавши назву." });
                     }
-                } else {
-                    await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву результату та текст коментаря.` });
-                }
-                break;
-            
-            case 'view_my_tasks': {
-                const allTasks = await getAllTasksForCompany(companyId);
-                const today = new Date().toISOString().split('T')[0];
-                const startDate = params?.startDate || today;
-                const endDate = params?.endDate || startDate;
-                let filteredTasks = allTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
-                filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === currentEmployee.id);
-                 if (params?.status) {
-                    filteredTasks = filteredTasks.filter(t => t.status === params.status);
-                }
-
-                if (filteredTasks.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: `✅ Ваших задач на ${startDate} не знайдено.` });
-                } else {
-                    const taskList = filteredTasks.map(t => {
-                        const status = t.status === 'done' ? '✅' : '📝';
-                        const title = t.title || 'Без назви';
-                        return `- ${status} ${title}`;
-                    }).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${startDate}:\n${taskList}` });
-                }
-                break;
-            }
-
-            case 'view_tasks': {
-                const allTasks = await getAllTasksForCompany(companyId);
-                let filteredTasks = allTasks;
-
-                const today = new Date().toISOString().split('T')[0];
-                const startDate = params?.startDate || today;
-                const endDate = params?.endDate || startDate;
-                filteredTasks = filteredTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
+                    break;
                 
-                let assigneeName = params?.assigneeName;
-                if (assigneeName) {
-                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
-                    if (assignee) {
-                        filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === assignee.id);
+                case 'create_result':
+                    if (params?.title) {
+                        const assigneeName = params.assigneeName || currentUserForAI.name;
+                        const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                        const twoWeeksFromNow = new Date();
+                        twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+
+                        const newResultData: Omit<Result, 'id' | 'companyId'> = {
+                            name: params.title,
+                            status: 'Заплановано',
+                            completed: false,
+                            deadline: params.dueDate || twoWeeksFromNow.toISOString().split('T')[0],
+                            assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { name: assigneeName, id: '' },
+                            reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
+                            subResults: [],
+                            tasks: [], 
+                            templates: [], 
+                            comments: [], 
+                            accessList: [],
+                        };
+                        const createdResult = await createResultInDb(companyId, newResultData);
+                        await sendTelegramMessage(chat.id, { text: `🎯 Результат "${createdResult.name}" створено.` });
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: "Не вдалося створити результат. Спробуйте ще раз, вказавши назву." });
                     }
-                }
+                    break;
                 
-                if (params?.status) {
-                    filteredTasks = filteredTasks.filter(t => t.status === params.status);
-                }
-
-                if (filteredTasks.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: `✅ Задач на ${startDate} для ${assigneeName || 'всіх'} не знайдено.` });
-                } else {
-                    const taskList = filteredTasks.map(t => {
-                        const status = t.status === 'done' ? '✅' : '📝';
-                        const title = t.title || 'Без назви';
-                        return `- ${status} ${title}`;
-                    }).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось задачі для ${assigneeName || 'всіх'} на ${startDate}:\n${taskList}` });
-                }
-                break;
-            }
-            
-             case 'view_my_results': {
-                const allResults = await getAllResultsForCompany(companyId);
-                let filteredResults = allResults.filter(r => r.assignee && r.assignee.id === currentEmployee.id);
-
-                if (params?.status) {
-                    filteredResults = filteredResults.filter(r => r.status === params.status);
-                }
-
-                if (filteredResults.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: `✅ Ваших результатів не знайдено.` });
-                } else {
-                    const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось ваші результати:\n${resultList}` });
-                }
-                break;
-            }
-
-            case 'view_results': {
-                const allResults = await getAllResultsForCompany(companyId);
-                let filteredResults = allResults;
-
-                let assigneeName = params?.assigneeName;
-                if (assigneeName) {
-                    const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
-                    if (assignee) {
-                        filteredResults = filteredResults.filter(r => r.assignee && r.assignee.id === assignee.id);
+                case 'add_sub_results':
+                    if (params?.parentResultTitle && params.subResultNames) {
+                        const allResults = await getAllResultsForCompany(companyId);
+                        const parentResult = allResults.find(r => r.name.toLowerCase() === params.parentResultTitle?.toLowerCase());
+                        if (parentResult) {
+                            const newSubResults: SubResult[] = params.subResultNames.map(name => ({
+                                id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                                name,
+                                completed: false,
+                            }));
+                            const updatedSubResults = [...(parentResult.subResults || []), ...newSubResults];
+                            await updateResultInDb(companyId, parentResult.id, { subResults: updatedSubResults });
+                            await sendTelegramMessage(chat.id, { text: `📝 Додано підрезультати до "${parentResult.name}":\n- ${params.subResultNames.join('\n- ')}` });
+                        } else {
+                             await sendTelegramMessage(chat.id, { text: `❌ Не знайдено результат з назвою "${params.parentResultTitle}" для додавання підрезультатів.` });
+                        }
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати підрезультати, вкажіть назву основного результату та список підрезультатів.` });
                     }
-                }
+                    break;
+                
+                case 'edit_task_title':
+                    if (params?.targetTitle && params.newTitle) {
+                        const allTasks = await getAllTasksForCompany(companyId);
+                        const taskToEdit = allTasks.find(t => t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                        if (taskToEdit) {
+                            await updateTaskInDb(companyId, taskToEdit.id, { title: params.newTitle });
+                            await sendTelegramMessage(chat.id, { text: `✅ Назву задачі оновлено на "${params.newTitle}".` });
+                        } else {
+                            await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                        }
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Для зміни назви задачі, вкажіть поточну та нову назву.` });
+                    }
+                    break;
 
-                if (params?.status) {
-                    filteredResults = filteredResults.filter(r => r.status === params.status);
-                }
+                case 'add_comment_to_result':
+                    if (params?.targetTitle && params.commentText) {
+                        const allResults = await getAllResultsForCompany(companyId);
+                        const resultToComment = allResults.find(r => r.name.toLowerCase() === params.targetTitle?.toLowerCase());
+                        if (resultToComment) {
+                            const newComment = {
+                                id: `comment-${Date.now()}`,
+                                text: params.commentText,
+                                author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
+                                timestamp: new Date().toLocaleString('uk-UA')
+                            };
+                            const updatedComments = [...(resultToComment.comments || []), newComment];
+                            await updateResultInDb(companyId, resultToComment.id, { comments: updatedComments });
+                            await sendTelegramMessage(chat.id, { text: `💬 Коментар додано до результату "${params.targetTitle}".` });
+                        } else {
+                            await sendTelegramMessage(chat.id, { text: `❌ Не знайдено результат з назвою "${params.targetTitle}".` });
+                        }
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву результату та текст коментаря.` });
+                    }
+                    break;
+                
+                case 'view_my_tasks': {
+                    const allTasks = await getAllTasksForCompany(companyId);
+                    const today = new Date().toISOString().split('T')[0];
+                    const startDate = params?.startDate || today;
+                    const endDate = params?.endDate || startDate;
+                    let filteredTasks = allTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
+                    filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === currentEmployee.id);
+                    if (params?.status) {
+                        filteredTasks = filteredTasks.filter(t => t.status === params.status);
+                    }
 
-                if (filteredResults.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: `✅ Результатів для ${assigneeName || 'всіх'} не знайдено.` });
-                } else {
-                    const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось результати для ${assigneeName || 'всіх'}:\n${resultList}` });
-                }
-                break;
-            }
-
-            case 'list_employees':
-                const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
-                await sendTelegramMessage(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
-                break;
-            
-            case 'view_task_details': {
-                if (!params?.title) {
-                    await sendTelegramMessage(chat.id, { text: "Будь ласка, вкажіть назву задачі, яку хочете переглянути." });
+                    if (filteredTasks.length === 0) {
+                        await sendTelegramMessage(chat.id, { text: `✅ Ваших задач на ${startDate} не знайдено.` });
+                    } else {
+                        const taskList = filteredTasks.map(t => {
+                            const status = t.status === 'done' ? '✅' : '📝';
+                            const title = t.title || 'Без назви';
+                            return `- ${status} ${title}`;
+                        }).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${startDate}:\n${taskList}` });
+                    }
                     break;
                 }
-                const allTasks = await getAllTasksForCompany(companyId);
-                const task = allTasks.find(t => t.title && t.title.toLowerCase() === params.title?.toLowerCase());
-                if (task) {
-                    const details = `
+
+                case 'view_tasks': {
+                    const allTasks = await getAllTasksForCompany(companyId);
+                    let filteredTasks = allTasks;
+
+                    const today = new Date().toISOString().split('T')[0];
+                    const startDate = params?.startDate || today;
+                    const endDate = params?.endDate || startDate;
+                    filteredTasks = filteredTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
+                    
+                    let assigneeName = params?.assigneeName;
+                    if (assigneeName) {
+                        const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                        if (assignee) {
+                            filteredTasks = filteredTasks.filter(t => t.assignee && t.assignee.id === assignee.id);
+                        }
+                    }
+                    
+                    if (params?.status) {
+                        filteredTasks = filteredTasks.filter(t => t.status === params.status);
+                    }
+
+                    if (filteredTasks.length === 0) {
+                        await sendTelegramMessage(chat.id, { text: `✅ Задач на ${startDate} для ${assigneeName || 'всіх'} не знайдено.` });
+                    } else {
+                        const taskList = filteredTasks.map(t => {
+                            const status = t.status === 'done' ? '✅' : '📝';
+                            const title = t.title || 'Без назви';
+                            return `- ${status} ${title}`;
+                        }).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось задачі для ${assigneeName || 'всіх'} на ${startDate}:\n${taskList}` });
+                    }
+                    break;
+                }
+                
+                case 'view_my_results': {
+                    const allResults = await getAllResultsForCompany(companyId);
+                    let filteredResults = allResults.filter(r => r.assignee && r.assignee.id === currentEmployee.id);
+
+                    if (params?.status) {
+                        filteredResults = filteredResults.filter(r => r.status === params.status);
+                    }
+
+                    if (filteredResults.length === 0) {
+                        await sendTelegramMessage(chat.id, { text: `✅ Ваших результатів не знайдено.` });
+                    } else {
+                        const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось ваші результати:\n${resultList}` });
+                    }
+                    break;
+                }
+
+                case 'view_results': {
+                    const allResults = await getAllResultsForCompany(companyId);
+                    let filteredResults = allResults;
+
+                    let assigneeName = params?.assigneeName;
+                    if (assigneeName) {
+                        const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
+                        if (assignee) {
+                            filteredResults = filteredResults.filter(r => r.assignee && r.assignee.id === assignee.id);
+                        }
+                    }
+
+                    if (params?.status) {
+                        filteredResults = filteredResults.filter(r => r.status === params.status);
+                    }
+
+                    if (filteredResults.length === 0) {
+                        await sendTelegramMessage(chat.id, { text: `✅ Результатів для ${assigneeName || 'всіх'} не знайдено.` });
+                    } else {
+                        const resultList = filteredResults.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось результати для ${assigneeName || 'всіх'}:\n${resultList}` });
+                    }
+                    break;
+                }
+
+                case 'list_employees':
+                    const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
+                    await sendTelegramMessage(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
+                    break;
+                
+                case 'view_task_details': {
+                    if (!params?.title) {
+                        await sendTelegramMessage(chat.id, { text: "Будь ласка, вкажіть назву задачі, яку хочете переглянути." });
+                        break;
+                    }
+                    const allTasks = await getAllTasksForCompany(companyId);
+                    const task = allTasks.find(t => t.title && t.title.toLowerCase() === params.title?.toLowerCase());
+                    if (task) {
+                        const details = `
 *Задача:* ${task.title}
 *Статус:* ${task.status}
 *Виконавець:* ${task.assignee?.name || 'Не призначено'}
 *Дедлайн:* ${task.dueDate}
 *Опис:* ${task.description || 'Немає'}
-                    `.trim();
-                    await sendTelegramMessage(chat.id, { text: details });
-                } else {
-                    await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.title}".` });
+                        `.trim();
+                        await sendTelegramMessage(chat.id, { text: details });
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.title}".` });
+                    }
+                    break;
                 }
-                break;
-            }
 
-            case 'add_comment_to_task': {
-                if (params?.targetTitle && params.commentText) {
-                    const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToComment = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
-                    if (taskToComment) {
-                        const newComment = {
-                            id: `comment-${Date.now()}`,
-                            text: params.commentText,
-                            author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
-                            timestamp: new Date().toLocaleString('uk-UA')
+                case 'add_comment_to_task': {
+                    if (params?.targetTitle && params.commentText) {
+                        const allTasks = await getAllTasksForCompany(companyId);
+                        const taskToComment = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                        if (taskToComment) {
+                            const newComment = {
+                                id: `comment-${Date.now()}`,
+                                text: params.commentText,
+                                author: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
+                                timestamp: new Date().toLocaleString('uk-UA')
+                            };
+                            const updatedComments = [...(taskToComment.comments || []), newComment];
+                            await updateTaskInDb(companyId, taskToComment.id, { comments: updatedComments });
+                            await sendTelegramMessage(chat.id, { text: `💬 Коментар додано до задачі "${params.targetTitle}".` });
+                        } else {
+                            await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                        }
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву задачі та текст коментаря.` });
+                    }
+                    break;
+                }
+
+                case 'update_task_status': {
+                    if (params?.targetTitle && params.status && ['todo', 'done'].includes(params.status)) {
+                        const allTasks = await getAllTasksForCompany(companyId);
+                        const taskToUpdate = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                        if (taskToUpdate) {
+                            await updateTaskInDb(companyId, taskToUpdate.id, { status: params.status as 'todo' | 'done' });
+                            await sendTelegramMessage(chat.id, { text: `✅ Статус задачі "${params.targetTitle}" оновлено на "${params.status}".` });
+                        } else {
+                            await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                        }
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Для зміни статусу, вкажіть назву задачі та новий статус ('todo' або 'done').` });
+                    }
+                    break;
+                }
+
+                case 'update_task_date': {
+                    if (params?.targetTitle && params.newDueDate) {
+                        const allTasks = await getAllTasksForCompany(companyId);
+                        const taskToUpdate = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
+                        if (taskToUpdate) {
+                            await updateTaskInDb(companyId, taskToUpdate.id, { dueDate: params.newDueDate });
+                            await sendTelegramMessage(chat.id, { text: `✅ Дату задачі "${params.targetTitle}" перенесено на ${params.newDueDate}.` });
+                        } else {
+                            await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                        }
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Для переносу задачі, вкажіть її назву та нову дату.` });
+                    }
+                    break;
+                }
+
+                case 'list_templates': {
+                    const templates = await getAllTemplatesForCompany(companyId);
+                    if (templates.length === 0) {
+                        await sendTelegramMessage(chat.id, { text: "У вас ще немає жодного шаблону." });
+                    } else {
+                        const templateList = templates.map(t => `- ${t.name} (${t.repeatability})`).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось ваші шаблони:\n${templateList}` });
+                    }
+                    break;
+                }
+                
+                case 'create_template': {
+                    if (params?.title && params.repeatability) {
+                        const newTemplateData: Omit<Template, 'id' | 'companyId'> = {
+                            name: params.title,
+                            repeatability: params.repeatability,
+                            startDate: new Date().toISOString().split('T')[0],
+                            tasksGenerated: [],
                         };
-                        const updatedComments = [...(taskToComment.comments || []), newComment];
-                        await updateTaskInDb(companyId, taskToComment.id, { comments: updatedComments });
-                        await sendTelegramMessage(chat.id, { text: `💬 Коментар додано до задачі "${params.targetTitle}".` });
+                        const createdTemplate = await createTemplateInDb(companyId, newTemplateData);
+                        await sendTelegramMessage(chat.id, { text: `✅ Шаблон "${createdTemplate.name}" створено з повторенням "${createdTemplate.repeatability}".` });
                     } else {
-                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
+                        await sendTelegramMessage(chat.id, { text: "Для створення шаблону вкажіть назву та правило повторення (наприклад, 'щоденно')." });
                     }
-                } else {
-                    await sendTelegramMessage(chat.id, { text: `🤔 Щоб додати коментар, вкажіть назву задачі та текст коментаря.` });
+                    break;
                 }
-                break;
-            }
+                
+                case 'show_help':
+                    await sendTelegramMessage(chat.id, { text: aiResult.missingInfo || "Я вмію:\n- Створювати задачі та результати.\n- Показувати списки задач, результатів, співробітників, шаблонів." });
+                    break;
 
-            case 'update_task_status': {
-                if (params?.targetTitle && params.status && ['todo', 'done'].includes(params.status)) {
-                    const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToUpdate = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
-                    if (taskToUpdate) {
-                        await updateTaskInDb(companyId, taskToUpdate.id, { status: params.status as 'todo' | 'done' });
-                        await sendTelegramMessage(chat.id, { text: `✅ Статус задачі "${params.targetTitle}" оновлено на "${params.status}".` });
-                    } else {
-                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
-                    }
-                } else {
-                    await sendTelegramMessage(chat.id, { text: `🤔 Для зміни статусу, вкажіть назву задачі та новий статус ('todo' або 'done').` });
-                }
-                break;
-            }
+                case 'clarify':
+                    await sendTelegramMessage(chat.id, { text: `🤔 ${aiResult.missingInfo}` });
+                    break;
 
-            case 'update_task_date': {
-                if (params?.targetTitle && params.newDueDate) {
-                    const allTasks = await getAllTasksForCompany(companyId);
-                    const taskToUpdate = allTasks.find(t => t.title && t.title.toLowerCase() === params.targetTitle?.toLowerCase());
-                    if (taskToUpdate) {
-                        await updateTaskInDb(companyId, taskToUpdate.id, { dueDate: params.newDueDate });
-                        await sendTelegramMessage(chat.id, { text: `✅ Дату задачі "${params.targetTitle}" перенесено на ${params.newDueDate}.` });
-                    } else {
-                        await sendTelegramMessage(chat.id, { text: `❌ Не знайдено задачу з назвою "${params.targetTitle}".` });
-                    }
-                } else {
-                    await sendTelegramMessage(chat.id, { text: `🤔 Для переносу задачі, вкажіть її назву та нову дату.` });
-                }
-                break;
+                case 'unknown':
+                default:
+                    await sendTelegramMessage(chat.id, { text: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
+                    break;
             }
-
-            case 'list_templates': {
-                const templates = await getAllTemplatesForCompany(companyId);
-                if (templates.length === 0) {
-                    await sendTelegramMessage(chat.id, { text: "У вас ще немає жодного шаблону." });
-                } else {
-                    const templateList = templates.map(t => `- ${t.name} (${t.repeatability})`).join('\n');
-                    await sendTelegramMessage(chat.id, { text: `Ось ваші шаблони:\n${templateList}` });
-                }
-                break;
-            }
-            
-            case 'create_template': {
-                if (params?.title && params.repeatability) {
-                    const newTemplateData: Omit<Template, 'id' | 'companyId'> = {
-                        name: params.title,
-                        repeatability: params.repeatability,
-                        startDate: new Date().toISOString().split('T')[0],
-                        tasksGenerated: [],
-                    };
-                    const createdTemplate = await createTemplateInDb(companyId, newTemplateData);
-                    await sendTelegramMessage(chat.id, { text: `✅ Шаблон "${createdTemplate.name}" створено з повторенням "${createdTemplate.repeatability}".` });
-                } else {
-                     await sendTelegramMessage(chat.id, { text: "Для створення шаблону вкажіть назву та правило повторення (наприклад, 'щоденно')." });
-                }
-                break;
-            }
-            
-            case 'show_help':
-                await sendTelegramMessage(chat.id, { text: aiResult.missingInfo || "Я вмію:\n- Створювати задачі та результати.\n- Показувати списки задач, результатів, співробітників, шаблонів." });
-                break;
-
-            case 'clarify':
-                await sendTelegramMessage(chat.id, { text: `🤔 ${aiResult.missingInfo}` });
-                break;
-
-            case 'unknown':
-            default:
-                await sendTelegramMessage(chat.id, { text: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
-                break;
         }
     } catch (error) {
         console.error("Error processing natural language command:", error);

@@ -24,132 +24,137 @@ const mockTemplates = [
 ];
 
 const today = new Date().toISOString().split('T')[0];
+const tomorrow = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
 
 // Define all test cases
-const testCases: { description: string; input: string; expected: Partial<TelegramCommandOutput> }[] = [
+const testCases: { description: string; input: string; expected: Partial<TelegramCommandOutput>[] }[] = [
     {
         description: 'Should create a simple task for the current user',
         input: 'Створи задачу "Підготувати звіт"',
-        expected: {
+        expected: [{
             command: 'create_task',
-            parameters: { title: 'Підготувати звіт' }
-        }
+            parameters: { title: 'Підготувати звіт', assigneeName: 'Марія Сидоренко' }
+        }]
     },
     {
         description: 'Should create a task with an assignee and a date',
         input: 'Створи задачу \'Підготувати щотижневий звіт\' для Марії Сидоренко на завтра',
-        expected: {
+        expected: [{
             command: 'create_task',
             parameters: {
                 title: 'Підготувати щотижневий звіт',
                 assigneeName: 'Марія Сидоренко',
-                dueDate: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]
+                dueDate: tomorrow,
             }
-        }
+        }]
     },
     {
         description: 'Should view user\'s own tasks for today',
         input: 'Покажи мої невиконані задачі',
-        expected: {
+        expected: [{
             command: 'view_my_tasks',
             parameters: {
                 status: 'todo',
                 startDate: today,
                 endDate: today,
             }
-        }
+        }]
     },
     {
-        description: 'Should create a result with sub-results',
+        description: 'Should create a result with sub-results by decomposing the command',
         input: 'Створити новий результат \'Збільшити конверсію сайту на 15%\', підрезультати: "проаналізувати трафік", "оновити головну сторінку"',
-        expected: {
-            command: 'create_result',
-            parameters: {
-                title: 'Збільшити конверсію сайту на 15%',
-                subResults: [
-                    { name: 'проаналізувати трафік' },
-                    { name: 'оновити головну сторінку' }
-                ]
+        expected: [
+            {
+                command: 'create_result',
+                parameters: {
+                    title: 'Збільшити конверсію сайту на 15%',
+                }
+            },
+            {
+                command: 'add_sub_results',
+                parameters: {
+                    parentResultTitle: 'Збільшити конверсію сайту на 15%',
+                    subResultNames: ["проаналізувати трафік", "оновити головну сторінку"],
+                }
             }
-        }
+        ]
     },
     {
-        description: 'Should create a result with complex nested sub-results',
+        description: 'Should create a result with complex nested sub-results (L1 only)',
         input: 'ціль Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM',
-        expected: {
-            command: 'create_result',
-            parameters: {
-                title: 'Підготувати квартальний звіт',
-                subResults: [
-                    { 
-                        name: 'Зібрати дані',
-                        subResults: [
-                            { name: 'аналітика з GA' },
-                            { name: 'дані з CRM' }
-                        ] 
-                    },
-                    { name: 'Створити презентацію' }
-                ]
+        expected: [
+            {
+                command: 'create_result',
+                parameters: {
+                    title: 'Підготувати квартальний звіт',
+                }
+            },
+            {
+                command: 'add_sub_results',
+                parameters: {
+                   parentResultTitle: 'Підготувати квартальний звіт',
+                   subResultNames: ["Зібрати дані", "Створити презентацію", "аналітика з GA", "дані з CRM"],
+                }
             }
-        }
+        ]
     },
     {
         description: 'Should correctly identify a command to list employees',
         input: 'список співробітників',
-        expected: {
+        expected: [{
             command: 'list_employees',
-        }
+        }]
     },
     {
         description: 'Should ask for clarification if task title is missing',
         input: 'Створити задачу для Петра',
-        expected: {
+        expected: [{
             command: 'clarify',
-        }
+        }]
     },
     {
         description: 'Should create a simple result without sub-results',
         input: 'Створити результат "Запустити нову маркетингову кампанію"',
-        expected: {
+        expected: [{
             command: 'create_result',
             parameters: { title: 'Запустити нову маркетингову кампанію' }
-        }
+        }]
     },
     {
         description: 'Should create a simple template',
         input: 'Створи шаблон "Щоденний звіт" з повторенням щодня',
-        expected: {
+        expected: [{
             command: 'create_template',
             parameters: {
                 title: 'Щоденний звіт',
                 repeatability: 'щодня'
             }
-        }
+        }]
     },
     {
         description: 'Should view tasks for a specific date',
-        input: `Покажи задачі на ${new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]}`,
-        expected: {
+        input: `Покажи задачі на ${tomorrow}`,
+        expected: [{
             command: 'view_tasks',
             parameters: {
-                startDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0],
-                endDate: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split('T')[0]
+                startDate: tomorrow,
+                endDate: tomorrow,
             }
-        }
+        }]
     },
     {
         description: 'Should view a list of results',
         input: 'Покажи список результатів',
-        expected: {
+        expected: [{
             command: 'view_results',
-        }
+        }]
     },
     {
         description: 'Should view a list of templates',
         input: 'Які є шаблони?',
-        expected: {
+        expected: [{
             command: 'list_templates',
-        }
+        }]
     }
 ];
 
@@ -158,6 +163,16 @@ function deepEqual(obj1: any, obj2: any): boolean {
     if (obj1 === obj2) return true;
 
     if (obj1 && typeof obj1 === 'object' && obj2 && typeof obj2 === 'object') {
+        if (Array.isArray(obj1) !== Array.isArray(obj2)) return false;
+
+        if(Array.isArray(obj1)) {
+            if (obj1.length !== obj2.length) return false;
+            for (let i = 0; i < obj1.length; i++) {
+                if (!deepEqual(obj1[i], obj2[i])) return false;
+            }
+            return true;
+        }
+
         if (Object.keys(obj1).length !== Object.keys(obj2).length) return false;
 
         for (const key in obj1) {
@@ -187,21 +202,25 @@ async function runTests() {
         };
 
         try {
-            const result = await parseTelegramCommand(input);
+            const results = await parseTelegramCommand(input);
             
             // We only compare the fields present in the 'expected' object
-            const partialResult: Partial<TelegramCommandOutput> = { command: result.command };
-            if (result.parameters && testCase.expected.parameters) {
-                partialResult.parameters = {};
-                for (const key in testCase.expected.parameters) {
-                    if (Object.prototype.hasOwnProperty.call(result.parameters, key)) {
-                         (partialResult.parameters as any)[key] = (result.parameters as any)[key];
+            const partialResults = results.map(result => {
+                const partialResult: Partial<TelegramCommandOutput> = { command: result.command };
+                if (result.parameters && testCase.expected.find(exp => exp.command === result.command)?.parameters) {
+                    partialResult.parameters = {};
+                    const expectedParams = testCase.expected.find(exp => exp.command === result.command)!.parameters!;
+                    for (const key in expectedParams) {
+                        if (Object.prototype.hasOwnProperty.call(result.parameters, key)) {
+                            (partialResult.parameters as any)[key] = (result.parameters as any)[key];
+                        }
                     }
                 }
-            }
+                return partialResult;
+            });
 
 
-            if (deepEqual(partialResult, testCase.expected)) {
+            if (deepEqual(partialResults, testCase.expected)) {
                 console.log(`\x1b[32m✔ PASS:\x1b[0m ${testCase.description}`);
                 passed++;
             } else {
@@ -209,7 +228,7 @@ async function runTests() {
                 console.log(`\x1b[31m✖ FAIL:\x1b[0m ${testCase.description}`);
                 console.log(`  Input: "${testCase.input}"`);
                 console.log(`  \x1b[31mExpected:\x1b[0m ${inspect(testCase.expected, { depth: null, colors: true })}`);
-                console.log(`  \x1b[32mGot:\x1b[0m      ${inspect(result, { depth: null, colors: true })}\n`);
+                console.log(`  \x1b[32mGot:\x1b[0m      ${inspect(results, { depth: null, colors: true })}\n`);
             }
         } catch (error) {
             failed++;
