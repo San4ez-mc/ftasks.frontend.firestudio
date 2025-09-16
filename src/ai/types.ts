@@ -90,6 +90,7 @@ export const TelegramCommandOutputSchema = z.object({
     commentText: z.string().optional().describe('The text of the comment to add to a result.'),
     repeatability: z.string().optional().describe("The recurrence rule for a new template (e.g., 'daily', 'weekly')."),
     newDueDate: z.string().optional().describe("The new due date for a task in 'YYYY-MM-DD' format."),
+    subResults: z.any().optional().describe('An array of nested sub-results for creation.'),
   }).optional().describe('The parameters extracted from the command.'),
   missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
   reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees", "show_help") or unknown.'),
