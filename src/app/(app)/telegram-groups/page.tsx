@@ -66,7 +66,7 @@ const telegramTourSteps: TourStep[] = [
     },
 ];
 
-
+// --- Main Page Component Wrapper for Suspense ---
 function TelegramGroupsPageContent() {
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<TelegramGroup | null>(null);
@@ -237,14 +237,10 @@ function TelegramGroupsPageContent() {
   );
 }
 
-
-// --- Main Page Component Wrapper for Suspense ---
 export default function TelegramGroupsPage() {
-  // The useSearchParams hook must be used within a Suspense boundary.
-  // We wrap the main component in Suspense here.
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>}>
-      <TelegramGroupsPageContent />
+        <TelegramGroupsPageContent />
     </Suspense>
   )
 }

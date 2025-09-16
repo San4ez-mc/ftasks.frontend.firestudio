@@ -123,18 +123,27 @@ const parseTitle = (text: string): string => {
     return endMatch ? endMatch[1].trim() : title.trim();
 };
 
+function getKyivDate(): Date {
+    const now = new Date();
+    // In a serverless environment, TZ might not be set. We'll manually adjust for Kyiv time (UTC+3).
+    // This is a simplification and doesn't account for DST perfectly, but is better than UTC.
+    const kyivOffset = 3 * 60 * 60 * 1000;
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    return new Date(utc + kyivOffset);
+}
+
 const parseDate = (text: string): string => {
     const lowerText = text.toLowerCase();
     if (lowerText.includes('завтра')) {
-        const tomorrow = new Date();
+        const tomorrow = getKyivDate();
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow.toISOString().split('T')[0];
     }
     if (lowerText.includes('сьогодні')) {
-        return new Date().toISOString().split('T')[0];
+        return getKyivDate().toISOString().split('T')[0];
     }
     if (lowerText.includes('п\'ятницю') || lowerText.includes('пт')) {
-        const today = new Date();
+        const today = getKyivDate();
         const dayOfWeek = today.getDay(); // 0 (Sun) to 6 (Sat)
         const daysUntilFriday = (5 - dayOfWeek + 7) % 7;
         const friday = new Date(today);
@@ -157,7 +166,7 @@ const parseDate = (text: string): string => {
         return `${year}-${month}-${day}`;
     }
 
-    return new Date().toISOString().split('T')[0]; // Default to today
+    return getKyivDate().toISOString().split('T')[0]; // Default to today
 };
 
 const parseExecutionTime = (text: string): string | null => {
