@@ -23,35 +23,17 @@ const commandParserPrompt = ai.definePrompt({
 
 **RULES:**
 1.  **Decompose Complex Commands:** If a user command requires multiple actions (e.g., creating a result AND adding sub-results), you MUST break it down into a sequence of simple commands in the output array.
-2.  **Strict JSON Output:** Your entire output must be a single JSON array `[]`. Do NOT add any other text, comments, or fields like 'reply'.
+2.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text, comments, or fields like 'reply'.
 3.  **Use Today's Date:** If a date is not specified for a task or query, use today's date from the context.
-4.  **Handle "My"/"мої":** If the user refers to "my" tasks or results, use the dedicated commands `view_my_tasks` or `view_my_results`. Do not try to fill `assigneeName`.
-5.  **Clarify if Needed:** If a required parameter is missing (e.g., "create task" with no title), return an array with a single `clarify` command.
-
-**EXAMPLE of command decomposition:**
-User command: "Створити новий результат 'Збільшити конверсію сайту на 15%', підрезультати: 'проаналізувати трафік', 'оновити головну сторінку'"
-Your JSON Output:
-[
-  {
-    "command": "create_result",
-    "parameters": {
-      "title": "Збільшити конверсію сайту на 15%"
-    }
-  },
-  {
-    "command": "add_sub_results",
-    "parameters": {
-      "parentResultTitle": "Збільшити конверсію сайту на 15%",
-      "subResultNames": ["проаналізувати трафік", "оновити головну сторінку"]
-    }
-  }
-]
+4.  **Handle "My"/"мої":** If the user refers to "my" tasks or results, use the dedicated commands \`view_my_tasks\` or \`view_my_results\`.
+5.  **Clarify if Needed:** If a required parameter is missing (e.g., "create task for John" with no title), return an array with a single \`clarify\` command.
 
 **CONTEXT:**
 - Today's date is: ${new Date().toISOString().split('T')[0]}.
 - Current user: {{json currentUser}}.
 - Available employees: {{json employees}}.
 - Available templates: {{json templates}}.
+- Allowed commands: [{{#each allowedCommands}}'{{this}}'{{#unless @last}}, {{/unless}}{{/each}}]
 
 **User command:** "{{command}}"
 `,
@@ -75,14 +57,6 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
      return [{ command: 'unknown' }];
   }
   
-  // Post-processing to ensure my tasks are assigned to the current user
-  return output.map(cmd => {
-    if (cmd.command === 'create_task' && !cmd.parameters?.assigneeName) {
-        cmd.parameters = {
-            ...cmd.parameters,
-            assigneeName: input.currentUser.name
-        };
-    }
-    return cmd;
-  });
+  // The logic for 'мої' is now handled by dedicated commands (view_my_tasks, etc.)
+  return output;
 }
