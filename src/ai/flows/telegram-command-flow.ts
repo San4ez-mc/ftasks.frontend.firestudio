@@ -25,8 +25,9 @@ const commandParserPrompt = ai.definePrompt({
 **RULES:**
 1.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text or comments.
 2.  **Identify the Best Command:** From the list of available commands, choose the ONE that best matches the user's intent.
-3.  **Extract Raw Text:** The 'text' parameter in your output should contain the rest of the user's command, excluding the initial command phrase if possible.
-4.  **Handle Ambiguity:** If the command is completely unclear or doesn't match any known command, return an array with a single 'unknown' command.
+3.  **Keywords:** The words 'ціль' or 'результат' strongly imply 'create_result'. The word 'задача' implies 'create_task'.
+4.  **Extract Raw Text:** The 'text' parameter in your output should contain the rest of the user's command. For simple list commands (like "list employees" or "show results"), you MUST copy the entire user's command into the 'text' field.
+5.  **Handle Ambiguity:** If the command is completely unclear, return an array with a single 'unknown' command.
 
 **Available Commands:**
 - create_task
@@ -58,7 +59,7 @@ Your JSON Output:
 
 User command: "список співробітників"
 Your JSON Output:
-[{ "command": "list_employees", "text": "співробітників" }]
+[{ "command": "list_employees", "text": "список співробітників" }]
 ---
 **CONTEXT:**
 - Current user: {{json currentUser}}.
