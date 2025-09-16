@@ -23,6 +23,7 @@ import type { Task } from '@/types/task';
 import type { Result, SubResult } from '@/types/result';
 import { ai } from '@/ai/genkit';
 import type { Template } from '@/types/template';
+import { formatDate } from '@/lib/utils';
 
 
 interface TelegramUser {
@@ -50,6 +51,35 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-taskt
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 
 
+// --- Formatting Functions ---
+function formatTaskForTelegram(task: Task): string {
+    return `
+*📝 Задача створена/оновлена*
+*Назва:* ${task.title}
+*Виконавець:* ${task.assignee.name}
+*Постановник:* ${task.reporter.name}
+*Дедлайн:* ${formatDate(task.dueDate)}
+*Статус:* ${task.status}
+*Тип:* ${task.type}
+    `.trim();
+}
+
+function formatResultForTelegram(result: Result): string {
+    let subResultsText = '';
+    if (result.subResults && result.subResults.length > 0) {
+        subResultsText = `\n*Підрезультати:*\n` + result.subResults.map(sr => `- ${sr.name}`).join('\n');
+    }
+    return `
+*🎯 Результат створено/оновлено*
+*Назва:* ${result.name}
+*Виконавець:* ${result.assignee.name}
+*Дедлайн:* ${formatDate(result.deadline)}
+*Статус:* ${result.status}
+${subResultsText}
+    `.trim();
+}
+
+
 // --- Parameter Parsing Functions ---
 const parseTitle = (text: string): string => {
     // Match content within single or double quotes
@@ -67,22 +97,6 @@ const parseTitle = (text: string): string => {
     // Take everything before the next keyword like 'для' or 'на' or ','
     const endMatch = title.match(/(.*?)(?:\s+(?:для|на|,|підрезультати)|$)/i);
     return endMatch ? endMatch[1].trim() : title.trim();
-};
-
-
-const findAssignee = (text: string, employees: {id: string, name: string}[], currentUser: {id: string, name: string}) => {
-    const lowerText = text.toLowerCase();
-    // Look for 'для ...' pattern
-    const forMatch = lowerText.match(/\sдля\s+([^,]+)/);
-    if (forMatch) {
-        const name = forMatch[1].trim();
-        for (const employee of employees) {
-            if (employee.name.toLowerCase().includes(name)) {
-                return employee;
-            }
-        }
-    }
-    return currentUser; // Default to current user
 };
 
 const parseDate = (text: string): string => {
@@ -124,14 +138,11 @@ const parseSubResults = (text: string): string[] => {
     // Handle "в ... є підпункти ..." case
     const nestedMatch = subResultsText.match(/в\s+['"]?(.+?)['"]?\s+є\s+підпункти\s+(.+)/i);
     if (nestedMatch) {
-        // For simplicity, we'll just merge them all for now.
-        // The first part is also a sub-result.
         const parentSubResult = nestedMatch[1].trim();
         const childSubResults = nestedMatch[2].split(/,\s*/).map(s => s.trim());
         return [parentSubResult, ...childSubResults].filter(Boolean);
     }
     
-    // Split by commas
     return subResultsText.split(/[,"]+/).map(s => s.trim()).filter(Boolean);
 };
 
@@ -173,19 +184,14 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             currentUser: currentUserForAI,
         });
 
-        // The webhook now executes a sequence of commands
         for (const aiResult of aiResults) {
             const commandText = aiResult.text || '';
 
             switch (aiResult.command) {
                 case 'create_task': {
                     const title = parseTitle(commandText);
-                    const assigneeInfo = findAssignee(commandText, employeeListForAI, currentUserForAI);
-                    const assignee = allEmployees.find(e => e.id === assigneeInfo.id);
-                    if (!assignee) {
-                        await sendTelegramMessage(chat.id, { text: `Не знайдено співробітника ${assigneeInfo.name}.` });
-                        continue;
-                    }
+                    const assignee = (aiResult.assigneeId ? allEmployees.find(e => e.id === aiResult.assigneeId) : currentEmployee) || currentEmployee;
+                    
                     const dueDate = parseDate(commandText);
                     const assigneeName = `${assignee.firstName} ${assignee.lastName}`;
 
@@ -199,25 +205,19 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         reporter: { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}`, avatar: currentEmployee.avatar || '' },
                     };
                     const createdTask = await createTaskInDb(companyId, newTaskData);
-                    await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
+                    await sendTelegramMessage(chat.id, { text: formatTaskForTelegram(createdTask) });
                     break;
                 }
                 
                 case 'create_result': {
-                    const params = { title: parseTitle(commandText) };
-                    const assigneeInfo = findAssignee(commandText, employeeListForAI, currentUserForAI);
-                    const assignee = allEmployees.find(e => e.id === assigneeInfo.id);
-                     if (!assignee) {
-                        await sendTelegramMessage(chat.id, { text: `Не знайдено співробітника ${assigneeInfo.name}.` });
-                        continue;
-                    }
+                    const title = parseTitle(commandText);
+                    const assignee = (aiResult.assigneeId ? allEmployees.find(e => e.id === aiResult.assigneeId) : currentEmployee) || currentEmployee;
                     const deadline = parseDate(commandText);
-
                     const twoWeeksFromNow = new Date();
                     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
                     const newResultData: Omit<Result, 'id' | 'companyId'> = {
-                        name: params.title,
+                        name: title,
                         status: 'Заплановано',
                         completed: false,
                         deadline: deadline || twoWeeksFromNow.toISOString().split('T')[0],
@@ -232,7 +232,6 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         expectedResult: '',
                     };
                     const createdResult = await createResultInDb(companyId, newResultData);
-                    await sendTelegramMessage(chat.id, { text: `🎯 Результат "${createdResult.name}" створено.` });
                     
                     const subResultNames = parseSubResults(commandText);
                     if (subResultNames.length > 0) {
@@ -241,35 +240,30 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                            name,
                            completed: false,
                        }));
-                       await updateResultInDb(companyId, createdResult.id, { subResults: newSubResults });
-                       await sendTelegramMessage(chat.id, { text: `📝 Додано підрезультати:\n- ${subResultNames.join('\n- ')}` });
-                    }
-                    break;
-                }
-                 case 'add_sub_results': {
-                    const allResults = await getAllResultsForCompany(companyId);
-                    const params = {
-                        parentResultTitle: parseTitle(commandText),
-                        subResultNames: parseSubResults(commandText)
-                    };
-                    
-                    const parentResult = allResults.find(r => r.name.toLowerCase().includes(params.parentResultTitle.toLowerCase()));
-
-                    if (parentResult) {
-                        const newSubResults: SubResult[] = params.subResultNames.map(name => ({
-                            id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                            name,
-                            completed: false,
-                        }));
-                        const updatedSubResults = [...(parentResult.subResults || []), ...newSubResults];
-                        await updateResultInDb(companyId, parentResult.id, { subResults: updatedSubResults });
-                        await sendTelegramMessage(chat.id, { text: `📝 Додано підрезультати до "${parentResult.name}":\n- ${params.subResultNames.join('\n- ')}` });
+                       const finalResult = await updateResultInDb(companyId, createdResult.id, { subResults: newSubResults });
+                       if (finalResult) await sendTelegramMessage(chat.id, { text: formatResultForTelegram(finalResult) });
                     } else {
-                        await sendTelegramMessage(chat.id, { text: `🤔 Не вдалося знайти результат "${params.parentResultTitle}", щоб додати підрезультати.` });
+                        await sendTelegramMessage(chat.id, { text: formatResultForTelegram(createdResult) });
                     }
                     break;
                 }
-
+                
+                case 'view_tasks': {
+                    const allTasks = await getAllTasksForCompany(companyId);
+                    const date = parseDate(commandText || 'сьогодні');
+                    const targetEmployee = (aiResult.assigneeId ? allEmployees.find(e => e.id === aiResult.assigneeId) : currentEmployee) || currentEmployee;
+                    
+                    const filteredTasks = allTasks.filter(t => t.dueDate === date && t.assignee?.id === targetEmployee.id);
+                    
+                    if (filteredTasks.length === 0) {
+                        await sendTelegramMessage(chat.id, { text: `✅ Задач для ${targetEmployee.firstName} ${targetEmployee.lastName} на ${date} не знайдено.` });
+                    } else {
+                        const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title}`).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось задачі для ${targetEmployee.firstName} на ${date}:\n${taskList}` });
+                    }
+                    break;
+                }
+                
                 case 'view_my_tasks': {
                     const allTasks = await getAllTasksForCompany(companyId);
                     const date = parseDate(commandText || 'сьогодні');
@@ -288,26 +282,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     }
                     break;
                 }
-                 case 'view_tasks': {
-                    const allTasks = await getAllTasksForCompany(companyId);
-                    const date = parseDate(commandText || 'сьогодні');
-                    const assigneeInfo = findAssignee(commandText, employeeListForAI, currentUserForAI);
-                    
-                    let filteredTasks = allTasks.filter(t => t.dueDate === date);
-                    if (assigneeInfo && assigneeInfo.id !== currentUserForAI.id) {
-                       filteredTasks = filteredTasks.filter(t => t.assignee?.id === assigneeInfo.id);
-                    }
-                    
-                    if (filteredTasks.length === 0) {
-                        const forWhom = assigneeInfo && assigneeInfo.id !== currentUserForAI.id ? `для ${assigneeInfo.name}` : '';
-                        await sendTelegramMessage(chat.id, { text: `✅ Задач ${forWhom} на ${date} не знайдено.` });
-                    } else {
-                        const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title} (виконавець: ${t.assignee.name})`).join('\n');
-                        await sendTelegramMessage(chat.id, { text: `Ось задачі на ${date}:\n${taskList}` });
-                    }
-                    break;
-                }
-                
+
                 case 'list_employees': {
                     const employeeNames = allEmployees.map(e => `- ${e.firstName} ${e.lastName}`).join('\n');
                     await sendTelegramMessage(chat.id, { text: `Ось список співробітників:\n${employeeNames}` });
@@ -363,7 +338,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     break;
                 
                 case 'clarify':
-                     await sendTelegramMessage(chat.id, { text: "🤔 Не вдалося розпізнати команду. Будь ласка, спробуйте перефразувати." });
+                     await sendTelegramMessage(chat.id, { text: "🤔 Не вдалося розпізнати команду. Будь ласка, спробуйте перефразувати або надайте більше інформації." });
                      break;
 
                 case 'unknown':
@@ -397,13 +372,12 @@ async function getTelegramAudioDataUri(fileId: string): Promise<string> {
     const audioBuffer = await audioResponse.arrayBuffer();
     const base64String = Buffer.from(audioBuffer).toString('base64');
     
-    // Assuming the audio is ogg format, which is common for Telegram voice messages.
     return `data:audio/ogg;base64,${base64String}`;
 }
 
 async function handleFirstGroupMessage(chatId: number, chatTitle: string, user: TelegramUser) {
     const group = await findTelegramGroupByTgId(chatId.toString());
-    if (!group) return; // Not a group linked to our system
+    if (!group) return;
 
     const members = await getMembersForGroupDb(group.companyId, group.id);
     const isExistingMember = members.some(m => m.tgUserId === user.id.toString());
@@ -421,9 +395,6 @@ async function handleFirstGroupMessage(chatId: number, chatTitle: string, user: 
     }
 }
 
-/**
- * This is the Next.js backend endpoint that Telegram will call.
- */
 export async function POST(request: NextRequest) {
   console.log("Webhook request received");
   
@@ -440,7 +411,6 @@ export async function POST(request: NextRequest) {
         const isReplyToBot = message.reply_to_message?.from?.username === BOT_USERNAME;
         const isBotMentioned = text.includes(`@${BOT_USERNAME}`);
 
-        // --- Voice Message Handler ---
         if (voice) {
              try {
                 const audioDataUri = await getTelegramAudioDataUri(voice.file_id);
@@ -467,10 +437,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-
-        // --- /start command handler ---
         if (text.startsWith('/start')) {
-            // Group Linking Flow
             if (chat.type === 'group' || chat.type === 'supergroup') {
                 const { code, error } = await generateGroupLinkCode(chat.id.toString(), chat.title);
                 if (error || !code) {
@@ -489,7 +456,6 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ status: 'ok', message: 'Group link code sent.' });
             }
             
-            // Private Chat Login Flow
             if (chat.type === 'private') {
                 const payload = text.split(' ')[1] || 'auth';
                 const rememberMe = payload === 'auth_remember';
@@ -514,17 +480,13 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
             }
         } 
-        // --- Natural Language Command Handler (Text only) ---
         else if (text && (chat.type === 'private' || ( (chat.type === 'group' || chat.type === 'supergroup') && (isBotMentioned || isReplyToBot) ))) {
             const commandText = text.replace(`@${BOT_USERNAME}`, '').trim();
             await handleNaturalLanguageCommand(chat, fromUser, commandText);
             return NextResponse.json({ status: 'ok', message: 'Command processed.' });
         }
-        // --- New Member Discovery Handler ---
         else if (text && (chat.type === 'group' || chat.type === 'supergroup')) {
             await handleFirstGroupMessage(chat.id, chat.title, fromUser);
-            // This can fall through, so the message is not just "swallowed" if other logic needs to process it.
-            // For now, we'll stop here.
             return NextResponse.json({ status: 'ok', message: 'Member discovery checked.' });
         }
     }
@@ -535,7 +497,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     console.error('Critical error in webhook handler:', errorMessage, error);
-    // Try to send a message back to the user if we have a chat ID, but this might fail.
     try {
         const body = await request.json().catch(() => ({}));
         const chatId = body?.message?.chat?.id;

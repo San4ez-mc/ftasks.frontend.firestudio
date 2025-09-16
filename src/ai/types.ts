@@ -89,6 +89,7 @@ export const TelegramCommandOutputSchema = z.object({
     ])
     .describe('The recognized command the user wants to execute.'),
   text: z.string().optional().describe('The raw text associated with the command for backend processing.'),
+  assigneeId: z.string().optional().describe('The ID of the employee mentioned as the assignee. If no specific employee is mentioned, this should be omitted.'),
 });
 export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
 export const TelegramCommandListSchema = z.array(TelegramCommandOutputSchema);

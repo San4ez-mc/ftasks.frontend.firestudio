@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview An AI flow for parsing natural language commands from a Telegram bot.
- * This version identifies the primary command and extracts the raw text for later processing.
+ * This version identifies the primary command, extracts the raw text, and identifies the assignee if mentioned.
  *
  * - parseTelegramCommand - Analyzes user text and converts it into an array of simplified command objects.
  */
@@ -20,17 +20,16 @@ const commandParserPrompt = ai.definePrompt({
   name: 'telegramCommandParserPrompt',
   input: { schema: TelegramCommandInputSchema },
   output: { schema: TelegramCommandListSchema },
-  prompt: `You are a command classifier. Your only job is to identify the most likely command from the user's text and extract the entire raw text of the command.
+  prompt: `You are a command classifier and entity extractor for a task management system. Your job is to identify the command, extract the entire raw text, and identify the assignee.
 
 **RULES:**
 1.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text or comments.
-2.  **Keyword Priority:** The word 'шаблон' (template) STRONGLY and ALWAYS implies the 'create_template' command. Do not mistake it for 'create_task'.
-3.  **Keywords for 'create_result':** The words 'ціль' or 'результат' STRONGLY and ALWAYS imply the 'create_result' command. Do not mistake it for 'create_task'.
+2.  **Keyword Priority for 'create_template':** The word 'шаблон' (template) STRONGLY and ALWAYS implies the 'create_template' command. Do not mistake it for 'create_task'.
+3.  **Keywords Priority for 'create_result':** The words 'ціль' or 'результат' STRONGLY and ALWAYS imply the 'create_result' command. Do not mistake it for 'create_task'.
 4.  **Extract Full Raw Text:** For ALL commands, you MUST copy the entire user's original command text into the 'text' field. Do not shorten or modify it.
-5.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task), return the 'clarify' command.
-6.  **Correctly Choose View Commands:**
-    - If the user asks for "my tasks" ("мої задачі") or "my results" ("мої результати"), you MUST use the \`view_my_tasks\` or \`view_my_results\` commands.
-    - If the user asks for a general list like "show tasks" ("покажи задачі") or "list of results" ("список результатів") without specifying an owner, you MUST use the general \`view_tasks\` or \`view_results\` commands.
+5.  **Assignee Extraction:** Analyze the text for employee names from the provided list. If a name is mentioned in context of being an assignee (e.g., "для Петра", "виконавець Петро"), you MUST extract their 'id' and put it in the 'assigneeId' field. If no employee is mentioned, or if the user is referring to themselves ("мої задачі"), omit the 'assigneeId' field.
+6.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task, e.g., "Створити задачу для Петра"), return the 'clarify' command.
+7.  **Viewing Other's Tasks:** If the user asks for tasks of a specific person (e.g., "які задачі у Петра"), it is a 'view_tasks' command, and you MUST extract their ID into the 'assigneeId' field.
 
 **CONTEXT:**
 - Current user: {{json currentUser}}.
@@ -59,4 +58,3 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
   
   return output;
 }
-
