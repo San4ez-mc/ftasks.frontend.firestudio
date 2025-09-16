@@ -23,9 +23,7 @@ const commandParserPrompt = ai.definePrompt({
   output: { schema: TelegramCommandOutputSchema },
   prompt: `You are a command parser for the Fineko task management system.
   
-Your sole purpose is to convert the user's natural language command into a structured JSON object based on the provided output schema.
-
-Analyze the user's command text ("command") and use the provided context to fill out the JSON fields.
+Your sole purpose is to convert the user's natural language command into a structured JSON object based on the provided output schema. DO NOT add any extra fields like "reply". Your output MUST be only the JSON object.
 
 **EXAMPLES OF CORRECT JSON OUTPUT:**
 
