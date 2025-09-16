@@ -236,13 +236,13 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     const newTaskData: Omit<Task, 'id' | 'companyId'> = {
                         title: title,
                         dueDate: dueDate,
-                        executionTime: executionTime || undefined,
                         status: 'todo',
                         type: 'important-not-urgent',
                         expectedTime: 30,
                         expectedResult: 'Очікуваний результат генерується GPT',
                         assignee: { id: assignee.id, name: assigneeName, avatar: assignee.avatar || '' },
                         reporter: { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}`, avatar: currentEmployee.avatar || '' },
+                        ...(executionTime && { executionTime }),
                     };
                     const createdTask = await createTaskInDb(companyId, newTaskData);
                     await sendTelegramMessage(chat.id, { text: formatTaskForTelegram(createdTask, 'created') });
