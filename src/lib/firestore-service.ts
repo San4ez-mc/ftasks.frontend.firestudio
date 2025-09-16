@@ -159,13 +159,13 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
     const newCompanyRef = firestore.collection(COMPANIES_COLLECTION).doc();
     batch.set(newCompanyRef, { name: companyName, ownerId: userId });
 
-    // Create the complete employee record
-    const newEmployeeLinkRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
-    batch.set(newEmployeeLinkRef, {
+    // Create the complete employee record for the creator
+    const newEmployeeRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
+    batch.set(newEmployeeRef, {
         userId: user.id,
         companyId: newCompanyRef.id,
         firstName: user.firstName,
-        lastName: user.lastName,
+        lastName: user.lastName || '',
         telegramUserId: user.telegramUserId || '',
         telegramUsername: user.telegramUsername || '',
         avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.telegramUsername}`,
@@ -176,13 +176,12 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
         synonyms: [],
     });
 
-    // Also create a company profile
+    // Also create a company profile, making the creator the admin
     const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
     batch.set(companyProfileRef, {
         name: companyName,
         description: `Компанія ${companyName}`,
-        adminId: user.id,
-        companyId: newCompanyRef.id,
+        adminId: newEmployeeRef.id, // Use the new employee ID as the admin
     });
 
     await batch.commit();
