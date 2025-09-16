@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
@@ -92,7 +91,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         type: 'important-not-urgent',
                         expectedTime: 30,
                         assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { id: 'unknown', name: assigneeName },
-                        reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}` },
+                        reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
                     };
                     const createdTask = await createTaskInDb(companyId, newTaskData);
                     await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
@@ -114,7 +113,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         completed: false,
                         deadline: params.dueDate || twoWeeksFromNow.toISOString().split('T')[0],
                         assignee: assignee ? { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar } : { name: assigneeName, id: '' },
-                        reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}` },
+                        reporter: { id: finekoUser.id, name: `${finekoUser.firstName} ${finekoUser.lastName}`, avatar: finekoUser.avatar },
                         description: '',
                         expectedResult: '',
                         subResults: [], tasks: [], templates: [], comments: [], accessList: [],
