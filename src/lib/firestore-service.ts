@@ -262,10 +262,11 @@ export const getCompanyProfileFromDb = async (companyId: string): Promise<Compan
     
     return { id: doc.id, ...doc.data() } as CompanyProfile;
 };
-export const updateCompanyProfileInDb = (companyId: string, updates: Partial<CompanyProfile>) => {
+export const updateCompanyProfileInDb = async (companyId: string, updates: Partial<CompanyProfile>): Promise<CompanyProfile | null> => {
     firestoreGuard();
     const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
-    return docRef.update(updates).then(()s getCompanyProfileFromDb(companyId));
+    await docRef.update(updates);
+    return getCompanyProfileFromDb(companyId);
 };
 
 // --- Org Structure ---
