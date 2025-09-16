@@ -91,7 +91,7 @@ export default function TelegramGroupsPage() {
   }, []);
 
   useEffect(() => {
-     if (searchParams.get('action') === 'add-group') {
+     if (searchParams && searchParams.get('action') === 'add-group') {
       setIsAddGroupOpen(true);
     }
   }, [searchParams]);
