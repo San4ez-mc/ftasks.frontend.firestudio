@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, Suspense, useTransition } from 'react';
+import { useState, useEffect, Suspense, useTransition } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -240,6 +240,8 @@ function TelegramGroupsPageContent() {
 
 // --- Main Page Component Wrapper for Suspense ---
 export default function TelegramGroupsPage() {
+  // The useSearchParams hook must be used within a Suspense boundary.
+  // We wrap the main component in Suspense here.
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin"/></div>}>
       <TelegramGroupsPageContent />
