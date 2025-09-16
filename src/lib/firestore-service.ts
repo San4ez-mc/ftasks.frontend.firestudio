@@ -263,11 +263,10 @@ export const getCompanyProfileFromDb = async (companyId: string): Promise<Compan
     return { id: doc.id, ...doc.data() } as CompanyProfile;
 };
 
-export async function updateCompanyProfileInDb(companyId: string, updates: Partial<CompanyProfile>): Promise<CompanyProfile | null> {
+export const updateCompanyProfileInDb = (companyId: string, updates: Partial<CompanyProfile>): Promise<CompanyProfile | null> => {
     firestoreGuard();
     const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
-    await docRef.update(updates);
-    return getCompanyProfileFromDb(companyId);
+    return docRef.update(updates).then(() => getCompanyProfileFromDb(companyId));
 };
 
 // --- Org Structure ---
@@ -421,3 +420,5 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
+
+    

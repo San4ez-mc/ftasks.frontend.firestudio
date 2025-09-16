@@ -15,12 +15,18 @@ import {
   TelegramCommandOutput,
   TelegramCommandOutputSchema,
 } from '@/ai/types';
-import { z } from 'zod';
+import { z, type ZodType } from 'zod';
 
 // --- Tool Schemas ---
 
-// Recursive schema for nested sub-results
-const SubResultCreateSchema = z.lazy(() =>
+// Define the type for a single sub-result, which can contain more sub-results of the same type
+type SubResultCreate = {
+  name: string;
+  subResults?: SubResultCreate[];
+};
+
+// Create the Zod schema with the explicit type annotation
+const SubResultCreateSchema: ZodType<SubResultCreate> = z.lazy(() =>
   z.object({
     name: z.string().describe("Назва підрезультату."),
     subResults: z.array(SubResultCreateSchema).optional().describe("Масив дочірніх підрезультатів."),
