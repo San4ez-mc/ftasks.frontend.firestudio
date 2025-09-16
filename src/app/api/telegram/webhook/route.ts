@@ -53,10 +53,10 @@ const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
 // --- Parameter Parsing Functions ---
 const parseTitle = (text: string): string => {
     const match = text.match(/['"](.+?)['"]/);
-    return match ? match[1] : text;
+    return match ? match[1] : text.split(',')[0].trim();
 };
 
-const parseAssignee = (text: string, employees: {id: string, name: string}[], currentUser: {id: string, name: string}) => {
+const findAssignee = (text: string, employees: {id: string, name: string}[], currentUser: {id: string, name: string}) => {
     const lowerText = text.toLowerCase();
     for (const employee of employees) {
         if (lowerText.includes(employee.name.toLowerCase())) {
@@ -83,12 +83,12 @@ const parseDate = (text: string): string => {
     return new Date().toISOString().split('T')[0]; // Default to today
 };
 
-const parseSubResults = (text: string): string[] => {
+const parseSubResults = (text: string): { name: string }[] => {
     const match = text.match(/підрезультат(?:и)?:?\s*(.+)/i);
     if (!match || !match[1]) return [];
     
     // Split by commas or quotation marks
-    return match[1].split(/[,"]+/).map(s => s.trim()).filter(Boolean);
+    return match[1].split(/[,"]+/).map(s => ({ name: s.trim() })).filter(s => s.name);
 };
 
 
@@ -136,18 +136,14 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
             switch (aiResult.command) {
                 case 'create_task': {
                     const title = parseTitle(commandText);
-                    if (!title) {
-                        await sendTelegramMessage(chat.id, { text: "🤔 Не вдалося розпізнати назву задачі. Спробуйте взяти її в лапки." });
-                        continue;
-                    }
-
-                    const assigneeInfo = parseAssignee(commandText, employeeListForAI, currentUserForAI);
+                    const assigneeInfo = findAssignee(commandText, employeeListForAI, currentUserForAI);
                     const assignee = allEmployees.find(e => e.id === assigneeInfo.id);
                     if (!assignee) {
                         await sendTelegramMessage(chat.id, { text: `Не знайдено співробітника ${assigneeInfo.name}.` });
                         continue;
                     }
                     const dueDate = parseDate(commandText);
+                    const assigneeName = `${assignee.firstName} ${assignee.lastName}`;
 
                     const newTaskData: Omit<Task, 'id' | 'companyId'> = {
                         title: title,
@@ -155,22 +151,18 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                         status: 'todo',
                         type: 'important-not-urgent',
                         expectedTime: 30,
-                        assignee: { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar },
+                        assignee: { id: assignee.id, name: assigneeName, avatar: assignee.avatar },
                         reporter: { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}`, avatar: currentEmployee.avatar },
                     };
                     const createdTask = await createTaskInDb(companyId, newTaskData);
-                    await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assignee.firstName} ${assignee.lastName}.` });
+                    await sendTelegramMessage(chat.id, { text: `✅ Задачу створено: "${createdTask.title}" для ${assigneeName}.` });
                     break;
                 }
                 
                 case 'create_result': {
-                    const title = parseTitle(commandText);
-                    if (!title) {
-                         await sendTelegramMessage(chat.id, { text: "🤔 Не вдалося розпізнати назву результату. Спробуйте взяти її в лапки." });
-                        continue;
-                    }
-
-                    const assigneeInfo = parseAssignee(commandText, employeeListForAI, currentUserForAI);
+                    const allResults = await getAllResultsForCompany(companyId);
+                    const params = { title: parseTitle(commandText) };
+                    const assigneeInfo = findAssignee(commandText, employeeListForAI, currentUserForAI);
                     const assignee = allEmployees.find(e => e.id === assigneeInfo.id);
                      if (!assignee) {
                         await sendTelegramMessage(chat.id, { text: `Не знайдено співробітника ${assigneeInfo.name}.` });
@@ -182,34 +174,62 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
 
                     const newResultData: Omit<Result, 'id' | 'companyId'> = {
-                        name: title,
+                        name: params.title,
                         status: 'Заплановано',
                         completed: false,
                         deadline: deadline || twoWeeksFromNow.toISOString().split('T')[0],
                         assignee: { id: assignee.id, name: `${assignee.firstName} ${assignee.lastName}`, avatar: assignee.avatar },
                         reporter: { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}`, avatar: currentEmployee.avatar },
-                        subResults: [], tasks: [], templates: [], comments: [], accessList: [],
+                        subResults: [],
+                        tasks: [],
+                        templates: [],
+                        comments: [],
+                        accessList: [],
+                        description: '',
+                        expectedResult: '',
                     };
                     const createdResult = await createResultInDb(companyId, newResultData);
                     await sendTelegramMessage(chat.id, { text: `🎯 Результат "${createdResult.name}" створено.` });
                     
-                    // Now, handle sub-results if they exist in the same command
-                    const subResultNames = parseSubResults(commandText);
+                    const subResultNames = parseSubResults(commandText).map(s => s.name);
                     if (subResultNames.length > 0) {
-                         const newSubResults: SubResult[] = subResultNames.map(name => ({
+                        const newSubResults: SubResult[] = subResultNames.map(name => ({
+                           id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                           name,
+                           completed: false,
+                       }));
+                       await updateResultInDb(companyId, createdResult.id, { subResults: newSubResults });
+                       await sendTelegramMessage(chat.id, { text: `📝 Додано підрезультати:\n- ${subResultNames.join('\n- ')}` });
+                    }
+                    break;
+                }
+                 case 'add_sub_results': {
+                    const allResults = await getAllResultsForCompany(companyId);
+                    const params = {
+                        parentResultTitle: parseTitle(commandText),
+                        subResultNames: parseSubResults(commandText).map(s => s.name)
+                    };
+                    
+                    const parentResult = allResults.find(r => r.name.toLowerCase().includes(params.parentResultTitle.toLowerCase()));
+
+                    if (parentResult) {
+                        const newSubResults: SubResult[] = params.subResultNames.map(name => ({
                             id: `sub-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
                             name,
                             completed: false,
                         }));
-                        await updateResultInDb(companyId, createdResult.id, { subResults: newSubResults });
-                        await sendTelegramMessage(chat.id, { text: `📝 Додано підрезультати:\n- ${subResultNames.join('\n- ')}` });
+                        const updatedSubResults = [...(parentResult.subResults || []), ...newSubResults];
+                        await updateResultInDb(companyId, parentResult.id, { subResults: updatedSubResults });
+                        await sendTelegramMessage(chat.id, { text: `📝 Додано підрезультати до "${parentResult.name}":\n- ${params.subResultNames.join('\n- ')}` });
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `🤔 Не вдалося знайти результат "${params.parentResultTitle}", щоб додати підрезультати.` });
                     }
                     break;
                 }
 
                 case 'view_my_tasks': {
                     const allTasks = await getAllTasksForCompany(companyId);
-                    const date = parseDate(commandText);
+                    const date = parseDate(commandText || 'сьогодні');
                     const isTodo = commandText.includes('невиконані');
                     
                     let filteredTasks = allTasks.filter(t => t.dueDate === date && t.assignee?.id === currentEmployee.id);
@@ -222,6 +242,25 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     } else {
                         const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title}`).join('\n');
                         await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${date}:\n${taskList}` });
+                    }
+                    break;
+                }
+                 case 'view_tasks': {
+                    const allTasks = await getAllTasksForCompany(companyId);
+                    const date = parseDate(commandText || 'сьогодні');
+                    const assigneeInfo = findAssignee(commandText, employeeListForAI, currentUserForAI);
+                    
+                    let filteredTasks = allTasks.filter(t => t.dueDate === date);
+                    if (assigneeInfo) {
+                       filteredTasks = filteredTasks.filter(t => t.assignee?.id === assigneeInfo.id);
+                    }
+                    
+                    if (filteredTasks.length === 0) {
+                        const forWhom = assigneeInfo ? `для ${assigneeInfo.name}` : '';
+                        await sendTelegramMessage(chat.id, { text: `✅ Задач ${forWhom} на ${date} не знайдено.` });
+                    } else {
+                        const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title}`).join('\n');
+                        await sendTelegramMessage(chat.id, { text: `Ось задачі на ${date}:\n${taskList}` });
                     }
                     break;
                 }
@@ -243,18 +282,38 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     break;
                 }
                 
-                case 'view_results': {
-                    const results = await getAllResultsForCompany(companyId);
+                 case 'view_results':
+                 case 'view_my_results': {
+                    let results = await getAllResultsForCompany(companyId);
+                    let title = "Ось список результатів";
+                    if(aiResult.command === 'view_my_results') {
+                        results = results.filter(r => r.assignee?.id === currentEmployee.id);
+                        title = "Ось ваші результати";
+                    }
+
                      if (results.length === 0) {
                         await sendTelegramMessage(chat.id, { text: `✅ Результатів не знайдено.` });
                     } else {
                         const resultList = results.map(r => `- ${r.completed ? '✅' : '🎯'} ${r.name}`).join('\n');
-                        await sendTelegramMessage(chat.id, { text: `Ось список результатів:\n${resultList}` });
+                        await sendTelegramMessage(chat.id, { text: `${title}:\n${resultList}` });
                     }
                     break;
                 }
                 
-                // Add other command handlers here...
+                 case 'create_template': {
+                    const title = parseTitle(commandText);
+                    const repeatability = commandText.includes('щодня') ? 'Щоденно' : 'Щотижня'; // Simple parsing
+                    
+                    const newTemplateData: Omit<Template, 'id' | 'companyId'> = {
+                        name: title,
+                        repeatability: repeatability,
+                        startDate: new Date().toISOString().split('T')[0],
+                        tasksGenerated: [],
+                    };
+                    const createdTemplate = await createTemplateInDb(companyId, newTemplateData);
+                    await sendTelegramMessage(chat.id, { text: `✅ Шаблон "${createdTemplate.name}" створено з повторенням "${repeatability}".` });
+                    break;
+                }
 
                 case 'show_help':
                     await sendTelegramMessage(chat.id, { text: commandText });
