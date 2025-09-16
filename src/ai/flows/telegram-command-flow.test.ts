@@ -146,7 +146,7 @@ async function runTests() {
             
             // We only compare the fields present in the 'expected' object
             const partialResult: Partial<TelegramCommandOutput> = { command: result.command };
-            if (result.parameters) {
+            if (result.parameters && testCase.expected.parameters) {
                 partialResult.parameters = {};
                 for (const key in testCase.expected.parameters) {
                     if (Object.prototype.hasOwnProperty.call(result.parameters, key)) {

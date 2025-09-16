@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:bot": "tsx src/ai/flows/telegram-command-flow.test.ts"
+    "test:bot": "tsx --env-file .env src/ai/flows/telegram-command-flow.test.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "1.18.0",
