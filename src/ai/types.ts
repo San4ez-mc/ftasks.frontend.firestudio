@@ -58,6 +58,19 @@ export const TelegramCommandInputSchema = z.object({
 });
 export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
 
+
+// Define a recursive schema for sub-results
+type SubResult = {
+  name: string;
+  subResults?: SubResult[];
+};
+
+const SubResultSchema: z.ZodType<SubResult> = z.object({
+  name: z.string().describe('The name of the sub-result.'),
+  subResults: z.lazy(() => z.array(SubResultSchema)).optional().describe('A nested array of sub-results.'),
+});
+
+
 export const TelegramCommandOutputSchema = z.object({
   command: z.enum([
         'create_task', 
@@ -80,17 +93,17 @@ export const TelegramCommandOutputSchema = z.object({
     .describe('The recognized command the user wants to execute.'),
   parameters: z.object({
     title: z.string().optional().describe('The title for the new task or result.'),
-    assigneeName: z.string().optional().describe("The name of the employee to whom the task or result is assigned. Must be one of the names from the input employees list."),
+    assigneeName: z.string().optional().describe("The name of the employee. If the user says 'my' or 'мої', use the special string 'мої' as the value."),
     dueDate: z.string().optional().describe("The due date in 'YYYY-MM-DD' format."),
-    startDate: z.string().optional().describe("The start date for a query in 'YYYY-MM-DD' format."),
-    endDate: z.string().optional().describe("The end date for a query in 'YYYY-MM-DD' format."),
+    startDate: z.string().optional().describe("The start date for a query in 'YYYY-MM-DD' format. If the user does not specify a date, use today's date from the context."),
+    endDate: z.string().optional().describe("The end date for a query in 'YYYY-MM-DD' format. If the user does not specify a date, use today's date from the context."),
     status: z.string().optional().describe("The status to filter tasks by (e.g., 'todo', 'done')."),
     targetTitle: z.string().optional().describe('The title of the existing task or result to modify.'),
     newTitle: z.string().optional().describe('The new title for the task being edited.'),
     commentText: z.string().optional().describe('The text of the comment to add to a result.'),
     repeatability: z.string().optional().describe("The recurrence rule for a new template (e.g., 'daily', 'weekly')."),
     newDueDate: z.string().optional().describe("The new due date for a task in 'YYYY-MM-DD' format."),
-    subResults: z.any().optional().describe('An array of nested sub-results for creation.'),
+    subResults: z.array(SubResultSchema).optional().describe('An array of nested sub-results for creation.'),
   }).optional().describe('The parameters extracted from the command.'),
   missingInfo: z.string().optional().describe('A question to ask the user if some required information is missing for a command.'),
   reply: z.string().optional().describe('A direct reply to the user if the command is simple (like "list_employees", "show_help") or unknown.'),
