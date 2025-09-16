@@ -25,6 +25,7 @@ import { getEmployees } from '../company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getMe } from '@/lib/api';
 
 
 const allStatuses = ['В роботі', 'Заплановано', 'Виконано', 'Відкладено'];
@@ -86,15 +87,26 @@ export default function ResultsPage() {
     }
     
     startTransition(async () => {
-        const [fetchedResults, fetchedEmployees] = await Promise.all([
-            getResults(),
-            getEmployees()
-        ]);
-        setResults(fetchedResults);
-        setEmployees(fetchedEmployees);
-        // This is a mock for the current user. In a real app, this would come from a session.
-        setCurrentUser(fetchedEmployees.find(e => e.id === 'emp-2') || null); 
+        try {
+            const [fetchedResults, fetchedEmployees, me] = await Promise.all([
+                getResults(),
+                getEmployees(),
+                getMe()
+            ]);
+            setResults(fetchedResults);
+            setEmployees(fetchedEmployees);
+            const currentUserEmployee = fetchedEmployees.find(e => e.userId === me.id);
+            setCurrentUser(currentUserEmployee || null);
+        } catch (error) {
+            console.error("Failed to fetch initial page data", error);
+            toast({
+                title: "Помилка завантаження",
+                description: "Не вдалося завантажити дані.",
+                variant: "destructive",
+            });
+        }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleViewModeChange = (mode: 'table' | 'cards') => {
@@ -822,3 +834,5 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
         </div>
     )
 }
+
+    
