@@ -1,6 +1,3 @@
-
-'use server';
-
 /**
  * @fileOverview Test script for the Telegram command parser.
  * This script runs a series of predefined test cases against the `parseTelegramCommand` flow
