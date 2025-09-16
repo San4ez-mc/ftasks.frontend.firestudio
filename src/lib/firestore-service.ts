@@ -161,8 +161,8 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
 
     // Create the complete employee record
     const newEmployeeLinkRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
-    batch.set(newEmployeeLinkRef, { 
-        userId: user.id, 
+    batch.set(newEmployeeLinkRef, {
+        userId: user.id,
         companyId: newCompanyRef.id,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -175,7 +175,7 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
         groups: [],
         synonyms: [],
     });
-    
+
     // Also create a company profile
     const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
     batch.set(companyProfileRef, {

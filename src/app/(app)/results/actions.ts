@@ -2,11 +2,11 @@
 'use server';
 
 import type { Result } from '@/types/result';
-import { 
-    getAllResultsForCompany, 
-    createResultInDb, 
-    updateResultInDb, 
-    deleteResultFromDb 
+import {
+    getAllResultsForCompany,
+    createResultInDb,
+    updateResultInDb,
+    deleteResultFromDb
 } from '@/lib/firestore-service';
 import { getUserSession } from '@/lib/session';
 
@@ -18,7 +18,7 @@ export async function getResults(): Promise<Result[]> {
     return getAllResultsForCompany(session.companyId);
 }
 
-// The index parameter is a bit tricky with Firestore due to ordering. 
+// The index parameter is a bit tricky with Firestore due to ordering.
 // For now, we'll just add to the end.
 // A more robust solution would involve an 'order' field.
 export async function createResult(resultData: Omit<Result, 'id' | 'companyId'>): Promise<Result> {
