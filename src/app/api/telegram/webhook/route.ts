@@ -60,11 +60,17 @@ const taskTypeLabels: Record<TaskType, string> = {
     'not-important-not-urgent': 'Неважлива, нетермінова',
 };
 
-function formatTaskForTelegram(task: Task, action: 'created' | 'updated'): string {
-    const actionText = action === 'created' ? 'створена' : 'оновлена';
+function formatTaskForTelegram(task: Task, action: 'created' | 'updated' | 'viewed'): string {
+    const actionText = action === 'created' ? 'створена' : (action === 'updated' ? 'оновлена' : '');
+    
     let executionTimeText = '';
     if (task.executionTime) {
         executionTimeText = `\n*Час виконання:* ${task.executionTime}`;
+    }
+
+    let commentsText = '';
+    if (task.comments && task.comments.length > 0) {
+        commentsText = '\n*Коментарі:*\n' + task.comments.map(c => `- ${c.author.name}: ${c.text}`).join('\n');
     }
 
     return `
@@ -76,6 +82,7 @@ function formatTaskForTelegram(task: Task, action: 'created' | 'updated'): strin
 *Тривалість:* ${formatTime(task.expectedTime)}
 *Тип:* ${taskTypeLabels[task.type]}
 *Очікуваний результат:* ${task.expectedResult || 'Не вказано'}
+${commentsText}
     `.trim();
 }
 
@@ -104,7 +111,7 @@ const parseTitle = (text: string): string => {
     if (quoteMatch) return quoteMatch[1];
 
     // Fallback for commands without quotes, e.g., "ціль Підготувати звіт"
-    const commandWords = ['створи задачу', 'створи', 'задача', 'ціль', 'результат', 'створити новий результат'];
+    const commandWords = ['створи задачу', 'створи', 'задача', 'ціль', 'результат', 'створити новий результат', 'деталі по задачі', 'що по задачі'];
     let title = text;
     for (const word of commandWords) {
         if (title.toLowerCase().startsWith(word)) {
@@ -322,6 +329,23 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     } else {
                         const taskList = filteredTasks.map(t => `- ${t.status === 'done' ? '✅' : '📝'} ${t.title}`).join('\n');
                         await sendTelegramMessage(chat.id, { text: `Ось ваші задачі на ${formatDate(date)}:\n${taskList}` });
+                    }
+                    break;
+                }
+                 case 'view_task_details': {
+                    const titleToFind = parseTitle(commandText);
+                    if (!titleToFind) {
+                        await sendTelegramMessage(chat.id, { text: "Будь ласка, вкажіть назву задачі, деталі якої ви хочете побачити." });
+                        break;
+                    }
+                    const allTasks = await getAllTasksForCompany(companyId);
+                    // Simple case-insensitive search
+                    const foundTask = allTasks.find(t => t.title.toLowerCase().includes(titleToFind.toLowerCase()));
+
+                    if (foundTask) {
+                        await sendTelegramMessage(chat.id, { text: formatTaskForTelegram(foundTask, 'viewed') });
+                    } else {
+                        await sendTelegramMessage(chat.id, { text: `Не вдалося знайти задачу, що містить "${titleToFind}".` });
                     }
                     break;
                 }

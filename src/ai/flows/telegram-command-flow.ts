@@ -30,7 +30,8 @@ const commandParserPrompt = ai.definePrompt({
 5.  **Assignee Extraction:** Analyze the text for employee names from the provided list. If a name is mentioned in context of being an assignee (e.g., "для Петра", "виконавець Петро"), you MUST extract their 'id' and put it in the 'assigneeId' field. If no employee is mentioned, or if the user is referring to themselves ("мої задачі"), omit the 'assigneeId' field.
 6.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task, e.g., "Створити задачу для Петра"), return the 'clarify' command.
 7.  **Viewing Other's Tasks:** If the user asks for tasks of a specific person (e.g., "які задачі у Петра"), it is a 'view_tasks' command, and you MUST extract their ID into the 'assigneeId' field.
-8.  **Clean Task Title:** When creating a task, if a time like "о 15:00" is mentioned, EXCLUDE it from the task title you extract.
+8.  **Viewing Task Details:** If a user asks for details about a specific task (e.g., 'що по задачі "Звіт"', 'деталі по задачі'), identify it as a 'view_task_details' command.
+9.  **Clean Task Title:** When creating a task, if a time like "о 15:00" is mentioned, EXCLUDE it from the task title you extract.
 
 **CONTEXT:**
 - Current user: {{json currentUser}}.
@@ -53,6 +54,7 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
 *Задачі*
 - *Створити:* \`створи задачу "Написати звіт" для Петра на завтра о 14:00\`
 - *Переглянути:* \`покажи мої задачі\` або \`задачі Марії на сьогодні\`
+- *Деталі:* \`деталі по задачі "Написати звіт"\`
 
 *Результати*
 - *Створити:* \`створи результат "Запустити сайт" з підпунктами: дизайн, розробка\`
