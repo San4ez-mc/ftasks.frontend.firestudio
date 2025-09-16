@@ -50,11 +50,17 @@ const TemplateSchema = z.object({
     name: z.string().describe('The name of the template.'),
 });
 
+const UserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
 export const TelegramCommandInputSchema = z.object({
   command: z.string().describe('The natural language command from the user.'),
   employees: z.array(EmployeeSchema).describe('A list of available employees to assign tasks/results to.'),
   templates: z.array(TemplateSchema).describe('A list of available task templates.'),
   allowedCommands: z.array(z.string()).describe('A list of commands the user is permitted to execute.'),
+  currentUser: UserSchema.describe('The user who is issuing the command.'),
 });
 export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
 

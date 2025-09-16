@@ -21,24 +21,58 @@ const commandParserPrompt = ai.definePrompt({
   name: 'telegramCommandParserPrompt',
   input: { schema: TelegramCommandInputSchema },
   output: { schema: TelegramCommandOutputSchema },
-  prompt: `Ти — просунутий парсер команд для системи керування задачами Fineko.
+  prompt: `You are a command parser for the Fineko task management system.
   
-Твоя єдина мета — перетворити текст користувача на структурований JSON-об'єкт, який точно відповідає наданій вихідній схемі (output schema).
+Your sole purpose is to convert the user's natural language command into a structured JSON object based on the provided output schema.
 
-Проаналізуй текст команди користувача ("command") та використай наданий контекст для правильного заповнення полів JSON.
+Analyze the user's command text ("command") and use the provided context to fill out the JSON fields.
 
-**Контекст:**
-- Сьогоднішня дата: ${new Date().toISOString().split('T')[0]}. Використовуй її для розрахунку відносних дат, таких як "сьогодні" або "завтра".
-- Доступні співробітники: {{json employees}}. Використовуй ці імена для поля 'assigneeName'.
-- Доступні шаблони: {{json templates}}.
+**EXAMPLES OF CORRECT JSON OUTPUT:**
 
-**Правила обробки:**
-1.  **Чітка команда:** Якщо команда ясна, згенеруй відповідний JSON-об'єкт з командою та параметрами.
-2.  **Неоднозначність:** Якщо команда неповна або неоднозначна (наприклад, "створи задачу для Петра" без назви), встанови поле "command" в "clarify" і сформулюй уточнююче питання в полі "missingInfo".
-3.  **Невідома команда:** Якщо ти зовсім не можеш зрозуміти команду, встанови поле "command" в "unknown" і надай корисну відповідь у полі "reply".
-4.  **Вкладеність:** Для команди 'create_result' правильно розпізнавай вкладену структуру підрезультатів з тексту. Наприклад: "ціль А, підрезультати Б, В. в Б є підпункти Б1, Б2" -> { title: "А", subResults: [{ name: "Б", subResults: [{name: "Б1"}, {name: "Б2"}] }, { name: "В" }] }.
+1.  User command: "Покажи мої невиконані задачі"
+    JSON Output:
+    {
+      "command": "view_tasks",
+      "parameters": {
+        "assigneeName": "мої",
+        "status": "todo",
+        "startDate": "${new Date().toISOString().split('T')[0]}",
+        "endDate": "${new Date().toISOString().split('T')[0]}"
+      }
+    }
 
-**Команда користувача:** "{{command}}"
+2.  User command: "ціль Підготувати квартальний звіт, підрезультати Зібрати дані, Створити презентацію. в Зібрати дані є підпункти аналітика з GA, дані з CRM"
+    JSON Output:
+    {
+      "command": "create_result",
+      "parameters": {
+        "title": "Підготувати квартальний звіт",
+        "subResults": [
+          {
+            "name": "Зібрати дані",
+            "subResults": [
+              { "name": "аналітика з GA" },
+              { "name": "дані з CRM" }
+            ]
+          },
+          { "name": "Створити презентацію" }
+        ]
+      }
+    }
+
+**CONTEXT:**
+- Today's date is: ${new Date().toISOString().split('T')[0]}. Use this to resolve relative dates like "today" or "tomorrow".
+- Available employees: {{json employees}}.
+- Available templates: {{json templates}}.
+- Current user: {{json currentUser}}.
+
+**RULES:**
+1.  If the command is clear, generate the corresponding JSON object.
+2.  If the command is ambiguous or missing required information (e.g., "create task for John" with no title), set the command field to "clarify" and provide a question in the "missingInfo" field.
+3.  If you cannot understand the command at all, set the command to "unknown" and provide a helpful reply.
+4.  For 'create_result', correctly parse the nested structure of sub-results from the text.
+
+**User command:** "{{command}}"
 `,
 });
 
@@ -57,6 +91,11 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
 
   if (!output) {
      return { command: 'unknown', reply: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." };
+  }
+  
+  // If the AI returns 'мої', replace it with the actual current user's name.
+  if (output.parameters?.assigneeName === 'мої') {
+      output.parameters.assigneeName = input.currentUser.name;
   }
   
   return output;

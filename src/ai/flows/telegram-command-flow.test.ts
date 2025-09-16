@@ -16,6 +16,8 @@ const mockEmployees = [
     { id: 'emp-1', name: 'Марія Сидоренко' },
     { id: 'emp-2', name: 'Петро Іваненко' },
 ];
+const mockCurrentUser = { id: 'emp-1', name: 'Марія Сидоренко' };
+
 
 const mockTemplates = [
     { id: 'tpl-1', name: 'Щотижневий звіт' },
@@ -49,7 +51,7 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
         expected: {
             command: 'view_tasks',
             parameters: {
-                assigneeName: 'мої',
+                assigneeName: 'Марія Сидоренко',
                 status: 'todo',
                 startDate: new Date().toISOString().split('T')[0],
                 endDate: new Date().toISOString().split('T')[0],
@@ -136,6 +138,7 @@ async function runTests() {
             employees: mockEmployees,
             templates: mockTemplates,
             allowedCommands: [], // For testing, allow all commands
+            currentUser: mockCurrentUser,
         };
 
         try {

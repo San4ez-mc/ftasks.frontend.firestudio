@@ -67,16 +67,23 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
         const allEmployees = await getAllEmployeesForCompany(companyId);
         const allTemplates = await getAllTemplatesForCompany(companyId);
         const currentEmployee = allEmployees.find(e => e.userId === finekoUser.id);
-        const allowedCommands = currentEmployee?.telegramPermissions || [];
+        
+        if (!currentEmployee) {
+            await sendTelegramMessage(chat.id, { text: "Ваш профіль не прив'язаний до профілю співробітника в компанії." });
+            return;
+        }
 
+        const allowedCommands = currentEmployee?.telegramPermissions || [];
         const employeeList = allEmployees.map(e => ({ id: e.id, name: `${e.firstName} ${e.lastName}` }));
         const templateList = allTemplates.map(t => ({ id: t.id, name: t.name }));
+        const currentUserForAI = { id: currentEmployee.id, name: `${currentEmployee.firstName} ${currentEmployee.lastName}` };
 
         const aiResult = await parseTelegramCommand({
             command: text,
             employees: employeeList,
             templates: templateList,
             allowedCommands: allowedCommands,
+            currentUser: currentUserForAI,
         });
 
         const params = aiResult.parameters;
@@ -189,7 +196,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                 filteredTasks = filteredTasks.filter(t => t.dueDate >= startDate && t.dueDate <= endDate);
                 
                 let assigneeName = params?.assigneeName;
-                if (assigneeName === 'мої' || !assigneeName) {
+                if (!assigneeName) {
                     assigneeName = `${finekoUser.firstName} ${finekoUser.lastName}`;
                 }
                 const assignee = allEmployees.find(e => `${e.firstName} ${e.lastName}` === assigneeName);
