@@ -1,30 +1,44 @@
 'use server';
 
-import type { Task, TaskPrioritizationInput, TaskPrioritizationOutput } from '@/ai/types';
-import { suggestTaskPriorities } from '@/ai/flows/ai-task-prioritization';
+import { sendTelegramMessage } from '@/lib/telegram-service';
 
+// The user's ID provided in the prompt for error reporting
+const ADMIN_TELEGRAM_ID = '345126254';
 
-type ActionResult<T> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-};
+/**
+ * A shared server action to report client-side errors to a specific Telegram user.
+ * It formats the error details into a readable Markdown message.
+ */
+export async function reportClientError(errorInfo: { message: string; stack?: string; page?: string }) {
+    try {
+        const timestamp = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
+        
+        // Telegram's MarkdownV2 requires escaping these characters
+        const escapeMarkdown = (text: string) => {
+            if (!text) return '';
+            return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        }
 
-export async function getTaskPriorities(tasks: Task[], overallGoal: string): Promise<ActionResult<TaskPrioritizationOutput>> {
-  if (!tasks || tasks.length === 0 || !overallGoal) {
-    return { success: false, error: 'Tasks and overall goal are required.' };
-  }
+        const message = `
+🔴 *Client-Side Error Report* 🔴
 
-  const input: TaskPrioritizationInput = {
-    tasks,
-    overallGoal,
-  };
+*Time:* ${escapeMarkdown(timestamp)}
+*Page:* ${escapeMarkdown(errorInfo.page || 'Unknown')}
+*Error:* \`${escapeMarkdown(errorInfo.message)}\`
 
-  try {
-    const output = await suggestTaskPriorities(input);
-    return { success: true, data: output };
-  } catch (error) {
-    console.error('Error in task prioritization flow:', error);
-    return { success: false, error: 'Failed to get task priorities from AI.' };
-  }
+*Stack Trace:*
+\`\`\`
+${escapeMarkdown(errorInfo.stack || 'No stack trace available.')}
+\`\`\`
+        `;
+
+        await sendTelegramMessage(parseInt(ADMIN_TELEGRAM_ID, 10), {
+            text: message,
+        });
+
+        return { success: true };
+    } catch (reportError) {
+        console.error("Failed to report client-side error:", reportError);
+        return { success: false };
+    }
 }
