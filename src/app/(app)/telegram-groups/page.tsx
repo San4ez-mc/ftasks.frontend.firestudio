@@ -67,13 +67,30 @@ const telegramTourSteps: TourStep[] = [
 ];
 
 function TelegramGroupsPageContent() {
+  const searchParams = useSearchParams();
+  const [action, setAction] = useState<string | null>(null);
+
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<TelegramGroup | null>(null);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
   const [linkCode, setLinkCode] = useState('');
   const [isPending, startTransition] = useTransition();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
+  
+  // Effect to safely read from searchParams
+  useEffect(() => {
+    if (searchParams) {
+      setAction(searchParams.get('action'));
+    }
+  }, [searchParams]);
+
+  // Effect to act on the read parameter
+  useEffect(() => {
+    if (action === 'add-group') {
+      setIsAddGroupOpen(true);
+    }
+  }, [action]);
+
 
   const fetchGroups = () => {
     startTransition(async () => {
@@ -89,12 +106,6 @@ function TelegramGroupsPageContent() {
     fetchGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-     if (searchParams?.get('action') === 'add-group') {
-      setIsAddGroupOpen(true);
-    }
-  }, [searchParams]);
 
   const handleLinkGroup = () => {
     if (!linkCode) return;
@@ -538,10 +549,21 @@ function MessageLogCard({ group }: { group: TelegramGroup }) {
     )
 }
 
-export default function TelegramGroupsPage() {
+function LoadingState() {
+  return (
+     <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+     </div>
+  )
+}
+
+
+export default function Page() {
     return (
-        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+        <Suspense fallback={<LoadingState />}>
             <TelegramGroupsPageContent />
         </Suspense>
     )
 }
+
+    
