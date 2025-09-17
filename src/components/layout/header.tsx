@@ -3,15 +3,29 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bell, LogOut, Settings, LifeBuoy } from 'lucide-react';
+import { Bell, LogOut, Settings, LifeBuoy, Shield } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/lib/api';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { getUserSession } from '@/lib/session';
+import { isAdmin } from '@/lib/admin';
 
 export default function Header() {
   const router = useRouter();
+  const [userIsAdmin, setUserIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+        const session = await getUserSession();
+        if(session && isAdmin(session.userId)) {
+            setUserIsAdmin(true);
+        }
+    }
+    checkAdminStatus();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -51,12 +65,27 @@ export default function Header() {
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
             <DropdownMenuSeparator />
+             {userIsAdmin && (
+                <DropdownMenuItem asChild>
+                    <Link href="/admin">
+                        <Shield className="mr-2 h-4 w-4" />
+                        <span>Сторінка адміністратора</span>
+                    </Link>
+                </DropdownMenuItem>
+             )}
+            <DropdownMenuItem asChild>
+              <Link href="/settings/billing">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Оплати</span>
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings/companies">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Налаштування</span>
               </Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Вийти</span>

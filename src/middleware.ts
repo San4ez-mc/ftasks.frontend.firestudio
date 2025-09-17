@@ -1,37 +1,43 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isAdmin } from '@/lib/admin';
+import { getUserSession } from '@/lib/session';
 
-function getTokenFromStorage(request: NextRequest): string | undefined {
-    // In middleware, we can only access cookies, not localStorage.
-    // The client-side will handle localStorage and redirect if necessary.
-    // For server-rendered pages on first load, we rely on cookies if they exist.
-    // This part of the logic is now primarily handled on the client.
-    return request.cookies.get('auth_token')?.value;
-}
-
-
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const { pathname } = request.nextUrl;
 
-  const isAuthPage = ['/login', '/select-company', '/create-company'].some(path => pathname.startsWith(path)) || pathname.startsWith('/auth/telegram/callback');
+  const isAuthPage = ['/login', '/select-company', '/create-company'].some(path => pathname.startsWith(path)) || pathname.startsWith('/auth/telegram/callback') || pathname.startsWith('/payment');
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
 
-  // Allow public API routes to be accessed without authentication
+  // Allow public API routes and auth pages to be accessed without a token.
   if (isApiAuthRoute) {
       return NextResponse.next();
   }
 
+  // Handle protected admin routes
+  if (pathname.startsWith('/admin')) {
+      const session = await getUserSession();
+      if (!session || !isAdmin(session.userId)) {
+          // If not an admin, redirect to the main app page.
+          return NextResponse.redirect(new URL('/', request.url));
+      }
+      // If admin, allow access.
+      return NextResponse.next();
+  }
+  
   // If user is not authenticated and is trying to access a protected page, redirect to login
   if (!authToken && !isAuthPage) {
-    // Note: The primary check for localStorage token will happen on the client side.
-    // This server-side check is a fallback for direct navigation to protected pages.
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // If user is authenticated and tries to access an auth page (like login), redirect them to the home page
   if (authToken && isAuthPage) {
+    // Exception: allow access to payment pages even if logged in
+    if(pathname.startsWith('/payment')) {
+        return NextResponse.next();
+    }
     return NextResponse.redirect(new URL('/', request.url));
   }
   

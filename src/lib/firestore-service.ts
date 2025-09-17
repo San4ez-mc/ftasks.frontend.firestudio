@@ -1,3 +1,4 @@
+
 // src/lib/firestore-service.ts
 'use server';
 
@@ -15,6 +16,7 @@ import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 import type { User } from '@/types/user';
 import type { Department, Division } from '@/types/org-structure';
+import { add } from 'date-fns';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -176,12 +178,15 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
         synonyms: [],
     });
 
-    // Also create a company profile, making the creator the admin
+    // Create a company profile with a 30-day trial
+    const trialEndDate = add(new Date(), { days: 30 });
     const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
     batch.set(companyProfileRef, {
         name: companyName,
         description: `Компанія ${companyName}`,
-        adminId: newEmployeeRef.id, // Use the new employee ID as the admin
+        adminId: newEmployeeRef.id,
+        subscriptionTier: 'free',
+        trialEnds: trialEndDate.toISOString(),
     });
 
     await batch.commit();

@@ -23,8 +23,13 @@ import {
   BookText,
   ClipboardCheck,
   Bell,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+import { getSubscriptionStatus, type SubscriptionStatus } from '@/app/(app)/settings/billing/actions';
+import { Badge } from '../ui/badge';
+import { Card, CardContent } from '../ui/card';
 
 const menuItems = [
   { href: '/results', label: 'Результати', icon: Trophy },
@@ -38,6 +43,48 @@ const menuItems = [
   { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
   { href: '/notifications', label: 'Сповіщення', icon: Bell },
 ];
+
+function SubscriptionIndicator() {
+    const [status, setStatus] = useState<SubscriptionStatus | null>(null);
+    const [isPending, startTransition] = useTransition();
+
+    useEffect(() => {
+        startTransition(async () => {
+            const subStatus = await getSubscriptionStatus();
+            setStatus(subStatus);
+        });
+    }, []);
+
+    if (!status || isPending) {
+        return null; // or a skeleton loader
+    }
+    
+    if (status.tier === 'free') {
+        return (
+            <Card className="bg-destructive/10 border-destructive/20">
+                <CardContent className="p-2 text-center">
+                    <p className="text-xs font-semibold text-destructive-foreground">Тариф Безкоштовний</p>
+                    <Button variant="link" size="sm" asChild className="text-xs h-auto p-0 text-destructive-foreground">
+                        <Link href="/settings/billing">Оплатити</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    return (
+         <Card className="bg-primary/10 border-primary/20">
+            <CardContent className="p-2 text-center">
+                 <div className="flex items-center justify-center gap-1 text-primary">
+                    <Sparkles className="h-3 w-3" />
+                    <p className="text-xs font-semibold">{status.planName}</p>
+                 </div>
+                 <p className="text-xs text-primary/80">Залишилось: {status.daysRemaining} днів</p>
+            </CardContent>
+        </Card>
+    )
+}
+
 
 export default function SidebarNav() {
   const pathname = usePathname();
@@ -81,8 +128,9 @@ export default function SidebarNav() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter>
-        <div className="p-4 text-sm font-medium text-muted-foreground truncate">
+      <SidebarFooter className="p-2 space-y-2">
+        <SubscriptionIndicator />
+        <div className="p-2 text-sm font-medium text-muted-foreground truncate">
             {companyName}
         </div>
       </SidebarFooter>
