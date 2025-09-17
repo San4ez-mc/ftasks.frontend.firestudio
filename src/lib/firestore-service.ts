@@ -50,6 +50,17 @@ function addDays(date: Date, days: number): Date {
 }
 
 // --- Generic Firestore Functions ---
+async function handleFirestoreError(error: any, context: string): Promise<never> {
+    // 5 is the gRPC status code for NOT_FOUND
+    if (error.code === 5) {
+        const enhancedMessage = `Firestore operation failed: NOT_FOUND. This can happen if the Firestore database is not enabled in your Firebase project, a required Firestore index is missing, or the queried document does not exist. Context: ${context}`;
+        console.error(enhancedMessage, error);
+        throw new Error(enhancedMessage);
+    }
+    console.error(`Error in Firestore operation. Context: ${context}`, error);
+    throw new Error(`A database error occurred. Please check server logs. Context: ${context}`);
+}
+
 
 async function getByQuery<T>(collectionName: string, queryField: string, queryValue: string): Promise<T[]> {
   try {
@@ -57,66 +68,80 @@ async function getByQuery<T>(collectionName: string, queryField: string, queryVa
     const snapshot = await firestore.collection(collectionName).where(queryField, '==', queryValue).get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
   } catch (error) {
-    console.error(`Error in getByQuery for collection ${collectionName} where ${queryField} == ${queryValue}:`, error);
-    return []; // Return empty array on failure to prevent crash
+    return handleFirestoreError(error, `getByQuery on ${collectionName}`);
   }
 }
 
 async function getDocAndValidateCompany<T>(collectionName: string, id: string, companyId: string): Promise<T | null> {
-    firestoreGuard();
-    const docRef = firestore.collection(collectionName).doc(id);
-    const doc = await docRef.get();
+    try {
+        firestoreGuard();
+        const docRef = firestore.collection(collectionName).doc(id);
+        const doc = await docRef.get();
 
-    if (!doc.exists) {
-        return null;
-    }
-
-    const data = doc.data();
-    
-    // Special case for company_profiles where the doc ID is the companyId
-    if (collectionName === COMPANY_PROFILES_COLLECTION) {
-        if (doc.id !== companyId) {
-            console.warn(`Attempted to access document in ${collectionName} with ID ${id} from wrong company ${companyId}.`);
+        if (!doc.exists) {
             return null;
         }
-    } else if (data?.companyId !== companyId) {
-        console.warn(`Attempted to access document in ${collectionName} with ID ${id} from wrong company ${companyId}.`);
-        return null; // Security: do not return doc if companyId doesn't match
+
+        const data = doc.data();
+        
+        if (collectionName === COMPANY_PROFILES_COLLECTION) {
+            if (doc.id !== companyId) {
+                console.warn(`Attempted to access document in ${collectionName} with ID ${id} from wrong company ${companyId}.`);
+                return null;
+            }
+        } else if (data?.companyId !== companyId) {
+            console.warn(`Attempted to access document in ${collectionName} with ID ${id} from wrong company ${companyId}.`);
+            return null; 
+        }
+        
+        return { id: doc.id, ...data } as T;
+    } catch (error) {
+        return handleFirestoreError(error, `getDocAndValidateCompany on ${collectionName}/${id}`);
     }
-    
-    return { id: doc.id, ...data } as T;
 }
 
 async function create<T extends { id?: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
-  firestoreGuard();
-  const { id, ...rest } = data as any;
-  const docRef = await firestore.collection(collectionName).add(rest);
-  const newDoc = await docRef.get();
-  return { id: newDoc.id, ...newDoc.data() } as T;
+  try {
+    firestoreGuard();
+    const { id, ...rest } = data as any;
+    const docRef = await firestore.collection(collectionName).add(rest);
+    const newDoc = await docRef.get();
+    return { id: newDoc.id, ...newDoc.data() } as T;
+  } catch (error) {
+    return handleFirestoreError(error, `create in ${collectionName}`);
+  }
 }
 
 async function update<T>(collectionName: string, docId: string, companyId: string, updates: Partial<T>): Promise<T | null> {
-  firestoreGuard();
-  const doc = await getDocAndValidateCompany<T & {id: string}>(collectionName, docId, companyId);
-  if (!doc) {
-      return null;
+  try {
+    firestoreGuard();
+    const doc = await getDocAndValidateCompany<T & {id: string}>(collectionName, docId, companyId);
+    if (!doc) {
+        return null;
+    }
+    
+    const docRef = firestore.collection(collectionName).doc(docId);
+    await docRef.update(updates);
+    
+    const updatedDoc = await docRef.get();
+    return updatedDoc.exists ? { id: updatedDoc.id, ...updatedDoc.data() } as T : null;
+  } catch (error) {
+    return handleFirestoreError(error, `update on ${collectionName}/${docId}`);
   }
-  
-  const docRef = firestore.collection(collectionName).doc(docId);
-  await docRef.update(updates);
-  
-  const updatedDoc = await docRef.get();
-  return updatedDoc.exists ? { id: updatedDoc.id, ...updatedDoc.data() } as T : null;
 }
 
 async function remove(collectionName: string, docId: string, companyId: string): Promise<{ success: boolean }> {
-  firestoreGuard();
-  const doc = await getDocAndValidateCompany(collectionName, docId, companyId);
-   if (!doc) {
-      return { success: false }; // Or throw an error
+  try {
+    firestoreGuard();
+    const doc = await getDocAndValidateCompany(collectionName, docId, companyId);
+     if (!doc) {
+        return { success: false };
+    }
+    await firestore.collection(collectionName).doc(docId).delete();
+    return { success: true };
+  } catch (error) {
+    return handleFirestoreError(error, `remove on ${collectionName}/${docId}`);
   }
-  await firestore.collection(collectionName).doc(docId).delete();
-  return { success: true };
 }
 
 // --- Service-Specific Functions ---
@@ -156,80 +181,81 @@ export async function isUserMemberOfCompany(userId: string, companyId: string): 
 }
 
 export async function createCompanyAndAddUser(userId: string, companyName: string): Promise<{newCompanyId: string}> {
-    firestoreGuard();
-    const batch = firestore.batch();
+    try {
+        firestoreGuard();
+        const batch = firestore.batch();
 
-    const user = await getUserById(userId);
-    if (!user) {
-        throw new Error(`User with ID ${userId} not found.`);
+        const user = await getUserById(userId);
+        if (!user) {
+            throw new Error(`User with ID ${userId} not found.`);
+        }
+
+        const newCompanyRef = firestore.collection(COMPANIES_COLLECTION).doc();
+        batch.set(newCompanyRef, { name: companyName, ownerId: userId });
+
+        const newEmployeeRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
+        batch.set(newEmployeeRef, {
+            userId: user.id,
+            companyId: newCompanyRef.id,
+            firstName: user.firstName,
+            lastName: user.lastName || '',
+            telegramUserId: user.telegramUserId || '',
+            telegramUsername: user.telegramUsername || '',
+            avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.telegramUsername}`,
+            status: 'active',
+            notes: 'Company creator',
+            positions: [],
+            groups: [],
+            synonyms: [],
+        });
+
+        const trialEndDate = addDays(new Date(), 30);
+        const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
+        batch.set(companyProfileRef, {
+            name: companyName,
+            description: `Компанія ${companyName}`,
+            adminId: newEmployeeRef.id,
+            subscriptionTier: 'free',
+            trialEnds: trialEndDate.toISOString(),
+        });
+
+        await batch.commit();
+        return { newCompanyId: newCompanyRef.id };
+    } catch (error) {
+        return handleFirestoreError(error, `createCompanyAndAddUser for user ${userId}`);
     }
-
-    // Create the company
-    const newCompanyRef = firestore.collection(COMPANIES_COLLECTION).doc();
-    batch.set(newCompanyRef, { name: companyName, ownerId: userId });
-
-    // Create the complete employee record for the creator
-    const newEmployeeRef = firestore.collection(EMPLOYEES_COLLECTION).doc();
-    batch.set(newEmployeeRef, {
-        userId: user.id,
-        companyId: newCompanyRef.id,
-        firstName: user.firstName,
-        lastName: user.lastName || '',
-        telegramUserId: user.telegramUserId || '',
-        telegramUsername: user.telegramUsername || '',
-        avatar: user.avatar || `https://i.pravatar.cc/150?u=${user.telegramUsername}`,
-        status: 'active',
-        notes: 'Company creator',
-        positions: [],
-        groups: [],
-        synonyms: [],
-    });
-
-    // Create a company profile with a 30-day trial
-    const trialEndDate = addDays(new Date(), 30);
-    const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
-    batch.set(companyProfileRef, {
-        name: companyName,
-        description: `Компанія ${companyName}`,
-        adminId: newEmployeeRef.id,
-        subscriptionTier: 'free',
-        trialEnds: trialEndDate.toISOString(),
-    });
-
-    await batch.commit();
-    return { newCompanyId: newCompanyRef.id };
 }
 
 
 export async function removeEmployeeLink(userId: string, companyId: string): Promise<{ success: boolean; message: string }> {
-    firestoreGuard();
+    try {
+        firestoreGuard();
+        const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId);
+        const companyDoc = await companyRef.get();
+        if (!companyDoc.exists) {
+            return { success: false, message: "Компанію не знайдено." };
+        }
+        if (companyDoc.data()?.ownerId === userId) {
+            return { success: false, message: "Власник не може покинути компанію. Спочатку передайте права власності." };
+        }
 
-    // 1. Check if the user is the owner of the company
-    const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId);
-    const companyDoc = await companyRef.get();
-    if (!companyDoc.exists) {
-        return { success: false, message: "Компанію не знайдено." };
+        const employeeLinkQuery = await firestore.collection(EMPLOYEES_COLLECTION)
+            .where('userId', '==', userId)
+            .where('companyId', '==', companyId)
+            .limit(1)
+            .get();
+
+        if (employeeLinkQuery.empty) {
+            return { success: false, message: "Ви не є учасником цієї компанії." };
+        }
+
+        const docToDelete = employeeLinkQuery.docs[0];
+        await docToDelete.ref.delete();
+
+        return { success: true, message: "Ви успішно покинули компанію." };
+    } catch (error) {
+        return handleFirestoreError(error, `removeEmployeeLink for user ${userId} from company ${companyId}`);
     }
-    if (companyDoc.data()?.ownerId === userId) {
-        return { success: false, message: "Власник не може покинути компанію. Спочатку передайте права власності." };
-    }
-
-    // 2. Find the employee link document
-    const employeeLinkQuery = await firestore.collection(EMPLOYEES_COLLECTION)
-        .where('userId', '==', userId)
-        .where('companyId', '==', companyId)
-        .limit(1)
-        .get();
-
-    if (employeeLinkQuery.empty) {
-        return { success: false, message: "Ви не є учасником цієї компанії." };
-    }
-
-    // 3. Delete the document
-    const docToDelete = employeeLinkQuery.docs[0];
-    await docToDelete.ref.delete();
-
-    return { success: true, message: "Ви успішно покинули компанію." };
 }
 
 
@@ -260,27 +286,35 @@ export const updateEmployeeInDb = (companyId: string, id: string, updates: Parti
 export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyId: string } | null> => {
     firestoreGuard();
     const links = await getByQuery<{ companyId: string }>(EMPLOYEES_COLLECTION, 'userId', userId);
-    return links[0] || null; // Return the first company link found
+    return links[0] || null;
 };
 
 // --- Company Profile ---
 export const getCompanyProfileFromDb = async (companyId: string): Promise<CompanyProfile | null> => {
-    firestoreGuard();
-    // The document ID *is* the company ID for this collection, so we don't need a separate companyId check within the document.
-    const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
-    const doc = await docRef.get();
+    try {
+        firestoreGuard();
+        const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
+        const doc = await docRef.get();
 
-    if (!doc.exists) {
-        return null;
+        if (!doc.exists) {
+            return null;
+        }
+        
+        return { id: doc.id, ...doc.data() } as CompanyProfile;
+    } catch (error) {
+        return handleFirestoreError(error, `getCompanyProfileFromDb for company ${companyId}`);
     }
-    
-    return { id: doc.id, ...doc.data() } as CompanyProfile;
 };
 
-export const updateCompanyProfileInDb = (companyId: string, updates: Partial<CompanyProfile>): Promise<CompanyProfile | null> => {
-    firestoreGuard();
-    const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
-    return docRef.update(updates).then(() => getCompanyProfileFromDb(companyId));
+export const updateCompanyProfileInDb = async (companyId: string, updates: Partial<CompanyProfile>): Promise<CompanyProfile | null> => {
+    try {
+        firestoreGuard();
+        const docRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
+        await docRef.update(updates);
+        return getCompanyProfileFromDb(companyId);
+    } catch(error) {
+        return handleFirestoreError(error, `updateCompanyProfileInDb for company ${companyId}`);
+    }
 };
 
 // --- Org Structure ---
@@ -288,46 +322,44 @@ export const getDivisionsForCompany = (companyId: string) => getByQuery<Division
 export const getDepartmentsForCompany = (companyId: string) => getByQuery<Department>(DEPARTMENTS_COLLECTION, 'companyId', companyId);
 
 export async function saveOrgStructure(companyId: string, divisions: Division[], departments: Department[]): Promise<{ success: boolean }> {
-    firestoreGuard();
-    const batch = firestore.batch();
+    try {
+        firestoreGuard();
+        const batch = firestore.batch();
+        const existingDivisions = await getDivisionsForCompany(companyId);
+        const existingDepartments = await getDepartmentsForCompany(companyId);
 
-    // Get existing divisions and departments to find what to delete
-    const existingDivisions = await getDivisionsForCompany(companyId);
-    const existingDepartments = await getDepartmentsForCompany(companyId);
+        const newDivisionIds = new Set(divisions.map(d => d.id));
+        const newDepartmentIds = new Set(departments.map(d => d.id));
 
-    const newDivisionIds = new Set(divisions.map(d => d.id));
-    const newDepartmentIds = new Set(departments.map(d => d.id));
-
-    // Delete divisions that are no longer present
-    for (const div of existingDivisions) {
-        if (!newDivisionIds.has(div.id)) {
-            batch.delete(firestore.collection(DIVISIONS_COLLECTION).doc(div.id));
+        for (const div of existingDivisions) {
+            if (!newDivisionIds.has(div.id)) {
+                batch.delete(firestore.collection(DIVISIONS_COLLECTION).doc(div.id));
+            }
         }
-    }
 
-    // Delete departments that are no longer present
-    for (const dept of existingDepartments) {
-        if (!newDepartmentIds.has(dept.id)) {
-            batch.delete(firestore.collection(DEPARTMENTS_COLLECTION).doc(dept.id));
+        for (const dept of existingDepartments) {
+            if (!newDepartmentIds.has(dept.id)) {
+                batch.delete(firestore.collection(DEPARTMENTS_COLLECTION).doc(dept.id));
+            }
         }
-    }
 
-    // Set/Update divisions
-    for (const div of divisions) {
-        const { id, ...data } = div;
-        const ref = firestore.collection(DIVISIONS_COLLECTION).doc(id);
-        batch.set(ref, { ...data, companyId });
-    }
+        for (const div of divisions) {
+            const { id, ...data } = div;
+            const ref = firestore.collection(DIVISIONS_COLLECTION).doc(id);
+            batch.set(ref, { ...data, companyId });
+        }
 
-    // Set/Update departments
-    for (const dept of departments) {
-        const { id, ...data } = dept;
-        const ref = firestore.collection(DEPARTMENTS_COLLECTION).doc(id);
-        batch.set(ref, { ...data, companyId });
+        for (const dept of departments) {
+            const { id, ...data } = dept;
+            const ref = firestore.collection(DEPARTMENTS_COLLECTION).doc(id);
+            batch.set(ref, { ...data, companyId });
+        }
+        
+        await batch.commit();
+        return { success: true };
+    } catch (error) {
+        return handleFirestoreError(error, `saveOrgStructure for company ${companyId}`);
     }
-    
-    await batch.commit();
-    return { success: true };
 }
 
 
@@ -414,21 +446,25 @@ export async function getTelegramLogsByGroupId(companyId: string, groupId: strin
 export const getMembersForGroupDb = (companyId: string, groupId: string) => getByQuery<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, 'groupId', groupId);
 
 export async function upsertTelegramMember(companyId: string, memberData: Omit<TelegramMember, 'id' | 'companyId' | 'employeeId'>) {
-    firestoreGuard();
-    const membersRef = firestore.collection(TELEGRAM_MEMBERS_COLLECTION);
-    const q = membersRef
-        .where('companyId', '==', companyId)
-        .where('groupId', '==', memberData.groupId)
-        .where('tgUserId', '==', memberData.tgUserId)
-        .limit(1);
-    const snapshot = await q.get();
+    try {
+        firestoreGuard();
+        const membersRef = firestore.collection(TELEGRAM_MEMBERS_COLLECTION);
+        const q = membersRef
+            .where('companyId', '==', companyId)
+            .where('groupId', '==', memberData.groupId)
+            .where('tgUserId', '==', memberData.tgUserId)
+            .limit(1);
+        const snapshot = await q.get();
 
-    if (snapshot.empty) {
-        await create<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, { ...memberData, employeeId: null, companyId });
-    } else {
-        const docId = snapshot.docs[0].id;
-        const { tgUserId, groupId, ...updatableData } = memberData;
-        await update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, docId, companyId, updatableData);
+        if (snapshot.empty) {
+            await create<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, { ...memberData, employeeId: null, companyId });
+        } else {
+            const docId = snapshot.docs[0].id;
+            const { tgUserId, groupId, ...updatableData } = memberData;
+            await update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, docId, companyId, updatableData);
+        }
+    } catch (error) {
+        return handleFirestoreError(error, `upsertTelegramMember for user ${memberData.tgUserId}`);
     }
 }
 
