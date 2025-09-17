@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect, useTransition, Suspense } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -50,21 +49,24 @@ const telegramTourSteps: TourStep[] = [
     },
 ];
 
-function TelegramGroupsPageContent() {
+export default function TelegramGroupsPage() {
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<TelegramGroup | null>(null);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
   const [linkCode, setLinkCode] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  
-  // This effect runs once on component mount to check for the URL action.
-  // It avoids using useSearchParams, which was causing rendering issues.
+
   useEffect(() => {
+    // This effect runs once on component mount to check for the URL action.
+    // It reads directly from window.location, avoiding useSearchParams to prevent rendering issues.
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'add-group') {
       setIsAddGroupOpen(true);
     }
+    
+    fetchGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -77,11 +79,6 @@ function TelegramGroupsPageContent() {
         }
     });
   }
-
-  useEffect(() => {
-    fetchGroups();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleLinkGroup = () => {
     if (!linkCode) return;
@@ -220,23 +217,3 @@ function TelegramGroupsPageContent() {
     </div>
   );
 }
-
-function LoadingState() {
-  return (
-     <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-     </div>
-  )
-}
-
-// This is the main export. It wraps the client component in Suspense
-// for cases where it might be needed, even though we removed the direct hook dependency.
-export default function TelegramGroupsPage() {
-    return (
-        <Suspense fallback={<LoadingState />}>
-            <TelegramGroupsPageContent />
-        </Suspense>
-    )
-}
-
-    

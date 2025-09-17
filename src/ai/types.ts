@@ -83,6 +83,9 @@ export const TelegramCommandOutputSchema = z.object({
         'create_template',
         'update_task_status',
         'update_task_date',
+        'delete_task',
+        'delete_result',
+        'delete_template',
         'show_help', 
         'unknown', 
         'clarify'

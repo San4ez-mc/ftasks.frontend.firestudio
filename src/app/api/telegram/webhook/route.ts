@@ -17,6 +17,9 @@ import {
     getMembersForGroupDb,
     getAllTemplatesForCompany,
     createTemplateInDb,
+    deleteTaskFromDb,
+    deleteResultFromDb,
+    deleteTemplateFromDb,
 } from '@/lib/firestore-service';
 import { sendTelegramMessage } from '@/lib/telegram-service';
 import type { Task, TaskType } from '@/types/task';
@@ -111,7 +114,7 @@ const parseTitle = (text: string): string => {
     if (quoteMatch) return quoteMatch[1];
 
     // Fallback for commands without quotes, e.g., "ціль Підготувати звіт"
-    const commandWords = ['створи задачу', 'створи', 'задача', 'ціль', 'результат', 'створити новий результат', 'деталі по задачі', 'що по задачі'];
+    const commandWords = ['створи задачу', 'створи', 'задача', 'ціль', 'результат', 'створити новий результат', 'деталі по задачі', 'що по задачі', 'видали задачу', 'удали результат', 'знищ шаблон'];
     let title = text;
     for (const word of commandWords) {
         if (title.toLowerCase().startsWith(word)) {
@@ -125,8 +128,6 @@ const parseTitle = (text: string): string => {
 
 function getKyivDate(): Date {
     const now = new Date();
-    // In a serverless environment, TZ might not be set. We'll manually adjust for Kyiv time (UTC+3).
-    // This is a simplification and doesn't account for DST perfectly, but is better than UTC.
     const kyivOffset = 3 * 60 * 60 * 1000;
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     return new Date(utc + kyivOffset);
@@ -415,6 +416,68 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
                     await sendTelegramMessage(chat.id, { text: `✅ Шаблон "${createdTemplate.name}" створено з повторенням "${repeatability}".` });
                     break;
                 }
+
+                case 'delete_task': {
+                    const title = parseTitle(commandText);
+                    if (!title) {
+                        await sendTelegramMessage(chat.id, { text: "Будь ласка, вкажіть назву задачі для видалення." });
+                        break;
+                    }
+                    const tasks = await getAllTasksForCompany(companyId);
+                    const taskToDelete = tasks.find(t => t.title.toLowerCase() === title.toLowerCase());
+                    if (!taskToDelete) {
+                        await sendTelegramMessage(chat.id, { text: `Задача з назвою "${title}" не знайдена.` });
+                        break;
+                    }
+                    if (taskToDelete.reporter.id !== currentEmployee.id) {
+                        await sendTelegramMessage(chat.id, { text: `🚫 Відмовлено. Ви можете видаляти тільки ті задачі, які самі створили.` });
+                        break;
+                    }
+                    await deleteTaskFromDb(companyId, taskToDelete.id);
+                    await sendTelegramMessage(chat.id, { text: `🗑️ Задача "${title}" видалена.` });
+                    break;
+                }
+
+                case 'delete_result': {
+                    const title = parseTitle(commandText);
+                    if (!title) {
+                        await sendTelegramMessage(chat.id, { text: "Будь ласка, вкажіть назву результату для видалення." });
+                        break;
+                    }
+                    const results = await getAllResultsForCompany(companyId);
+                    const resultToDelete = results.find(r => r.name.toLowerCase() === title.toLowerCase());
+                    if (!resultToDelete) {
+                        await sendTelegramMessage(chat.id, { text: `Результат з назвою "${title}" не знайдений.` });
+                        break;
+                    }
+                    if (resultToDelete.reporter.id !== currentEmployee.id) {
+                        await sendTelegramMessage(chat.id, { text: `🚫 Відмовлено. Ви можете видаляти тільки ті результати, які самі створили.` });
+                        break;
+                    }
+                    await deleteResultFromDb(companyId, resultToDelete.id);
+                    await sendTelegramMessage(chat.id, { text: `🗑️ Результат "${title}" видалено.` });
+                    break;
+                }
+
+                case 'delete_template': {
+                    const title = parseTitle(commandText);
+                    if (!title) {
+                        await sendTelegramMessage(chat.id, { text: "Будь ласка, вкажіть назву шаблону для видалення." });
+                        break;
+                    }
+                    const templates = await getAllTemplatesForCompany(companyId);
+                    const templateToDelete = templates.find(t => t.name.toLowerCase() === title.toLowerCase());
+                    if (!templateToDelete) {
+                        await sendTelegramMessage(chat.id, { text: `Шаблон з назвою "${title}" не знайдений.` });
+                        break;
+                    }
+                    // Note: Templates don't have a reporter, so anyone can delete them for now.
+                    // This could be changed by adding a reporterId to the template model.
+                    await deleteTemplateFromDb(companyId, templateToDelete.id);
+                    await sendTelegramMessage(chat.id, { text: `🗑️ Шаблон "${title}" видалено.` });
+                    break;
+                }
+
 
                 case 'show_help':
                     await sendTelegramMessage(chat.id, { text: commandText });

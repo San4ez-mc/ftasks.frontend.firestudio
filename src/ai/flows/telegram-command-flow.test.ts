@@ -127,6 +127,30 @@ const testCases: { description: string; input: string; expected: Partial<Telegra
             command: 'list_templates',
             text: 'Які є шаблони?'
         }]
+    },
+    {
+        description: 'Should parse a delete task command',
+        input: 'Видали задачу "Підготувати звіт"',
+        expected: [{
+            command: 'delete_task',
+            text: 'Видали задачу "Підготувати звіт"'
+        }]
+    },
+    {
+        description: 'Should parse a delete result command',
+        input: 'удали результат "Запустити кампанію"',
+        expected: [{
+            command: 'delete_result',
+            text: 'удали результат "Запустити кампанію"'
+        }]
+    },
+    {
+        description: 'Should parse a delete template command',
+        input: 'знищ шаблон "Щотижневий звіт"',
+        expected: [{
+            command: 'delete_template',
+            text: 'знищ шаблон "Щотижневий звіт"'
+        }]
     }
 ];
 

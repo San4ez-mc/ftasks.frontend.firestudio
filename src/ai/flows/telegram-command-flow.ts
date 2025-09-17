@@ -24,14 +24,18 @@ const commandParserPrompt = ai.definePrompt({
 
 **RULES:**
 1.  **Strict JSON Output:** Your entire output must be a single JSON array \`[]\`. Do NOT add any other text or comments.
-2.  **Keyword Priority for 'create_template':** The word 'шаблон' (template) STRONGLY and ALWAYS implies the 'create_template' command. Do not mistake it for 'create_task'.
-3.  **Keywords Priority for 'create_result':** The words 'ціль' or 'результат' STRONGLY and ALWAYS imply the 'create_result' command. Do not mistake it for 'create_task'.
-4.  **Extract Full Raw Text:** For ALL commands, you MUST copy the entire user's original command text into the 'text' field. Do not shorten or modify it.
-5.  **Assignee Extraction:** Analyze the text for employee names from the provided list. If a name is mentioned in context of being an assignee (e.g., "для Петра", "виконавець Петро"), you MUST extract their 'id' and put it in the 'assigneeId' field. If no employee is mentioned, or if the user is referring to themselves ("мої задачі"), omit the 'assigneeId' field.
-6.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task, e.g., "Створити задачу для Петра"), return the 'clarify' command.
-7.  **Viewing Other's Tasks:** If the user asks for tasks of a specific person (e.g., "які задачі у Петра"), it is a 'view_tasks' command, and you MUST extract their ID into the 'assigneeId' field.
-8.  **Viewing Task Details:** If a user asks for details about a specific task (e.g., 'що по задачі "Звіт"', 'деталі по задачі'), identify it as a 'view_task_details' command.
-9.  **Clean Task Title:** When creating a task, if a time like "о 15:00" is mentioned, EXCLUDE it from the task title you extract.
+2.  **Keyword Priority for 'create_template':** The word 'шаблон' (template) STRONGLY and ALWAYS implies the 'create_template' command.
+3.  **Keywords Priority for 'create_result':** The words 'ціль' or 'результат' STRONGLY and ALWAYS imply the 'create_result' command.
+4.  **Keyword Priority for Deletion:** Words like 'видали', 'удали', 'знищ' (delete, remove) imply a delete command.
+    - If it's "видали задачу...", use \`delete_task\`.
+    - If it's "видали результат...", use \`delete_result\`.
+    - If it's "видали шаблон...", use \`delete_template\`.
+5.  **Extract Full Raw Text:** For ALL commands, you MUST copy the entire user's original command text into the 'text' field. Do not shorten or modify it.
+6.  **Assignee Extraction:** Analyze the text for employee names from the provided list. If a name is mentioned in context of being an assignee (e.g., "для Петра", "виконавець Петро"), you MUST extract their 'id' and put it in the 'assigneeId' field. If no employee is mentioned, or if the user is referring to themselves ("мої задачі"), omit the 'assigneeId' field.
+7.  **Handle Ambiguity:** If a command is missing critical information (like a title for a task, e.g., "Створити задачу для Петра"), return the 'clarify' command.
+8.  **Viewing Other's Tasks:** If the user asks for tasks of a specific person (e.g., "які задачі у Петра"), it is a 'view_tasks' command, and you MUST extract their ID into the 'assigneeId' field.
+9.  **Viewing Task Details:** If a user asks for details about a specific task (e.g., 'що по задачі "Звіт"', 'деталі по задачі'), identify it as a 'view_task_details' command.
+10. **Clean Task Title:** When creating a task, if a time like "о 15:00" is mentioned, EXCLUDE it from the task title you extract.
 
 **CONTEXT:**
 - Current user: {{json currentUser}}.
@@ -55,14 +59,17 @@ export async function parseTelegramCommand(input: TelegramCommandInput): Promise
 - *Створити:* \`створи задачу "Написати звіт" для Петра на завтра о 14:00\`
 - *Переглянути:* \`покажи мої задачі\` або \`задачі Марії на сьогодні\`
 - *Деталі:* \`деталі по задачі "Написати звіт"\`
+- *Видалити:* \`видали задачу "Написати звіт"\`
 
 *Результати*
 - *Створити:* \`створи результат "Запустити сайт" з підпунктами: дизайн, розробка\`
 - *Переглянути:* \`покажи всі результати\`
+- *Видалити:* \`удали результат "Запустити сайт"\`
 
 *Шаблони*
 - *Створити:* \`створи шаблон "Щоденний мітинг"\`
 - *Переглянути:* \`список шаблонів\`
+- *Видалити:* \`знищ шаблон "Щоденний мітинг"\`
 
 *Команда*
 - *Переглянути:* \`список співробітників\`
