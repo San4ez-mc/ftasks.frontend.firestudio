@@ -28,6 +28,7 @@ export default function GlobalError({
             message: error.message,
             stack: error.stack,
             page: window.location.href, // Add context about where the error happened
+            digest: error.digest,
         });
     }
     console.error("Caught a global client-side error:", error); // Also log to the browser console

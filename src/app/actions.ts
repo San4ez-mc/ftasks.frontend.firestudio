@@ -1,3 +1,4 @@
+
 'use server';
 
 import { sendTelegramMessage } from '@/lib/telegram-service';
@@ -9,7 +10,7 @@ const ADMIN_TELEGRAM_ID = '345126254';
  * A shared server action to report client-side errors to a specific Telegram user.
  * It formats the error details into a readable Markdown message.
  */
-export async function reportClientError(errorInfo: { message: string; stack?: string; page?: string }) {
+export async function reportClientError(errorInfo: { message: string; stack?: string; page?: string; digest?: string }) {
     try {
         const timestamp = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
         
@@ -24,6 +25,7 @@ export async function reportClientError(errorInfo: { message: string; stack?: st
 
 *Time:* ${escapeMarkdown(timestamp)}
 *Page:* ${escapeMarkdown(errorInfo.page || 'Unknown')}
+*Digest:* \`${escapeMarkdown(errorInfo.digest || 'N/A')}\`
 *Error:* \`${escapeMarkdown(errorInfo.message)}\`
 
 *Stack Trace:*
