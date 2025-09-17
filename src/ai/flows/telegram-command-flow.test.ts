@@ -7,6 +7,14 @@
  * To run this test, use the command: `npm run test:bot`
  */
 
+// Manually load environment variables from .env and .env.local to mimic Next.js behavior
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+config({ path: resolve(process.cwd(), '.env') });
+config({ path: resolve(process.cwd(), '.env.local'), override: true });
+
+
 import { parseTelegramCommand } from './telegram-command-flow';
 import type { TelegramCommandInput, TelegramCommandOutput } from '../types';
 import { inspect } from 'util';
