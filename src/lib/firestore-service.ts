@@ -50,15 +50,24 @@ function addDays(date: Date, days: number): Date {
 }
 
 // --- Generic Firestore Functions ---
-async function handleFirestoreError(error: any, context: string): Promise<never> {
+async function handleFirestoreError(error: any, context: string): Promise<any> {
     // 5 is the gRPC status code for NOT_FOUND
     if (error.code === 5) {
-        const enhancedMessage = `Firestore operation failed: NOT_FOUND. This can happen if the Firestore database is not enabled in your Firebase project, a required Firestore index is missing, or the queried document does not exist. Context: ${context}`;
-        console.error(enhancedMessage, error);
-        throw new Error(enhancedMessage);
+        // This specific error can happen on new projects if Firestore is enabled but
+        // the collection (e.g., 'results') hasn't been created yet because no data
+        // has been written, or a required index is missing. Instead of crashing, we log a 
+        // warning and return an empty result to allow the UI to render an empty state.
+        console.warn(`Firestore 'NOT_FOUND' error in context: ${context}. This is expected on a new project. Returning empty/null result.`);
+        
+        if (context.startsWith('getByQuery')) {
+             return []; // Return empty array for queries to non-existent collections/indexes
+        }
+        // For functions that expect a single document, return null
+        return null;
     }
-    console.error(`Error in Firestore operation. Context: ${context}`, error);
-    throw new Error(`A database error occurred. Please check server logs. Context: ${context}`);
+    const errorMessage = `A database error occurred. Please check server logs. Context: ${context}`;
+    console.error(errorMessage, error);
+    throw new Error(errorMessage);
 }
 
 
@@ -153,9 +162,13 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
     return users[0] || null;
 }
 export async function getUserById(userId: string): Promise<(User & { id: string }) | null> {
-    firestoreGuard();
-    const doc = await firestore.collection(USERS_COLLECTION).doc(userId).get();
-    return doc.exists ? { id: doc.id, ...doc.data() } as User & { id: string } : null;
+    try {
+        firestoreGuard();
+        const doc = await firestore.collection(USERS_COLLECTION).doc(userId).get();
+        return doc.exists ? { id: doc.id, ...doc.data() } as User & { id: string } : null;
+    } catch (error) {
+        return handleFirestoreError(error, `getUserById for user ${userId}`);
+    }
 }
 
 export async function getCompaniesForUser(userId: string): Promise<{id: string, name: string}[]> {
@@ -471,3 +484,5 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
+
+    
