@@ -117,6 +117,7 @@ async function remove(collectionName: string, docId: string, companyId: string):
 
 // --- Auth Related ---
 export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
+    firestoreGuard();
     const users = await getByQuery<User & {id: string}>(USERS_COLLECTION, 'telegramUserId', telegramUserId);
     return users[0] || null;
 }
@@ -127,12 +128,12 @@ export async function getUserById(userId: string): Promise<(User & { id: string 
 }
 
 export async function getCompaniesForUser(userId: string): Promise<{id: string, name: string}[]> {
+    firestoreGuard();
     const employeeLinks = await getByQuery<{companyId: string}>(EMPLOYEES_COLLECTION, 'userId', userId);
     if (employeeLinks.length === 0) return [];
 
     const companyIds = employeeLinks.map(link => link.companyId);
     
-    firestoreGuard();
     const companiesSnapshot = await firestore.collection(COMPANIES_COLLECTION).where(FieldPath.documentId(), 'in', companyIds).get();
     
     return companiesSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
@@ -251,6 +252,7 @@ export const getAllEmployeesForCompany = (companyId: string) => getByQuery<Emplo
 export const createEmployeeInDb = (companyId: string, data: Omit<Employee, 'id' | 'companyId'>) => create<Employee>(EMPLOYEES_COLLECTION, { ...data, companyId });
 export const updateEmployeeInDb = (companyId: string, id: string, updates: Partial<Employee>) => update<Employee>(EMPLOYEES_COLLECTION, id, companyId, updates);
 export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyId: string } | null> => {
+    firestoreGuard();
     const links = await getByQuery<{ companyId: string }>(EMPLOYEES_COLLECTION, 'userId', userId);
     return links[0] || null; // Return the first company link found
 };
@@ -382,6 +384,7 @@ export const linkTelegramGroup = async (code: string, companyId: string): Promis
 export const getAllTelegramGroups = (companyId: string) => getByQuery<TelegramGroup>(GROUPS_COLLECTION, 'companyId', companyId);
 export const getTelegramGroupById = (companyId: string, id: string) => getDocAndValidateCompany<TelegramGroup>(GROUPS_COLLECTION, id, companyId);
 export const findTelegramGroupByTgId = async (tgGroupId: string) => {
+    firestoreGuard();
     const groups = await getByQuery<TelegramGroup & {id: string}>(GROUPS_COLLECTION, 'tgGroupId', tgGroupId);
     return groups[0] || null;
 }
@@ -426,5 +429,3 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
-
-    
