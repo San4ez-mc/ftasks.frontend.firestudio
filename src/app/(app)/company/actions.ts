@@ -15,7 +15,10 @@ import { getUserSession } from '@/lib/session';
 
 export async function getEmployees(): Promise<Employee[]> {
     const session = await getUserSession();
-    if (!session) throw new Error("Not authenticated");
+    if (!session) {
+        console.warn("getEmployees called without a valid session.");
+        return [];
+    }
     return getAllEmployeesForCompany(session.companyId);
 }
 
