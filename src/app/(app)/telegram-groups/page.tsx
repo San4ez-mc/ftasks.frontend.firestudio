@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect, useTransition, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -66,7 +66,7 @@ const telegramTourSteps: TourStep[] = [
     },
 ];
 
-export default function TelegramGroupsPage() {
+function TelegramGroupsPageContent() {
   const [groups, setGroups] = useState<TelegramGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<TelegramGroup | null>(null);
   const [isAddGroupOpen, setIsAddGroupOpen] = useState(false);
@@ -91,7 +91,7 @@ export default function TelegramGroupsPage() {
   }, []);
 
   useEffect(() => {
-     if (searchParams && searchParams.get('action') === 'add-group') {
+     if (searchParams?.get('action') === 'add-group') {
       setIsAddGroupOpen(true);
     }
   }, [searchParams]);
@@ -535,5 +535,13 @@ function MessageLogCard({ group }: { group: TelegramGroup }) {
                 </div>
             </CardContent>
         </Card>
+    )
+}
+
+export default function TelegramGroupsPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <TelegramGroupsPageContent />
+        </Suspense>
     )
 }
