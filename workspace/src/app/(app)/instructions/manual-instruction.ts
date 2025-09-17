@@ -1,4 +1,3 @@
-
 import type { Instruction } from '@/types/instruction';
 
 export const manualInstruction: Instruction = {
