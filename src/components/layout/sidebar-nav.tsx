@@ -22,13 +22,10 @@ import {
   Send,
   BookText,
   ClipboardCheck,
-  Bell,
-  CreditCard,
   Sparkles,
 } from 'lucide-react';
 import { useEffect, useState, useTransition } from 'react';
 import { getSubscriptionStatus, type SubscriptionStatus } from '@/app/(app)/settings/billing/actions';
-import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -42,7 +39,6 @@ const menuItems = [
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
   { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
-  { href: '/notifications', label: 'Сповіщення', icon: Bell },
 ];
 
 function SubscriptionIndicator() {

@@ -2,9 +2,12 @@
 'use server';
 
 import { sendTelegramMessage } from '@/lib/telegram-service';
+import { getUserSession } from '@/lib/session';
+import { getUserById } from '@/lib/firestore-service';
+import { ADMIN_USER_IDS } from '@/lib/admin';
 
 // The user's ID provided in the prompt for error reporting
-const ADMIN_TELEGRAM_ID = '345126254';
+const ADMIN_TELEGRAM_ID = ADMIN_USER_IDS[0] || '345126254';
 
 /**
  * A shared server action to report client-side errors to a specific Telegram user.
@@ -46,6 +49,54 @@ ${escapeMarkdown(errorInfo.stack || 'No stack trace available.')}
         return { success: true };
     } catch (reportError) {
         console.error("Failed to report client-side error:", reportError);
+        return { success: false };
+    }
+}
+
+
+/**
+ * Sends a support message from a user to the admin's Telegram.
+ */
+export async function sendSupportMessage(message: string): Promise<{ success: boolean }> {
+    try {
+        const session = await getUserSession();
+        if (!session) {
+            throw new Error("User not authenticated.");
+        }
+
+        const user = await getUserById(session.userId);
+
+        const timestamp = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
+        
+        const escapeMarkdown = (text: string) => text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+
+        const header = `💬 *New Support Message* 💬`;
+        const userInfo = user
+            ? `*From:* ${escapeMarkdown(user.firstName)} ${escapeMarkdown(user.lastName || '')} (ID: \`${user.id}\`)\n*Company ID:* \`${session.companyId}\``
+            : `*From:* Unidentified User (ID: \`${session.userId}\`)\n*Company ID:* \`${session.companyId}\``;
+
+        const formattedMessage = `
+${header}
+
+${userInfo}
+*Time:* ${escapeMarkdown(timestamp)}
+
+*Message:*
+${escapeMarkdown(message)}
+        `;
+
+        await sendTelegramMessage(parseInt(ADMIN_TELEGRAM_ID, 10), {
+            text: formattedMessage,
+        });
+
+        return { success: true };
+
+    } catch (error) {
+        console.error("Failed to send support message:", error);
+        // Optionally, you could try to send a simplified error report
+        await sendTelegramMessage(parseInt(ADMIN_TELEGRAM_ID, 10), {
+            text: `🔴 Failed to process a support message. Check server logs.`
+        });
         return { success: false };
     }
 }

@@ -343,7 +343,7 @@ export default function TasksPage() {
         panelOpen ? "md:w-1/2" : "md:w-3/4"
       )}>
         {/* Main Content */}
-        <div className="flex flex-col p-4 md:p-6 w-full">
+        <div className="flex flex-col p-2 md:p-4 w-full">
           <TasksHeader 
             id="tasks-header"
             currentDate={currentDate}
@@ -351,7 +351,7 @@ export default function TasksPage() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
           />
-          <div className="flex-1 flex flex-col gap-2 overflow-y-auto pt-4">
+          <div className="flex-1 flex flex-col gap-1 overflow-y-auto pt-2">
             <div className="px-1">
                 <WorkloadAlert />
             </div>

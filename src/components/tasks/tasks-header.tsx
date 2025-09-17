@@ -29,15 +29,15 @@ export default function TasksHeader({ currentDate, onDateChange, activeTab, onTa
     }
 
     return (
-        <div id={id} className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2">
+        <div id={id} className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" onClick={() => changeDate(-1)}>
                     <ChevronLeft />
                 </Button>
                 <Popover>
                     <PopoverTrigger asChild>
-                         <Button variant="ghost" className="text-lg md:text-xl font-semibold text-center whitespace-nowrap">
-                            <CalendarIcon className="mr-2 h-5 w-5" />
+                         <Button variant="ghost" className="text-md md:text-lg font-semibold text-center whitespace-nowrap">
+                            <CalendarIcon className="mr-2 h-4 w-4" />
                              <span className="hidden sm:inline">Мої задачі на</span> {formatDate(currentDate)}
                         </Button>
                     </PopoverTrigger>
