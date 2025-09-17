@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, PlusCircle, Loader2, Trash2 } from 'lucide-react';
+import { Link as LinkIcon, PlusCircle, Loader2, Trash2, Send, RefreshCw, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,10 +20,17 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
 import { useToast } from '@/hooks/use-toast';
-import { getGroups, linkGroup } from './actions';
-import type { TelegramGroup } from '@/types/telegram-group';
+import { getGroups, linkGroup, getGroupMembers, refreshGroupMembers, sendMessageToGroup, getLogsForGroup, linkTelegramMemberToEmployee } from './actions';
+import { getEmployees } from '../company/actions';
+import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
+import type { TelegramMember } from '@/types/telegram-member';
+import type { Employee } from '@/types/company';
 import { cn } from '@/lib/utils';
-import TelegramGroupDetails from './_components/TelegramGroupDetails';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatDateTime } from '@/lib/utils';
 
 
 // --- TOUR STEPS ---
@@ -56,19 +64,18 @@ export default function TelegramGroupsPage() {
   const [linkCode, setLinkCode] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-
+  
   useEffect(() => {
-    // This effect runs once on component mount to check for the URL action.
-    // It reads directly from window.location, avoiding useSearchParams to prevent rendering issues.
+    // This effect runs only once on the client after mounting.
+    // It safely reads the URL without causing server/client mismatches.
     const params = new URLSearchParams(window.location.search);
     if (params.get('action') === 'add-group') {
-      setIsAddGroupOpen(true);
+        setIsAddGroupOpen(true);
     }
     
     fetchGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   const fetchGroups = () => {
     startTransition(async () => {
@@ -216,4 +223,176 @@ export default function TelegramGroupsPage() {
       </div>
     </div>
   );
+}
+
+// --- Details Panel ---
+
+function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClose: () => void }) {
+    const [message, setMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const [logs, setLogs] = useState<MessageLog[]>([]);
+    const [isPending, startTransition] = useTransition();
+    const [members, setMembers] = useState<TelegramMember[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        startTransition(async () => {
+            const [fetchedLogs, fetchedMembers, fetchedEmployees] = await Promise.all([
+                getLogsForGroup(group.id),
+                getGroupMembers(group.id),
+                getEmployees()
+            ]);
+            setLogs(fetchedLogs);
+            setMembers(fetchedMembers);
+            setEmployees(fetchedEmployees);
+        });
+    }, [group.id]);
+
+    const handleSendMessage = async () => {
+        if (!message) return;
+        setIsSending(true);
+        try {
+            const newLog = await sendMessageToGroup(group.id, message);
+            setLogs(prev => [newLog, ...prev]);
+            setMessage('');
+        } catch (error) {
+            toast({ title: "Помилка відправки", description: error instanceof Error ? error.message : "Невідома помилка.", variant: "destructive"});
+        } finally {
+            setIsSending(false);
+        }
+    };
+    
+    const handleRefreshMembers = () => {
+        startTransition(async () => {
+            try {
+                const refreshedMembers = await refreshGroupMembers(group.id, group.tgGroupId);
+                setMembers(refreshedMembers);
+                toast({ title: "Успіх", description: "Склад групи оновлено." });
+            } catch (error) {
+                toast({ title: "Помилка", description: error instanceof Error ? error.message : "Не вдалося оновити склад.", variant: "destructive" });
+            }
+        });
+    }
+    
+    const handleLinkMember = (memberId: string, employeeId: string | null) => {
+        startTransition(async () => {
+            try {
+                const updatedMember = await linkTelegramMemberToEmployee(memberId, employeeId);
+                if(updatedMember) {
+                    setMembers(prev => prev.map(m => m.id === memberId ? updatedMember : m));
+                }
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося прив'язати співробітника.", variant: "destructive" });
+            }
+        });
+    }
+
+    return (
+        <div className="flex flex-col h-full">
+            <header className="p-4 border-b flex items-center justify-between">
+                <div>
+                    <h2 className="text-lg font-semibold font-headline">{group.title}</h2>
+                    <p className="text-xs text-muted-foreground">ID групи: {group.tgGroupId}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onClose}><X className="h-4 w-4" /></Button>
+            </header>
+            <main className="flex-1 p-4 space-y-4 overflow-y-auto">
+                <Card id="member-management-card">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base">Керування учасниками</CardTitle>
+                                <CardContent className="text-xs text-muted-foreground p-0 pt-1">Прив'яжіть Telegram-акаунти до профілів співробітників.</CardContent>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={handleRefreshMembers} disabled={isPending}>
+                                <RefreshCw className={cn("mr-2 h-4 w-4", isPending && "animate-spin")} />
+                                Оновити склад
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {isPending && !members.length ? <p className="text-xs text-muted-foreground">Завантаження...</p> :
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Telegram-акаунт</TableHead>
+                                    <TableHead>Співробітник в системі</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {members.map(member => {
+                                    const linkedEmployee = employees.find(e => e.id === member.employeeId);
+                                    return (
+                                        <TableRow key={member.id}>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar className="h-8 w-8">
+                                                        <AvatarImage src={`https://i.pravatar.cc/40?u=${member.tgUserId}`} />
+                                                        <AvatarFallback>{member.tgFirstName.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <p className="text-xs font-medium">{member.tgFirstName} {member.tgLastName}</p>
+                                                        <p className="text-xs text-muted-foreground">@{member.tgUsername}</p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Select
+                                                    value={member.employeeId || 'none'}
+                                                    onValueChange={(value) => handleLinkMember(member.id, value === 'none' ? null : value)}
+                                                >
+                                                    <SelectTrigger className="text-xs">
+                                                        <SelectValue placeholder="Не прив'язано" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Не прив'язано</SelectItem>
+                                                        {employees.map(emp => (
+                                                            <SelectItem key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                        }
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                         <CardTitle className="text-base">Відправити повідомлення</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         <div className="relative">
+                            <Textarea placeholder="Введіть ваше повідомлення..." value={message} onChange={e => setMessage(e.target.value)} disabled={isSending}/>
+                            <Button size="icon" className="absolute right-2 bottom-2 h-8 w-8" onClick={handleSendMessage} disabled={isSending}>
+                                {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4"/>}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                         <CardTitle className="text-base">Журнал повідомлень</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {isPending && !logs.length ? <p className="text-xs text-muted-foreground">Завантаження...</p> :
+                         logs.map(log => (
+                            <div key={log.id} className="text-xs p-2 border rounded-md">
+                                <div className="flex justify-between items-center">
+                                    <Badge variant={log.status === 'OK' ? 'secondary' : 'destructive'}>{log.status}</Badge>
+                                    <span className="text-muted-foreground">{formatDateTime(log.timestamp)}</span>
+                                </div>
+                                <p className="mt-2 whitespace-pre-wrap">{log.content}</p>
+                                {log.error && <p className="mt-1 text-destructive">{log.error}</p>}
+                            </div>
+                         ))}
+                    </CardContent>
+                </Card>
+            </main>
+        </div>
+    );
 }

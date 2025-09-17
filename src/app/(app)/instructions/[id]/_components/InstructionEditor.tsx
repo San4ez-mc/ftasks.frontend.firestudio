@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Users, Settings, Trash2, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Users, Settings, Trash2, X, Loader2, Lock } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import type { Instruction, InstructionAccess } from '@/types/instruction';
 import { updateInstruction } from '../../actions';
@@ -21,9 +21,10 @@ import type { Employee } from '@/types/company';
 type InstructionEditorProps = {
   instruction: Instruction;
   allEmployees: Employee[];
+  isLocked?: boolean;
 };
 
-export default function InstructionEditor({ instruction: initialInstruction, allEmployees }: InstructionEditorProps) {
+export default function InstructionEditor({ instruction: initialInstruction, allEmployees, isLocked = false }: InstructionEditorProps) {
   const router = useRouter();
   const [instruction, setInstruction] = useState<Instruction>(initialInstruction);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,6 +41,7 @@ export default function InstructionEditor({ instruction: initialInstruction, all
   }
 
   const handleSave = async () => {
+      if (isLocked) return;
       setIsSaving(true);
       try {
         await updateInstruction(instruction.id, instruction);
@@ -69,67 +71,73 @@ export default function InstructionEditor({ instruction: initialInstruction, all
             <Input
               value={instruction.title}
               onChange={(e) => handleFieldChange('title', e.target.value)}
+              readOnly={isLocked}
               className="text-lg font-bold tracking-tight font-headline border-none shadow-none p-0 h-auto focus-visible:ring-0"
             />
+            {isLocked && <Lock className="h-4 w-4 text-muted-foreground" />}
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-              <Save className="mr-2 h-4 w-4" /> Зберегти
-            </Button>
+            {!isLocked && (
+                <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    <Save className="mr-2 h-4 w-4" /> Зберегти
+                </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => router.push('/instructions')}><X className="h-4 w-4" /></Button>
           </div>
         </header>
         <div className="flex-1 p-4 md:p-8">
-            {/* This is a placeholder for a rich text editor like Tiptap or TinyMCE */}
             <Textarea 
                 className="w-full h-full min-h-[60vh] text-base"
                 value={instruction.content}
                 onChange={(e) => handleFieldChange('content', e.target.value)}
+                readOnly={isLocked}
                 placeholder="Почніть писати інструкцію тут..."
             />
         </div>
       </div>
       
       {/* Right Panel: Settings */}
-      <aside className="w-full md:w-80 bg-card border-l p-6 space-y-6">
-        <Card>
-            <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                    <Settings className="h-5 w-5"/>
-                    Налаштування
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 <div>
-                    <label htmlFor="department" className="text-sm font-medium">Відділ</label>
-                    <Input id="department" value={instruction.department} onChange={(e) => handleFieldChange('department', e.target.value)} />
-                 </div>
-                 <Button variant="destructive" className="w-full">
-                    <Trash2 className="mr-2 h-4 w-4"/> Видалити інструкцію
-                 </Button>
-            </CardContent>
-        </Card>
-        
-        <Card>
-            <CardHeader>
-                 <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="h-5 w-5"/>
-                    Доступи
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <AccessListCombobox 
-                    allUsers={allUsers}
-                    selectedUsers={instruction.accessList.map(item => {
-                        const user = allUsers.find(u => u.id === item.userId);
-                        return user || { id: item.userId, name: 'Unknown User', avatar: ''};
-                    })}
-                    onSelectionChange={handleAccessChange}
-                />
-            </CardContent>
-        </Card>
-      </aside>
+      {!isLocked && (
+        <aside className="w-full md:w-80 bg-card border-l p-6 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <Settings className="h-5 w-5"/>
+                        Налаштування
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <label htmlFor="department" className="text-sm font-medium">Відділ</label>
+                        <Input id="department" value={instruction.department} onChange={(e) => handleFieldChange('department', e.target.value)} />
+                    </div>
+                    <Button variant="destructive" className="w-full">
+                        <Trash2 className="mr-2 h-4 w-4"/> Видалити інструкцію
+                    </Button>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <Users className="h-5 w-5"/>
+                        Доступи
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <AccessListCombobox 
+                        allUsers={allUsers}
+                        selectedUsers={instruction.accessList.map(item => {
+                            const user = allUsers.find(u => u.id === item.userId);
+                            return user || { id: item.userId, name: 'Unknown User', avatar: ''};
+                        })}
+                        onSelectionChange={handleAccessChange}
+                    />
+                </CardContent>
+            </Card>
+        </aside>
+      )}
     </div>
   );
 }

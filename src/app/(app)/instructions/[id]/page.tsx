@@ -4,6 +4,7 @@ import InstructionEditor from './_components/InstructionEditor';
 import { notFound, redirect } from 'next/navigation';
 import { getUserSession } from '@/lib/session';
 import { getEmployees } from '@/app/(app)/company/actions';
+import { manualInstruction } from '../page';
 
 type InstructionsPageProps = {
   params: { id: string };
@@ -17,7 +18,8 @@ export default async function Page({ params }: InstructionsPageProps) {
     redirect('/login');
   }
 
-  const instruction = await getInstructionById(session.companyId, id);
+  const isManual = id === manualInstruction.id;
+  const instruction = isManual ? manualInstruction : await getInstructionById(session.companyId, id);
   const allEmployees = await getEmployees();
 
   if (!instruction) {
@@ -28,6 +30,7 @@ export default async function Page({ params }: InstructionsPageProps) {
     <InstructionEditor
       instruction={instruction}
       allEmployees={allEmployees}
+      isLocked={isManual}
     />
   );
 }
@@ -39,7 +42,8 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   if (!session) {
     return { title: 'Інструкція' };
   }
-
-  const instruction = await getInstructionById(session.companyId, id);
+  
+  const isManual = id === manualInstruction.id;
+  const instruction = isManual ? manualInstruction : await getInstructionById(session.companyId, id);
   return { title: instruction ? instruction.title : 'Інструкція' };
 }
