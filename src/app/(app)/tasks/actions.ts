@@ -6,7 +6,8 @@ import {
     getAllTasksForCompany, 
     createTaskInDb, 
     updateTaskInDb, 
-    deleteTaskFromDb 
+    deleteTaskFromDb,
+    getTaskById
 } from '@/lib/firestore-service';
 import { getUserSession } from '@/lib/session';
 
@@ -62,7 +63,33 @@ export async function createTask(taskData: Omit<Task, 'id' | 'companyId'>): Prom
 export async function updateTask(taskId: string, updates: Partial<Task>): Promise<Task | null> {
     const session = await getUserSession();
     if (!session) throw new Error("Not authenticated");
-    return updateTaskInDb(session.companyId, taskId, updates);
+
+    const originalTask = await getTaskById(session.companyId, taskId);
+    if (!originalTask) {
+        console.error(`Task with ID ${taskId} not found for company ${session.companyId}.`);
+        return null;
+    }
+
+    const updatedTask = await updateTaskInDb(session.companyId, taskId, updates);
+
+    // Workflow: If task is marked as done by someone other than the reporter, create a verification task for the reporter.
+    if (updatedTask && updates.status === 'done' && originalTask.assignee.id !== originalTask.reporter.id) {
+        const verificationTask: Omit<Task, 'id' | 'companyId'> = {
+            title: `Перевірити задачу "${originalTask.title}"`,
+            description: updates.actualResult || originalTask.actualResult || 'Задача виконана, перевірте результат.',
+            dueDate: new Date().toISOString().split('T')[0], // Today
+            status: 'todo',
+            type: 'important-urgent',
+            expectedTime: 15,
+            assignee: originalTask.reporter,
+            reporter: originalTask.reporter, // Or a system user
+            resultId: originalTask.resultId,
+            resultName: originalTask.resultName,
+        };
+        await createTask(verificationTask);
+    }
+    
+    return updatedTask;
 }
 
 /**

@@ -223,12 +223,14 @@ export async function removeEmployeeLink(userId: string, companyId: string): Pro
 
 // --- Tasks ---
 export const getAllTasksForCompany = (companyId: string) => getByQuery<Task>(TASKS_COLLECTION, 'companyId', companyId);
+export const getTaskById = (companyId: string, id: string) => getDocAndValidateCompany<Task>(TASKS_COLLECTION, id, companyId);
 export const createTaskInDb = (companyId: string, data: Omit<Task, 'id' | 'companyId'>) => create<Task>(TASKS_COLLECTION, { ...data, companyId });
 export const updateTaskInDb = (companyId: string, id: string, updates: Partial<Task>) => update<Task>(TASKS_COLLECTION, id, companyId, updates);
 export const deleteTaskFromDb = (companyId: string, id: string) => remove(TASKS_COLLECTION, id, companyId);
 
 // --- Results ---
 export const getAllResultsForCompany = (companyId: string) => getByQuery<Result>(RESULTS_COLLECTION, 'companyId', companyId);
+export const getResultById = (companyId: string, id: string) => getDocAndValidateCompany<Result>(RESULTS_COLLECTION, id, companyId);
 export const createResultInDb = (companyId: string, data: Omit<Result, 'id' | 'companyId'>) => create<Result>(RESULTS_COLLECTION, { ...data, companyId });
 export const updateResultInDb = (companyId: string, id: string, updates: Partial<Result>) => update<Result>(RESULTS_COLLECTION, id, companyId, updates);
 export const deleteResultFromDb = (companyId: string, id: string) => remove(RESULTS_COLLECTION, id, companyId);
@@ -419,3 +421,5 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
+
+    
