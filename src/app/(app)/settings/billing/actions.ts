@@ -4,13 +4,21 @@
 import { getUserSession } from '@/lib/session';
 import { getCompanyProfileFromDb, updateCompanyProfileInDb } from '@/lib/firestore-service';
 import type { CompanyProfile } from '@/types/company-profile';
-import { differenceInDays } from 'date-fns';
 
 export type SubscriptionStatus = {
     tier: 'free' | 'paid' | 'trial';
     daysRemaining: number | null;
     planName: string;
 };
+
+// Manual implementation to avoid date-fns dependency issues on the server.
+function differenceInDays(dateLeft: Date, dateRight: Date): number {
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    // Discard the time and time-zone information.
+    const utc1 = Date.UTC(dateLeft.getFullYear(), dateLeft.getMonth(), dateLeft.getDate());
+    const utc2 = Date.UTC(dateRight.getFullYear(), dateRight.getMonth(), dateRight.getDate());
+    return Math.floor((utc1 - utc2) / MS_PER_DAY);
+}
 
 export async function getSubscriptionStatus(): Promise<SubscriptionStatus | null> {
     const session = await getUserSession();

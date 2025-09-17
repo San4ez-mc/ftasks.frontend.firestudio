@@ -16,7 +16,6 @@ import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 import type { User } from '@/types/user';
 import type { Department, Division } from '@/types/org-structure';
-import { add } from 'date-fns';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -42,6 +41,13 @@ const firestoreGuard = () => {
         throw new Error('Firestore is not initialized. Check server logs for Firebase Admin SDK initialization errors.');
     }
 };
+
+// Manual implementation to avoid date-fns dependency issues on the server.
+function addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
 
 // --- Generic Firestore Functions ---
 
@@ -180,7 +186,7 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
     });
 
     // Create a company profile with a 30-day trial
-    const trialEndDate = add(new Date(), { days: 30 });
+    const trialEndDate = addDays(new Date(), 30);
     const companyProfileRef = firestore.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
     batch.set(companyProfileRef, {
         name: companyName,
