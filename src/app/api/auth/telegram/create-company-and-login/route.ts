@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     const permanentToken = createPermanentToken(userId, newCompanyId, rememberMe || false);
     
-    const response = NextResponse.json({ token: permanentToken, rememberMe: rememberMe || false });
+    const response = NextResponse.json({ success: true });
     
     // Set the cookie in the response
     const maxAge = (rememberMe || false) ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;

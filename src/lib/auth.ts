@@ -15,11 +15,21 @@ type AuthResult = {
 
 export async function verifyToken(request: NextRequest, isPermanent = false): Promise<AuthResult> {
   const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return { error: 'Authorization header missing or malformed', status: 401 };
+  let token: string | undefined;
+
+  // Prefer the Authorization header (used for short-lived temp tokens)
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (isPermanent) {
+    // Fall back to the httpOnly cookie for permanent sessions
+    token = request.cookies.get('auth_token')?.value;
   }
 
-  const token = authHeader.split(' ')[1];
+
+  if (!token) {
+    return { error: 'Authentication token not found', status: 401 };
+  }
+  
   const secret = isPermanent ? PERMANENT_JWT_SECRET : JWT_SECRET;
 
   if (!secret) {
