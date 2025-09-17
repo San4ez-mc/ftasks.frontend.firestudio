@@ -3,7 +3,7 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bell, LogOut, Settings, LifeBuoy, Shield, MessageSquareQuestion } from 'lucide-react';
+import { Bell, LogOut, Settings, LifeBuoy, Shield, MessageSquareQuoteIcon } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
@@ -124,7 +124,7 @@ export default function Header() {
             <span className="sr-only">Почати навчання</span>
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setIsSupportChatOpen(true)}>
-            <MessageSquareQuestion className="h-5 w-5" />
+            <MessageSquareQuoteIcon className="h-5 w-5" />
             <span className="sr-only">Тех. підтримка</span>
           </Button>
           <Button variant="ghost" size="icon" asChild>
