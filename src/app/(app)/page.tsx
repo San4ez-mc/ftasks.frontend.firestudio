@@ -254,14 +254,14 @@ export default function TasksPage() {
      if (currentUser && activeTab) {
         switch(activeTab) {
             case 'delegated':
-                filtered = tasks.filter(t => t.reporter.id === currentUser.id && t.assignee.id !== currentUser.id);
+                filtered = tasks.filter(t => t.reporter?.id === currentUser.id && t.assignee?.id !== currentUser.id);
                 break;
             case 'subordinates':
-                filtered = tasks.filter(t => t.reporter.id !== currentUser.id && t.assignee.id !== currentUser.id);
+                filtered = tasks.filter(t => t.reporter?.id !== currentUser.id && t.assignee?.id !== currentUser.id);
                 break;
             case 'mine':
             default:
-                filtered = tasks.filter(t => t.assignee.id === currentUser.id);
+                filtered = tasks.filter(t => t.assignee?.id === currentUser.id);
                 break;
         }
     }

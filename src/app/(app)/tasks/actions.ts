@@ -33,13 +33,13 @@ export async function getTasksForDate(
 
     switch(filter) {
         case 'delegated':
-            return dateFilteredTasks.filter(t => t.reporter.id === userId && t.assignee.id !== userId);
+            return dateFilteredTasks.filter(t => t.reporter?.id === userId && t.assignee?.id !== userId);
         case 'subordinates':
             // In a real app, you'd have a hierarchy. For mock data, we'll treat it like 'delegated'.
-            return dateFilteredTasks.filter(t => t.reporter.id !== userId && t.assignee.id !== userId);
+            return dateFilteredTasks.filter(t => t.reporter?.id !== userId && t.assignee?.id !== userId);
         case 'mine':
         default:
-            return dateFilteredTasks.filter(t => t.assignee.id === userId);
+            return dateFilteredTasks.filter(t => t.assignee?.id === userId);
     }
 }
 
