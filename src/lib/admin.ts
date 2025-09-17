@@ -2,9 +2,9 @@
 'use server';
 // This file contains constants and helpers for admin functionality.
 
-// IMPORTANT: Replace this with the actual Firestore document ID of the admin user.
-// This is NOT the Telegram ID. You can find this in your Firestore 'users' collection.
-export const ADMIN_USER_IDS = ['345126254']; 
+// IMPORTANT: Replace this placeholder with the actual Firestore document ID of your admin user account.
+// This is NOT your Telegram ID. You can find this in your Firebase console in the 'users' collection.
+export const ADMIN_USER_IDS = ['REPLACE_WITH_YOUR_FIRESTORE_USER_ID']; 
 
 /**
  * Checks if a given user ID belongs to an administrator.

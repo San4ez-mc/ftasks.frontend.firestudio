@@ -10,11 +10,11 @@ try {
       credential: admin.credential.applicationDefault(),
     });
   }
-  // Підключаємось до конкретної бази даних 'tasktrakerdb'
-  firestore = getFirestore(admin.app(), 'tasktrakerdb');
+  // Use the default database instance
+  firestore = getFirestore();
 } catch (error) {
   console.error('CRITICAL: Firebase admin initialization failed. This will cause Firestore operations to fail.', error);
-  // firestore залишається невизначеним, і сервісні функції перевірятимуть це.
+  // firestore will be undefined, and service functions will guard against this.
 }
 
 export { firestore };
