@@ -1,5 +1,3 @@
-
-'use server';
 // This file contains constants and helpers for admin functionality.
 
 // IMPORTANT: Replace this placeholder with the actual Firestore document ID of your admin user account.
