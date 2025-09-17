@@ -11,8 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Scroll Animations
-    const animatedElements = document.querySelectorAll('.feature-card, .step');
+    // Scroll Animations for all cards
+    const animatedElements = document.querySelectorAll('.feature-card, .step, .problem-card, .audience-card');
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -29,5 +29,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 });
-
-    
