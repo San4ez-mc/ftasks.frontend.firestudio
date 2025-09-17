@@ -34,6 +34,11 @@ export default function LoginPage() {
               Увійти через Telegram
             </Link>
           </Button>
+
+          <p className="text-center text-xs text-muted-foreground pt-2">
+            Ваш Telegram-акаунт буде використано як основний спосіб доступу до системи. Бот надішле вам посилання для безпечного входу.
+          </p>
+
           <div className="flex items-center space-x-2">
             <Label
               htmlFor="remember-me"
