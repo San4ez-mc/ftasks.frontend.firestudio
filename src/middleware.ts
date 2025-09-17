@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAdmin } from '@/lib/admin';
 import { validatePermanentToken } from '@/lib/auth';
+import { getUserById } from '@/lib/firestore-service';
 
 export async function middleware(request: NextRequest) {
   const tokenCookie = request.cookies.get('auth_token');
@@ -13,6 +14,16 @@ export async function middleware(request: NextRequest) {
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
   
   const session = token ? validatePermanentToken(token) : null;
+  let isSessionValid = false;
+
+  if (session) {
+    // Session is structurally valid, now check if the user exists in the DB.
+    // This prevents a "ghost session" where the token is valid but the user has been deleted.
+    const user = await getUserById(session.userId);
+    if (user) {
+      isSessionValid = true;
+    }
+  }
 
   // Allow public API routes to be accessed without a token.
   if (isApiAuthRoute) {
@@ -21,7 +32,7 @@ export async function middleware(request: NextRequest) {
 
   // Handle protected admin routes
   if (pathname.startsWith('/admin')) {
-      if (!session || !isAdmin(session.userId)) {
+      if (!isSessionValid || !isAdmin(session!.userId)) {
           // If not an admin, redirect to the main app page.
           return NextResponse.redirect(new URL('/', request.url));
       }
@@ -29,13 +40,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
   }
   
-  // If user has no valid session and is trying to access a protected page, redirect to login
-  if (!session && !isAuthPage) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // If session is invalid and is trying to access a protected page, redirect to login
+  if (!isSessionValid && !isAuthPage) {
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    // Clear the invalid cookie so the user doesn't get stuck in a redirect loop.
+    response.cookies.delete('auth_token');
+    return response;
   }
 
   // If user has a valid session and tries to access an auth page, redirect them to the home page
-  if (session && isAuthPage) {
+  if (isSessionValid && isAuthPage) {
     // Exception: allow access to payment pages even if logged in
     if(pathname.startsWith('/payment')) {
         return NextResponse.next();

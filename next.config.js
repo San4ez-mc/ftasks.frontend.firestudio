@@ -17,6 +17,14 @@ const nextConfig = {
       },
     ],
   },
+  webpack(config) {
+    config.experiments = { ...config.experiments, asyncWebAssembly: true };
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      process: false,
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig;
