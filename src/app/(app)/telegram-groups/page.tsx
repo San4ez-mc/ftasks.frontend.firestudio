@@ -65,19 +65,7 @@ export default function TelegramGroupsPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   
-  useEffect(() => {
-    // This effect runs only once on the client after mounting.
-    // It safely reads the URL without causing server/client mismatches.
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('action') === 'add-group') {
-        setIsAddGroupOpen(true);
-    }
-    
-    fetchGroups();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const fetchGroups = () => {
+  const fetchGroups = React.useCallback(() => {
     startTransition(async () => {
         const fetchedGroups = await getGroups();
         setGroups(fetchedGroups);
@@ -85,7 +73,16 @@ export default function TelegramGroupsPage() {
             setSelectedGroup(fetchedGroups[0]);
         }
     });
-  }
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    // This effect runs only once on the client after mounting.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('action') === 'add-group') {
+        setIsAddGroupOpen(true);
+    }
+    fetchGroups();
+  }, [fetchGroups]);
 
   const handleLinkGroup = () => {
     if (!linkCode) return;
