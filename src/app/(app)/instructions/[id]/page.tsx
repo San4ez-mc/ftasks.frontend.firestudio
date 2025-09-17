@@ -4,7 +4,7 @@ import InstructionEditor from './_components/InstructionEditor';
 import { notFound, redirect } from 'next/navigation';
 import { getUserSession } from '@/lib/session';
 import { getEmployees } from '@/app/(app)/company/actions';
-import { manualInstruction } from '../page';
+import { manualInstruction } from '../manual-instruction';
 
 type InstructionsPageProps = {
   params: { id: string };
