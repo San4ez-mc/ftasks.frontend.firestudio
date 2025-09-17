@@ -30,6 +30,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { getSubscriptionStatus, type SubscriptionStatus } from '@/app/(app)/settings/billing/actions';
 import { Badge } from '../ui/badge';
 import { Card, CardContent } from '../ui/card';
+import { Button } from '@/components/ui/button';
 
 const menuItems = [
   { href: '/results', label: 'Результати', icon: Trophy },
