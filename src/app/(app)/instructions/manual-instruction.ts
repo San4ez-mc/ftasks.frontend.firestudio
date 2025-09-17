@@ -4,6 +4,7 @@ export const manualInstruction: Instruction = {
     id: 'instr-manual-system',
     companyId: 'system',
     title: 'Як користуватися FINEKO',
+    department: 'Загальні',
     summary: 'Основний посібник користувача з оглядом всього функціоналу системи.',
     content: `
 # Ласкаво просимо до FINEKO!

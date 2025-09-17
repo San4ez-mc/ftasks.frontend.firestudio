@@ -3,17 +3,21 @@
 
 import { sendTelegramMessage } from '@/lib/telegram-service';
 import { getUserSession } from '@/lib/session';
-import { getUserById } from '@/lib/firestore-service';
-import { ADMIN_USER_IDS } from '@/lib/admin';
+import { getUserById, getCompanyProfileFromDb } from '@/lib/firestore-service';
 
-// The user's ID provided in the prompt for error reporting
-const ADMIN_TELEGRAM_ID = '345126254';
+// The user's ID for error reporting is now an environment variable
+const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID;
 
 /**
  * A shared server action to report client-side errors to a specific Telegram user.
  * It formats the error details into a readable Markdown message.
  */
 export async function reportClientError(errorInfo: { message: string; stack?: string; page?: string; digest?: string }) {
+    if (!ADMIN_TELEGRAM_ID) {
+        console.error("ADMIN_TELEGRAM_ID is not set in environment variables. Cannot report client error.");
+        return { success: false };
+    }
+
     try {
         const timestamp = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
         
@@ -75,27 +79,40 @@ ${escapeMarkdown(errorInfo.stack || 'No stack trace available.')}
  * Sends a support message from a user to the admin's Telegram.
  */
 export async function sendSupportMessage(message: string): Promise<{ success: boolean }> {
+    if (!ADMIN_TELEGRAM_ID) {
+        console.error("ADMIN_TELEGRAM_ID is not set in environment variables. Cannot send support message.");
+        return { success: false };
+    }
+    
     try {
         const session = await getUserSession();
         if (!session) {
             throw new Error("User not authenticated.");
         }
 
-        const user = await getUserById(session.userId);
+        const [user, company] = await Promise.all([
+            getUserById(session.userId),
+            getCompanyProfileFromDb(session.companyId)
+        ]);
 
         const timestamp = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
         
-        const escapeMarkdown = (text: string) => text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+        const escapeMarkdown = (text: string | undefined | null) => text ? text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&') : '';
 
         const header = `💬 *New Support Message* 💬`;
+        
+        const companyName = company ? escapeMarkdown(company.name) : 'Unknown Company';
+        const companyInfo = `*Company:* ${companyName} (\`${session.companyId}\`)`;
+
         const userInfo = user
-            ? `*From:* ${escapeMarkdown(user.firstName)} ${escapeMarkdown(user.lastName || '')} (ID: \`${user.id}\`)\n*Company ID:* \`${session.companyId}\``
-            : `*From:* Unidentified User (ID: \`${session.userId}\`)\n*Company ID:* \`${session.companyId}\``;
+            ? `*From:* ${escapeMarkdown(user.firstName)} ${escapeMarkdown(user.lastName)}\n*Telegram:* @${escapeMarkdown(user.telegramUsername || 'N/A')}\n*User ID:* \`${user.id}\``
+            : `*From:* Unidentified User (\`${session.userId}\`)`;
 
         const formattedMessage = `
 ${header}
 
 ${userInfo}
+${companyInfo}
 *Time:* ${escapeMarkdown(timestamp)}
 
 *Message:*
@@ -119,6 +136,11 @@ ${escapeMarkdown(message)}
 }
     
 export async function sendDebugMessage(message: string) {
+    if (!ADMIN_TELEGRAM_ID) {
+        console.error("ADMIN_TELEGRAM_ID is not set in environment variables. Cannot send debug message.");
+        return { success: false };
+    }
+
     try {
         const timestamp = new Date().toLocaleTimeString('uk-UA', { timeZone: 'Europe/Kyiv' });
         // Using a simple format for debug messages, no markdown needed
