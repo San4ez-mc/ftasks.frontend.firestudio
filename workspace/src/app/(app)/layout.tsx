@@ -6,7 +6,7 @@ import AppShell from '@/components/layout/app-shell';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await getUserSession();
-  const userIsAdmin = session ? await isAdmin(session.userId) : false;
+  const userIsAdmin = session ? await isAdmin(session.userId, session.companyId) : false;
 
   return <AppShell userIsAdmin={userIsAdmin}>{children}</AppShell>;
 }
