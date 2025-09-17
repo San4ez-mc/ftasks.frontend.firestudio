@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { LifeBuoy, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -25,14 +25,26 @@ export default function InteractiveTour({ pageKey, steps }: InteractiveTourProps
   const [isClient, setIsClient] = useState(false);
   const storageKey = `interactive-tour-completed-${pageKey}`;
 
+  const startTour = useCallback(() => {
+      setCurrentStep(0);
+      setIsOpen(true);
+  }, []);
+
   useEffect(() => {
     setIsClient(true);
     const hasCompletedTour = localStorage.getItem(storageKey);
     if (!hasCompletedTour) {
-      // Use a timeout to ensure the page has rendered before starting the tour
-      setTimeout(() => setIsOpen(true), 500);
+      setTimeout(() => startTour(), 500);
     }
-  }, [storageKey]);
+  }, [storageKey, startTour]);
+
+  useEffect(() => {
+    // Listen for the custom event dispatched from the header
+    window.addEventListener('start-tour', startTour);
+    return () => {
+      window.removeEventListener('start-tour', startTour);
+    };
+  }, [startTour]);
   
   if (!isClient) {
     return null; // Don't render anything on the server
@@ -60,11 +72,6 @@ export default function InteractiveTour({ pageKey, steps }: InteractiveTourProps
     localStorage.setItem(storageKey, 'true');
     setCurrentStep(0);
   };
-  
-  const startTour = () => {
-      setCurrentStep(0);
-      setIsOpen(true);
-  }
 
   const HighlightOverlay = () => {
     if (!isOpen || !targetElement) return null;
@@ -88,16 +95,6 @@ export default function InteractiveTour({ pageKey, steps }: InteractiveTourProps
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed bottom-6 left-6 h-14 w-14 rounded-full shadow-lg z-50"
-        onClick={startTour}
-      >
-        <LifeBuoy className="h-8 w-8" />
-        <span className="sr-only">Допомога</span>
-      </Button>
-      
       <HighlightOverlay />
 
       {targetElement && (

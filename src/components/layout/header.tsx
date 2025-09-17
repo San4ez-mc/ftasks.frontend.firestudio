@@ -3,7 +3,7 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Bell, LogOut, Settings } from 'lucide-react';
+import { Bell, LogOut, Settings, LifeBuoy } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useRouter } from 'next/navigation';
@@ -19,16 +19,27 @@ export default function Header() {
     window.location.href = '/login';
   };
 
+  const handleStartTour = () => {
+    // Dispatch a custom event that the tour component on the page can listen for.
+    window.dispatchEvent(new CustomEvent('start-tour'));
+  };
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         <ThemeToggle />
-        <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
+        <Button variant="ghost" size="icon" onClick={handleStartTour}>
+          <LifeBuoy className="h-5 w-5" />
+          <span className="sr-only">Почати навчання</span>
+        </Button>
+        <Button variant="ghost" size="icon" asChild>
+          <Link href="/notifications">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">Notifications</span>
+          </Link>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

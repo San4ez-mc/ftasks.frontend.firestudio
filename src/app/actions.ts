@@ -17,6 +17,7 @@ export async function reportClientError(errorInfo: { message: string; stack?: st
         // Telegram's MarkdownV2 requires escaping these characters
         const escapeMarkdown = (text: string) => {
             if (!text) return '';
+            // Escape all characters that are special in MarkdownV2
             return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
         }
 
@@ -26,7 +27,11 @@ export async function reportClientError(errorInfo: { message: string; stack?: st
 *Time:* ${escapeMarkdown(timestamp)}
 *Page:* ${escapeMarkdown(errorInfo.page || 'Unknown')}
 *Digest:* \`${escapeMarkdown(errorInfo.digest || 'N/A')}\`
-*Error:* \`${escapeMarkdown(errorInfo.message)}\`
+
+*Error Message:*
+\`\`\`
+${escapeMarkdown(errorInfo.message)}
+\`\`\`
 
 *Stack Trace:*
 \`\`\`

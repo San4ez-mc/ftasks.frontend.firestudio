@@ -22,6 +22,7 @@ import {
   Send,
   BookText,
   ClipboardCheck,
+  Bell,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -35,6 +36,7 @@ const menuItems = [
   { href: '/company', label: 'Компанія', icon: Building },
   { href: '/telegram-groups', label: 'Телеграм групи', icon: Send },
   { href: '/audit', label: 'Аудит', icon: ClipboardCheck },
+  { href: '/notifications', label: 'Сповіщення', icon: Bell },
 ];
 
 export default function SidebarNav() {
