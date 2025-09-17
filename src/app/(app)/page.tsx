@@ -19,11 +19,11 @@ import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)/tasks/actions';
-import { getEmployees } from '@/app/(app)/company/actions';
+import { getEmployees, getCurrentEmployee } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
-import { getMe } from '@/lib/api';
+import { getMe, logout } from '@/lib/api';
 
 // --- TOUR STEPS ---
 
@@ -91,11 +91,21 @@ export default function TasksPage() {
             setCurrentUser(currentUserEmployee || null);
         } catch (error) {
             console.error("Failed to fetch initial page data", error);
-            toast({
-                title: "Помилка завантаження",
-                description: "Не вдалося завантажити дані користувача та співробітників.",
-                variant: "destructive",
-            });
+            if (error instanceof Error && error.message.includes("User not found")) {
+                toast({
+                    title: "Помилка сесії",
+                    description: "Ваш профіль не знайдено. Будь ласка, увійдіть знову.",
+                    variant: "destructive",
+                });
+                // This is a critical session error, force logout
+                logout(); // This will clear the bad cookie and redirect to /login
+            } else {
+                toast({
+                    title: "Помилка завантаження",
+                    description: "Не вдалося завантажити дані користувача та співробітників.",
+                    variant: "destructive",
+                });
+            }
         }
     });
 
@@ -143,7 +153,7 @@ export default function TasksPage() {
   
   const handleTaskUpdate = (updatedTask: Task) => {
      startTransition(async () => {
-        const isAssigneeChanged = updatedTask.assignee.id !== selectedTask?.assignee.id;
+        const isAssigneeChanged = updatedTask.assignee?.id !== selectedTask?.assignee?.id;
 
         // Optimistic update
         setTasks(currentTasks => currentTasks.map(t => t.id === updatedTask.id ? updatedTask : t));
