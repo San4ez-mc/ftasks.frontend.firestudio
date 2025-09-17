@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = ['/login', '/select-company', '/create-company'].some(path => pathname.startsWith(path)) || pathname.startsWith('/auth/telegram/callback') || pathname.startsWith('/payment');
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
   
-  const session = token ? validatePermanentToken(token) : null;
+  const session = token ? await validatePermanentToken(token) : null;
   let isSessionValid = false;
 
   if (session) {

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'User is not a member of this company' }, { status: 403 });
     }
 
-    const permanentToken = createPermanentToken(userId, companyId, rememberMe || false);
+    const permanentToken = await createPermanentToken(userId, companyId, rememberMe || false);
 
     const response = NextResponse.json({ success: true });
 

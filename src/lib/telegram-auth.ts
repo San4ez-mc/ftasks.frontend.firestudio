@@ -1,5 +1,5 @@
 
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 import { firestore } from './firebase-admin';
 import type { User } from '@/types/user';
 
@@ -67,7 +67,12 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       details = `Existing user ${first_name} found with ID ${user.id}.`;
     }
 
-    const tempToken = jwt.sign({ userId: user.id, rememberMe }, JWT_SECRET, { expiresIn: '5m' });
+    const secretKey = new TextEncoder().encode(JWT_SECRET);
+    const tempToken = await new jose.SignJWT({ userId: user.id, rememberMe })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('5m')
+      .sign(secretKey);
     
     return { tempToken, details };
 

@@ -1,7 +1,8 @@
+
 'use server';
 
 import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 const PERMANENT_JWT_SECRET = process.env.PERMANENT_JWT_SECRET;
 
@@ -22,13 +23,16 @@ export async function getUserSession(): Promise<UserSession | null> {
     }
 
     try {
-        const decoded = jwt.verify(token, PERMANENT_JWT_SECRET) as { userId: string, companyId: string };
+        const secretKey = new TextEncoder().encode(PERMANENT_JWT_SECRET);
+        const { payload } = await jose.jwtVerify(token, secretKey);
+        const decoded = payload as { userId: string, companyId: string };
+
         if (typeof decoded === 'object' && decoded.userId && decoded.companyId) {
             return { userId: decoded.userId, companyId: decoded.companyId };
         }
         return null;
     } catch (error) {
-        console.error("Failed to verify session token:", error);
+        console.warn("Failed to verify session token (it might be expired):", error instanceof Error ? error.message : String(error));
         return null;
     }
 }

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     const { newCompanyId } = await createCompanyAndAddUser(userId, companyName);
 
-    const permanentToken = createPermanentToken(userId, newCompanyId, rememberMe || false);
+    const permanentToken = await createPermanentToken(userId, newCompanyId, rememberMe || false);
     
     const response = NextResponse.json({ success: true });
     
