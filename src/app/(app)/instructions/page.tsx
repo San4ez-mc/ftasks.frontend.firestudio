@@ -16,9 +16,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import type { Instruction } from '@/types/instruction';
-import { getInstructions, createInstruction, updateInstruction, deleteInstruction } from './actions';
+import { getInstructions, createInstruction, updateInstruction, deleteInstruction } from '@/app/(app)/instructions/actions';
 import { useToast } from '@/hooks/use-toast';
-import { manualInstruction } from './manual-instruction';
+import { manualInstruction } from '@/app/(app)/instructions/manual-instruction';
 
 
 // --- TOUR STEPS ---

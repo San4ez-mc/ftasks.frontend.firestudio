@@ -1,10 +1,10 @@
 
 import { getInstructionById } from '@/lib/firestore-service';
-import InstructionEditor from './_components/InstructionEditor';
+import InstructionEditor from '@/app/(app)/instructions/[id]/_components/InstructionEditor';
 import { notFound, redirect } from 'next/navigation';
 import { getUserSession } from '@/lib/session';
 import { getEmployees } from '@/app/(app)/company/actions';
-import { manualInstruction } from '../manual-instruction';
+import { manualInstruction } from '@/app/(app)/instructions/manual-instruction';
 
 type InstructionsPageProps = {
   params: { id: string };
