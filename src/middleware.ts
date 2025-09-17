@@ -2,23 +2,25 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAdmin } from '@/lib/admin';
-import { getUserSession } from '@/lib/session';
+import { validatePermanentToken } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('auth_token');
+  const tokenCookie = request.cookies.get('auth_token');
+  const token = tokenCookie?.value;
   const { pathname } = request.nextUrl;
 
   const isAuthPage = ['/login', '/select-company', '/create-company'].some(path => pathname.startsWith(path)) || pathname.startsWith('/auth/telegram/callback') || pathname.startsWith('/payment');
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
+  
+  const session = token ? validatePermanentToken(token) : null;
 
-  // Allow public API routes and auth pages to be accessed without a token.
+  // Allow public API routes to be accessed without a token.
   if (isApiAuthRoute) {
       return NextResponse.next();
   }
 
   // Handle protected admin routes
   if (pathname.startsWith('/admin')) {
-      const session = await getUserSession();
       if (!session || !isAdmin(session.userId)) {
           // If not an admin, redirect to the main app page.
           return NextResponse.redirect(new URL('/', request.url));
@@ -27,13 +29,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
   }
   
-  // If user is not authenticated and is trying to access a protected page, redirect to login
-  if (!authToken && !isAuthPage) {
+  // If user has no valid session and is trying to access a protected page, redirect to login
+  if (!session && !isAuthPage) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If user is authenticated and tries to access an auth page (like login), redirect them to the home page
-  if (authToken && isAuthPage) {
+  // If user has a valid session and tries to access an auth page, redirect them to the home page
+  if (session && isAuthPage) {
     // Exception: allow access to payment pages even if logged in
     if(pathname.startsWith('/payment')) {
         return NextResponse.next();

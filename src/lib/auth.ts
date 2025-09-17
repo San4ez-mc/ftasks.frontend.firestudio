@@ -49,6 +49,23 @@ export function createPermanentToken(userId: string, companyId: string, remember
     if (!PERMANENT_JWT_SECRET) {
       throw new Error('Permanent JWT secret is not defined in environment variables.');
     }
-    const expiresIn = rememberMe ? '30d' : '7d';
+    const expiresIn = rememberMe ? '1d' : '1h';
     return jwt.sign({ userId, companyId, rememberMe }, PERMANENT_JWT_SECRET, { expiresIn });
+}
+
+export function validatePermanentToken(token: string): { userId: string; companyId: string } | null {
+    if (!PERMANENT_JWT_SECRET) {
+        console.error("PERMANENT_JWT_SECRET is not set.");
+        return null;
+    }
+
+    try {
+        const decoded = jwt.verify(token, PERMANENT_JWT_SECRET) as { userId: string, companyId: string };
+        if (typeof decoded === 'object' && decoded.userId && decoded.companyId) {
+            return { userId: decoded.userId, companyId: decoded.companyId };
+        }
+        return null;
+    } catch (error) {
+        return null; // Token is invalid or expired
+    }
 }
