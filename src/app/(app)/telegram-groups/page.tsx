@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -303,7 +303,7 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle className="text-base">Керування учасниками</CardTitle>
-                                <CardContent className="text-xs text-muted-foreground p-0 pt-1">Прив'яжіть Telegram-акаунти до профілів співробітників.</CardContent>
+                                <CardDescription className="text-xs text-muted-foreground p-0 pt-1">Прив'яжіть Telegram-акаунти до профілів співробітників.</CardDescription>
                             </div>
                             <Button variant="outline" size="sm" onClick={handleRefreshMembers} disabled={isPending}>
                                 <RefreshCw className={cn("mr-2 h-4 w-4", isPending && "animate-spin")} />
