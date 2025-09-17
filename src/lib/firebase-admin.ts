@@ -1,20 +1,31 @@
-
 import * as admin from 'firebase-admin';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 
-let firestore: Firestore;
+let db: Firestore | null = null;
 
-try {
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-    });
+/**
+ * A singleton function to get the Firestore instance.
+ * It initializes the Firebase Admin SDK only once, on the first call.
+ * This is a more robust pattern for serverless environments.
+ */
+export function getDb(): Firestore {
+  if (db) {
+    return db;
   }
-  // Use the default database instance
-  firestore = getFirestore();
-} catch (error) {
-  console.error('CRITICAL: Firebase admin initialization failed. This will cause Firestore operations to fail.', error);
-  // firestore will be undefined, and service functions will guard against this.
-}
 
-export { firestore };
+  if (admin.apps.length === 0) {
+    try {
+      // In a deployed Google Cloud environment (like App Hosting),
+      // this initializes with default credentials.
+      admin.initializeApp();
+      console.log('Firebase Admin SDK initialized successfully.');
+    } catch (error) {
+      console.error('CRITICAL: Firebase Admin SDK initialization failed.', error);
+      // Throw the error to prevent the app from continuing in a broken state.
+      throw new Error('Could not initialize Firebase Admin SDK.');
+    }
+  }
+  
+  db = getFirestore();
+  return db;
+}
