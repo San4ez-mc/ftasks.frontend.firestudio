@@ -9,9 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useRouter } from 'next/navigation';
 import { logout } from '@/lib/api';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { getUserSession } from '@/lib/session';
-import { isAdmin } from '@/lib/admin';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -84,21 +82,9 @@ function SupportChatDialog({ isOpen, onOpenChange }: { isOpen: boolean, onOpenCh
 }
 
 
-export default function Header() {
+export default function Header({ userIsAdmin }: { userIsAdmin: boolean }) {
   const router = useRouter();
-  const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
-
-
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-        const session = await getUserSession();
-        if(session && isAdmin(session.userId)) {
-            setUserIsAdmin(true);
-        }
-    }
-    checkAdminStatus();
-  }, []);
 
   const handleLogout = async () => {
     await logout();

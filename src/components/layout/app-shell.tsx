@@ -14,14 +14,14 @@ function LoadingState() {
   );
 }
 
-export default function AppShell({ children }: { children: ReactNode }) {
+export default function AppShell({ children, userIsAdmin }: { children: ReactNode; userIsAdmin: boolean; }) {
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarNav />
       </Sidebar>
       <SidebarInset>
-        <Header />
+        <Header userIsAdmin={userIsAdmin} />
         <main className="flex-1 overflow-y-auto">
           <Suspense fallback={<LoadingState />}>{children}</Suspense>
         </main>
