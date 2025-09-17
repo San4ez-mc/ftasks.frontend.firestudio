@@ -8,7 +8,7 @@ import { isAdmin } from '@/lib/admin';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await getUserSession();
-  const userIsAdmin = session ? isAdmin(session.userId) : false;
+  const userIsAdmin = session ? await isAdmin(session.userId, session.companyId) : false;
 
   return (
     <SidebarProvider>

@@ -49,7 +49,7 @@ export async function verifyToken(request: NextRequest, isPermanent = false): Pr
 
 export async function createPermanentToken(userId: string, companyId: string, rememberMe: boolean): Promise<string> {
     const secretKey = await getSecretKey(true);
-    const expiresIn = rememberMe ? '1d' : '1h';
+    const expiresIn = rememberMe ? '30d' : '1d';
     
     return new jose.SignJWT({ userId, companyId, rememberMe })
       .setProtectedHeader({ alg: 'HS256' })

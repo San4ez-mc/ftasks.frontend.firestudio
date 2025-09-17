@@ -1,14 +1,26 @@
-// This file contains constants and helpers for admin functionality.
-
-// IMPORTANT: Replace this placeholder with the actual Firestore document ID of your admin user account.
-// This is NOT your Telegram ID. You can find this in your Firebase console in the 'users' collection.
-export const ADMIN_USER_IDS = ['REPLACE_WITH_YOUR_FIRESTORE_USER_ID']; 
+'use server';
+import { getDb } from './firebase-admin';
 
 /**
- * Checks if a given user ID belongs to an administrator.
+ * Checks if a given user is the owner of the specified company.
+ * In this application's logic, the company owner is considered the admin.
  * @param userId The ID of the user to check.
- * @returns True if the user is an admin, false otherwise.
+ * @param companyId The ID of the company to check against.
+ * @returns True if the user is the owner of the company, false otherwise.
  */
-export const isAdmin = (userId: string): boolean => {
-    return ADMIN_USER_IDS.includes(userId);
-}
+export const isAdmin = async (userId: string, companyId: string): Promise<boolean> => {
+    if (!userId || !companyId) {
+        return false;
+    }
+    try {
+        const companyDoc = await getDb().collection('companies').doc(companyId).get();
+        if (!companyDoc.exists) {
+            return false;
+        }
+        // The user is an admin if their ID matches the ownerId in the company document.
+        return companyDoc.data()?.ownerId === userId;
+    } catch (error) {
+        console.error("Error checking admin status:", error);
+        return false;
+    }
+};

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ success: true });
     
     // Set the cookie in the response
-    const maxAge = (rememberMe || false) ? 24 * 60 * 60 : 60 * 60; // 1 day or 1 hour
+    const maxAge = (rememberMe || false) ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 1 day
     response.cookies.set('auth_token', permanentToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV !== 'development',

@@ -1,6 +1,6 @@
 
 import * as jose from 'jose';
-import { firestore } from './firebase-admin';
+import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -15,7 +15,7 @@ interface TelegramUser {
 }
 
 export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
-    const usersCollection = firestore.collection('users');
+    const usersCollection = getDb().collection('users');
     const userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId).limit(1).get();
     if (userQuery.empty) {
         return null;
@@ -44,7 +44,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
   }
 
   try {
-    const usersCollection = firestore.collection('users');
+    const usersCollection = getDb().collection('users');
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
     let user: any;
     let details: string;
@@ -90,7 +90,7 @@ export async function generateGroupLinkCode(groupId: string, groupTitle: string)
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const expiresAt = new Date(Date.now() + GROUP_LINK_CODE_EXPIRATION);
 
-        await firestore.collection('groupLinkCodes').doc(code).set({
+        await getDb().collection('groupLinkCodes').doc(code).set({
             tgGroupId: groupId,
             groupTitle,
             expiresAt,

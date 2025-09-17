@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
 
   // Handle protected admin routes
   if (pathname.startsWith('/admin')) {
-      if (!isSessionValid || !isAdmin(session!.userId)) {
+      if (!isSessionValid || !(await isAdmin(session!.userId, session!.companyId))) {
           // If not an admin, redirect to the main app page.
           return NextResponse.redirect(new URL('/', request.url));
       }

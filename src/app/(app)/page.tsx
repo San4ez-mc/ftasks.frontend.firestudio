@@ -19,10 +19,9 @@ import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)/tasks/actions';
-import { getEmployees, getCurrentEmployee } from '@/app/(app)/company/actions';
+import { getEmployees } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea';
 import { getMe, logout } from '@/lib/api';
 
 // --- TOUR STEPS ---
@@ -91,14 +90,14 @@ export default function TasksPage() {
             setCurrentUser(currentUserEmployee || null);
         } catch (error) {
             console.error("Failed to fetch initial page data", error);
-            if (error instanceof Error && error.message.includes("User not found")) {
+            if (error instanceof Error && (error.message.includes("User not found") || error.message.includes("Invalid or expired token"))) {
                 toast({
                     title: "Помилка сесії",
-                    description: "Ваш профіль не знайдено. Будь ласка, увійдіть знову.",
+                    description: "Ваш профіль не знайдено або сесія застаріла. Будь ласка, увійдіть знову.",
                     variant: "destructive",
                 });
-                // This is a critical session error, force logout
-                logout(); // This will clear the bad cookie and redirect to /login
+                // This is a critical session error, force logout to clear the bad cookie.
+                logout();
             } else {
                 toast({
                     title: "Помилка завантаження",
