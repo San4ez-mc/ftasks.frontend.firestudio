@@ -3,17 +3,19 @@
 
 import React, { useState, useEffect, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Save, UserPlus, Info, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Save, UserPlus, Info, Trash2, Loader2, Edit, PlusCircle } from 'lucide-react';
 import { departmentTemplates, sectionTemplates } from '@/data/org-structure-mock';
 import type { Department, Employee, Division, Section } from '@/types/org-structure';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getOrgStructureData, saveOrgData } from './actions';
@@ -141,7 +143,6 @@ function SectionCard({ section, employees, onUpdate }: { section: Section; emplo
     );
 }
 
-
 // --- DepartmentCard Component ---
 function DepartmentCard({ department, onUpdate, onDragStart, allEmployees }: { department: Department; onUpdate: (dept: Department) => void; onDragStart: (e: React.DragEvent) => void; allEmployees: Employee[] }) {
     
@@ -222,8 +223,102 @@ function DepartmentCard({ department, onUpdate, onDragStart, allEmployees }: { d
     )
 }
 
-// --- TOUR STEPS ---
+// --- Simplified Structure Component ---
+function SimplifiedOrgStructure() {
+  type Position = { id: string; name: string };
+  const [positions, setPositions] = useState<Position[]>([
+    { id: '1', name: 'Директор' },
+    { id: '2', name: 'Маркетолог' },
+    { id: '3', name: 'Менеджер з продажів' },
+    { id: '4', name: 'Бухгалтер' },
+  ]);
+  const [editingPositionId, setEditingPositionId] = useState<string | null>(null);
+  const [newPositionName, setNewPositionName] = useState('');
 
+  const handleAddPosition = () => {
+    if (newPositionName.trim() === '') return;
+    setPositions([...positions, { id: Date.now().toString(), name: newPositionName }]);
+    setNewPositionName('');
+  };
+  
+  const handleUpdatePosition = (id: string, newName: string) => {
+      setPositions(positions.map(p => p.id === id ? {...p, name: newName} : p));
+      setEditingPositionId(null);
+  }
+
+  const handleDeletePosition = (id: string) => {
+    setPositions(positions.filter(p => p.id !== id));
+  };
+
+  return (
+    <div className="p-4 md:p-8 pt-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Посади в компанії</CardTitle>
+          <CardDescription>
+            Це базовий список посад. Налаштуйте його відповідно до вашої команди.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Назва посади</TableHead>
+                  <TableHead className="text-right w-[100px]">Дії</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {positions.map((pos) => (
+                  <TableRow key={pos.id}>
+                    <TableCell>
+                      {editingPositionId === pos.id ? (
+                        <Input 
+                            defaultValue={pos.name}
+                            autoFocus
+                            onBlur={(e) => handleUpdatePosition(pos.id, e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleUpdatePosition(pos.id, e.currentTarget.value);
+                                if (e.key === 'Escape') setEditingPositionId(null);
+                            }}
+                        />
+                      ) : (
+                        pos.name
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => setEditingPositionId(pos.id)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                             <Button variant="ghost" size="icon" onClick={() => handleDeletePosition(pos.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <div className="flex gap-2 pt-4 border-t">
+                <Input 
+                    placeholder="Нова посада..."
+                    value={newPositionName}
+                    onChange={(e) => setNewPositionName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddPosition() }}
+                />
+                <Button onClick={handleAddPosition}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Додати
+                </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// --- TOUR STEPS ---
 const orgStructureTourSteps: TourStep[] = [
     {
         elementId: 'division-column-div-1',
@@ -250,7 +345,6 @@ const orgStructureTourSteps: TourStep[] = [
         placement: 'top'
     },
 ];
-
 
 export default function OrgStructurePage() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -354,57 +448,68 @@ export default function OrgStructurePage() {
         </div>
       </header>
       
-      <ScrollArea className="flex-1">
-        <div className="p-4 flex flex-row items-start gap-4">
-            {isPending && divisions.length === 0 ? <Loader2 className="mx-auto my-12 h-8 w-8 animate-spin" /> :
-            divisions.sort((a, b) => a.order - b.order).map(division => {
-                const divisionDepartments = departments.filter(d => d.divisionId === division.id);
-                return (
-                    <div 
-                        key={division.id} 
-                        id={`division-column-${division.id}`}
-                        className="flex flex-col gap-4 p-2 rounded-lg bg-background/50 border self-stretch"
-                        onDragOver={(e) => handleDragOver(e, division.id)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => handleDrop(e, division.id)}
-                    >
-                        <div className="p-3 bg-background rounded-lg border">
-                             <h3 className="font-bold">{division.name}</h3>
-                             <p className="text-xs text-muted-foreground">{division.description}</p>
-                        </div>
+      <Tabs defaultValue="simplified" className="flex-1 flex flex-col">
+          <TabsList className="mx-auto mt-4">
+              <TabsTrigger value="simplified">Спрощена</TabsTrigger>
+              <TabsTrigger value="detailed">Деталізована</TabsTrigger>
+          </TabsList>
+          <TabsContent value="simplified" className="flex-1">
+              <SimplifiedOrgStructure />
+          </TabsContent>
+          <TabsContent value="detailed" className="flex-1 flex flex-col">
+            <ScrollArea className="flex-1">
+              <div className="p-4 flex flex-row items-start gap-4">
+                  {isPending && divisions.length === 0 ? <Loader2 className="mx-auto my-12 h-8 w-8 animate-spin" /> :
+                  divisions.sort((a, b) => a.order - b.order).map(division => {
+                      const divisionDepartments = departments.filter(d => d.divisionId === division.id);
+                      return (
+                          <div 
+                              key={division.id} 
+                              id={`division-column-${division.id}`}
+                              className="flex flex-col gap-4 p-2 rounded-lg bg-background/50 border self-stretch"
+                              onDragOver={(e) => handleDragOver(e, division.id)}
+                              onDragLeave={handleDragLeave}
+                              onDrop={(e) => handleDrop(e, division.id)}
+                          >
+                              <div className="p-3 bg-background rounded-lg border">
+                                   <h3 className="font-bold">{division.name}</h3>
+                                   <p className="text-xs text-muted-foreground">{division.description}</p>
+                              </div>
 
-                        <div className="flex-1 flex flex-row gap-4 items-start">
-                            {divisionDepartments.map(dept => (
-                                <div key={dept.id} className="w-80">
-                                    <DepartmentCard 
-                                        department={dept} 
-                                        onUpdate={handleDepartmentUpdate}
-                                        onDragStart={(e) => handleDragStart(e, dept.id)}
-                                        allEmployees={employees}
-                                    />
-                                </div>
-                            ))}
-                            <div className="w-80">
-                                <AddDepartmentControl
-                                    id={`add-department-button-${division.id}`} 
-                                    divisionId={division.id} 
-                                    onAddDepartment={handleAddDepartment} 
-                                 />
-                            </div>
-                        </div>
+                              <div className="flex-1 flex flex-row gap-4 items-start">
+                                  {divisionDepartments.map(dept => (
+                                      <div key={dept.id} className="w-80">
+                                          <DepartmentCard 
+                                              department={dept} 
+                                              onUpdate={handleDepartmentUpdate}
+                                              onDragStart={(e) => handleDragStart(e, dept.id)}
+                                              allEmployees={employees}
+                                          />
+                                      </div>
+                                  ))}
+                                  <div className="w-80">
+                                      <AddDepartmentControl
+                                          id={`add-department-button-${division.id}`} 
+                                          divisionId={division.id} 
+                                          onAddDepartment={handleAddDepartment} 
+                                       />
+                                  </div>
+                              </div>
 
-                        {isDraggingOver === division.id && (
-                             <div 
-                                className="w-full rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-all"
-                                style={{ height: `${draggedItemHeight}px` }}
-                             ></div>
-                        )}
-                    </div>
-                )
-            })}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+                              {isDraggingOver === division.id && (
+                                   <div 
+                                      className="w-full rounded-lg border-2 border-dashed border-primary bg-primary/10 transition-all"
+                                      style={{ height: `${draggedItemHeight}px` }}
+                                   ></div>
+                              )}
+                          </div>
+                      )
+                  })}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </TabsContent>
+      </Tabs>
     </div>
   );
 }
