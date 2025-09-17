@@ -68,13 +68,17 @@ export default function TelegramGroupsPage() {
   
   const fetchGroups = React.useCallback(() => {
     startTransition(async () => {
+      try {
         const fetchedGroups = await getGroups();
         setGroups(fetchedGroups);
         if (fetchedGroups.length > 0 && !selectedGroup) {
             setSelectedGroup(fetchedGroups[0]);
         }
+      } catch(error) {
+        toast({ title: "Помилка", description: "Не вдалося завантажити групи.", variant: "destructive"});
+      }
     });
-  }, [selectedGroup]);
+  }, []); // Corrected dependency array
 
   useEffect(() => {
     // This effect runs only once on the client after mounting.
@@ -236,16 +240,20 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
 
     useEffect(() => {
         startTransition(async () => {
-            const [fetchedLogs, fetchedMembers, fetchedEmployees] = await Promise.all([
-                getLogsForGroup(group.id),
-                getGroupMembers(group.id),
-                getEmployees()
-            ]);
-            setLogs(fetchedLogs);
-            setMembers(fetchedMembers);
-            setEmployees(fetchedEmployees);
+            try {
+                const [fetchedLogs, fetchedMembers, fetchedEmployees] = await Promise.all([
+                    getLogsForGroup(group.id),
+                    getGroupMembers(group.id),
+                    getEmployees()
+                ]);
+                setLogs(fetchedLogs);
+                setMembers(fetchedMembers);
+                setEmployees(fetchedEmployees);
+            } catch (error) {
+                toast({ title: "Помилка", description: "Не вдалося завантажити деталі групи.", variant: "destructive" });
+            }
         });
-    }, [group.id]);
+    }, [group.id, toast]);
 
     const handleSendMessage = async () => {
         if (!message) return;
@@ -320,7 +328,6 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
                             </TableHeader>
                             <TableBody>
                                 {members.map(member => {
-                                    const linkedEmployee = employees.find(e => e.id === member.employeeId);
                                     return (
                                         <TableRow key={member.id}>
                                             <TableCell>
@@ -339,6 +346,7 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
                                                 <Select
                                                     value={member.employeeId || 'none'}
                                                     onValueChange={(value) => handleLinkMember(member.id, value === 'none' ? null : value)}
+                                                    disabled={isPending}
                                                 >
                                                     <SelectTrigger className="text-xs">
                                                         <SelectValue placeholder="Не прив'язано" />
@@ -394,3 +402,5 @@ function TelegramGroupDetails({ group, onClose }: { group: TelegramGroup, onClos
         </div>
     );
 }
+
+    
