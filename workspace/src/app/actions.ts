@@ -32,7 +32,7 @@ export async function reportClientError(errorInfo: { message: string; stack?: st
 
         if (errorInfo.message.includes('Server Components render')) {
             header = `🟠 *Server Render Error Caught on Client* 🟠`;
-            serverHint = `\n*Note:* This is a server-side error\\. The details are minimal\\. Please check the server logs and use the *Digest* to find the corresponding error\\. Please check the server logs and use the *Digest* to find the corresponding error\\.`;
+            serverHint = `\n*Note:* This is a server-side error\\. The details are minimal\\. Please check the server logs and use the *Digest* to find the corresponding error\\.`;
         }
 
 
