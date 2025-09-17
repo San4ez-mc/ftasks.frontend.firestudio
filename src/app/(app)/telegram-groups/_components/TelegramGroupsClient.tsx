@@ -21,8 +21,8 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import InteractiveTour, { type TourStep } from '@/components/layout/interactive-tour';
 import { useToast } from '@/hooks/use-toast';
-import { getGroups, linkGroup, getGroupMembers, refreshGroupMembers, sendMessageToGroup, getLogsForGroup, linkTelegramMemberToEmployee } from '../actions';
-import { getEmployees } from '../../company/actions';
+import { getGroups, linkGroup, getGroupMembers, refreshGroupMembers, sendMessageToGroup, getLogsForGroup, linkTelegramMemberToEmployee } from '@/app/(app)/telegram-groups/actions';
+import { getEmployees } from '@/app/(app)/company/actions';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 import type { Employee } from '@/types/company';

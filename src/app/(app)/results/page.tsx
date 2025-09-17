@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getResults, createResult, updateResult, deleteResult } from './actions';
-import { getEmployees } from '../company/actions';
+import { getEmployees } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -500,7 +500,7 @@ function ResultsTable({
           handleDeleteResult={handleDeleteResult}
           handlePostponeResult={handlePostponeResult}
           collapsedResults={collapsedResults}
-          toggleCollapse={toggleCollapse}
+          toggleCollapse={toggleResultCollapse}
         />
         {!collapsedResults.includes(result.id) && (result.subResults || []).map((sr) => (
           <SubResultRows 
@@ -516,7 +516,7 @@ function ResultsTable({
             path={[sr.id]}
             panelOpen={panelOpen}
             collapsedResults={collapsedResults}
-            toggleCollapse={toggleCollapse}
+            toggleCollapse={toggleResultCollapse}
             selectedResultId={selectedResultId}
           />
         ))}

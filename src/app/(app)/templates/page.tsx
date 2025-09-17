@@ -25,7 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
 import { getTemplates, createTemplate, updateTemplate, deleteTemplate } from './actions';
-import { getResults } from '../results/actions';
+import { getResults } from '@/app/(app)/results/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Template } from '@/types/template';
 import type { Result } from '@/types/result';

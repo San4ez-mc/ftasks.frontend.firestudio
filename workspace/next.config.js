@@ -1,3 +1,3 @@
-// This file is intentionally neutralized to avoid conflicts with the root next.config.js.
-// The build process should only use the configuration file from the project root.
+// This file is intentionally neutralized to avoid conflicts.
+// The primary next.config.js in the project root should be used.
 module.exports = {};
