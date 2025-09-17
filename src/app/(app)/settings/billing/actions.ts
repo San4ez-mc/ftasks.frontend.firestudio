@@ -1,4 +1,3 @@
-
 'use server';
 
 import { getUserSession } from '@/lib/session';
@@ -77,4 +76,9 @@ export async function processSuccessfulPayment(companyId: string, planType: 'mon
     });
 
     return { success: true };
+}
+
+export async function getCompanyId(): Promise<string | null> {
+    const session = await getUserSession();
+    return session?.companyId || null;
 }

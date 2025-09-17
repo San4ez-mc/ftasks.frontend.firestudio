@@ -1,11 +1,11 @@
-
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, CheckCircle, ArrowRight } from 'lucide-react';
-import { getSubscriptionStatus, type SubscriptionStatus } from './actions';
+import { getSubscriptionStatus, type SubscriptionStatus, getCompanyId } from './actions';
 import { Badge } from '@/components/ui/badge';
 
 const freeFeatures = [
@@ -23,16 +23,46 @@ const paidFeatures = [
     "AI-аудит бізнесу"
 ];
 
+// NOTE: You will need to create a separate button/product in Wayforpay for the yearly plan
+// and replace the ID here. For now, it uses the same as the monthly plan.
+const WAYFORPAY_MONTHLY_ID = 'b8af0361e2f89';
+const WAYFORPAY_YEARLY_ID = 'b8af0361e2f89'; // REPLACE WITH ACTUAL YEARLY BUTTON ID
+
+
 export default function BillingPage() {
     const [status, setStatus] = useState<SubscriptionStatus | null>(null);
+    const [companyId, setCompanyId] = useState<string | null>(null);
+    const [baseUrl, setBaseUrl] = useState('');
     const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
+        // This effect runs on the client, so `window` is available.
+        setBaseUrl(window.location.origin);
+
         startTransition(async () => {
-            const subStatus = await getSubscriptionStatus();
+            const [subStatus, compId] = await Promise.all([
+                getSubscriptionStatus(),
+                getCompanyId()
+            ]);
             setStatus(subStatus);
+            setCompanyId(compId);
         });
     }, []);
+    
+    const getPaymentUrl = (planType: 'monthly' | 'yearly') => {
+        if (!companyId || !baseUrl) return '#';
+        
+        const buttonId = planType === 'monthly' ? WAYFORPAY_MONTHLY_ID : WAYFORPAY_YEARLY_ID;
+
+        const successUrl = `${baseUrl}/payment/success?plan=${planType}&companyId=${companyId}`;
+        const failureUrl = `${baseUrl}/payment/failure`;
+
+        return `https://secure.wayforpay.com/button/${buttonId}?merchantReturnUrl=${encodeURIComponent(successUrl)}&merchantFailUrl=${encodeURIComponent(failureUrl)}`;
+    };
+
+    const monthlyPaymentUrl = getPaymentUrl('monthly');
+    const yearlyPaymentUrl = getPaymentUrl('yearly');
+
 
     const StatusCard = () => {
         if (isPending || !status) {
@@ -86,6 +116,7 @@ export default function BillingPage() {
                     features={paidFeatures}
                     isCurrent={status?.tier === 'paid' || status?.tier === 'trial'}
                     isRecommended
+                    paymentUrl={monthlyPaymentUrl}
                 />
             </div>
              <Card>
@@ -97,8 +128,10 @@ export default function BillingPage() {
                         <p className="text-2xl font-bold">20 000 грн <span className="text-lg font-normal text-muted-foreground">/рік</span></p>
                         <p className="text-primary">Ви економите 4000 грн!</p>
                     </div>
-                    <Button size="lg">
-                        Оплатити за рік <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button asChild size="lg" disabled={yearlyPaymentUrl === '#'}>
+                        <Link href={yearlyPaymentUrl}>
+                             Оплатити за рік <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
                     </Button>
                 </CardContent>
             </Card>
@@ -106,7 +139,7 @@ export default function BillingPage() {
     );
 }
 
-function PlanCard({ title, price, pricePeriod, description, features, isCurrent, isRecommended }: {
+function PlanCard({ title, price, pricePeriod, description, features, isCurrent, isRecommended, paymentUrl }: {
     title: string;
     price: string;
     pricePeriod?: string;
@@ -114,6 +147,7 @@ function PlanCard({ title, price, pricePeriod, description, features, isCurrent,
     features: string[];
     isCurrent?: boolean;
     isRecommended?: boolean;
+    paymentUrl?: string;
 }) {
     return (
         <Card className={isRecommended ? "border-2 border-primary" : ""}>
@@ -134,9 +168,11 @@ function PlanCard({ title, price, pricePeriod, description, features, isCurrent,
                         </li>
                     ))}
                 </ul>
-                {!isCurrent && (
-                    <Button className="w-full" variant={isRecommended ? "default" : "outline"}>
-                        {isRecommended ? "Перейти на цей тариф" : "Обрати"}
+                {!isCurrent && paymentUrl && (
+                    <Button asChild className="w-full" variant={isRecommended ? "default" : "outline"} disabled={paymentUrl === '#'}>
+                        <Link href={paymentUrl}>
+                            {isRecommended ? "Перейти на цей тариф" : "Обрати"}
+                        </Link>
                     </Button>
                 )}
             </CardContent>
