@@ -15,11 +15,12 @@ async function checkAdmin() {
 
 export async function getAllCompanies(): Promise<(CompanyProfile & {userCount: number})[]> {
     await checkAdmin();
-    const companiesSnapshot = await getDb().collection('company_profiles').get();
+    const db = await getDb();
+    const companiesSnapshot = await db.collection('company_profiles').get();
     const companies = companiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompanyProfile));
 
     const result = await Promise.all(companies.map(async (company) => {
-        const employeesSnapshot = await getDb().collection('employees').where('companyId', '==', company.id).get();
+        const employeesSnapshot = await db.collection('employees').where('companyId', '==', company.id).get();
         return {
             ...company,
             userCount: employeesSnapshot.size,
