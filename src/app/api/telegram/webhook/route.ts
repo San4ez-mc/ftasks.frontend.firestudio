@@ -28,6 +28,7 @@ import { ai } from '@/ai/genkit';
 import type { Template } from '@/types/template';
 import { formatDate } from '@/lib/utils';
 import { formatTime } from '@/lib/timeUtils';
+import { sendDebugMessage } from '@/app/actions';
 
 
 interface TelegramUser {
@@ -603,6 +604,7 @@ export async function POST(request: NextRequest) {
             }
             
             if (chat.type === 'private') {
+                await sendDebugMessage(`Received /start command in private chat from user ${fromUser.id} (@${fromUser.username}). Payload: ${text}`);
                 const payload = text.split(' ')[1] || 'auth';
                 const rememberMe = payload === 'auth_remember';
 
@@ -641,25 +643,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: 'ok', message: 'Webhook received, but no action taken.' });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? `${error.name}: ${error.message}` : 'An unknown error occurred';
-    const errorStack = error instanceof Error ? error.stack : 'No stack trace available.';
-    console.error('Critical error in webhook handler:', errorMessage, errorStack);
-
-    try {
-        const body = await request.json().catch(() => ({}));
-        const chatId = body?.message?.chat?.id;
-        if (chatId) {
-            // Truncate the stack trace to avoid hitting Telegram's message length limit.
-            const detailedError = `🔴 Server Error 🔴\n\nMessage: ${errorMessage}\n\nStack (first 500 chars):\n${errorStack.substring(0, 500)}`;
-            await sendTelegramMessage(chatId, { text: detailedError });
-        }
-    } catch (sendError) {
-        console.error("Failed to send critical error message to user:", sendError);
-    }
+    const detailedErrorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
+    console.error('Critical error in webhook handler:', detailedErrorMessage);
     
-    // Still return a 500 error to the webhook itself.
+    // We cannot reliably get the chat ID here if the initial body parsing failed.
+    // The best we can do is log it. The error will be sent to the admin via the debug message in the auth flow.
+    
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
 }
-
-    

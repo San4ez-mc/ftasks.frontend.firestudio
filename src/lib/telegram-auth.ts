@@ -2,6 +2,7 @@
 import * as jose from 'jose';
 import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
+import { sendDebugMessage } from '@/app/actions';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const GROUP_LINK_CODE_EXPIRATION = 10 * 60 * 1000; // 10 minutes
@@ -32,26 +33,27 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 }
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
-  // More robust check for the secret key
-  if (!JWT_SECRET || JWT_SECRET.length < 32) {
-    const errorMessage = 'Server configuration error: JWT_SECRET is missing or too short. Please ensure it is set in environment variables and is at least 32 characters long.';
-    console.error(errorMessage);
-    return { error: errorMessage };
-  }
-  
-  const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
-
-  if (!telegramUserId) {
-    return { error: 'Telegram user ID is required' };
-  }
-
   try {
+    if (!JWT_SECRET || JWT_SECRET.length < 32) {
+      throw new Error('Server configuration error: JWT_SECRET is missing or too short. Please ensure it is set in environment variables and is at least 32 characters long.');
+    }
+    
+    const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
+
+    if (!telegramUserId) {
+      throw new Error('Telegram user ID is required in the data from Telegram.');
+    }
+
+    await sendDebugMessage(`handleTelegramLogin: Starting for TG user ${telegramUser.id}.`);
+
     const usersCollection = getDb().collection('users');
+    await sendDebugMessage(`handleTelegramLogin: Got Firestore instance. Querying for user...`);
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
     let user: any;
     let details: string;
 
     if (userQuery.empty) {
+      await sendDebugMessage(`handleTelegramLogin: User not found. Creating new user for ${telegramUser.first_name}.`);
       const newUserRef = usersCollection.doc();
       const newUser = {
         telegramUserId: telegramUserId.toString(),
@@ -67,6 +69,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       const userDoc = userQuery.docs[0];
       user = { id: userDoc.id, ...userDoc.data() };
       details = `Existing user ${first_name} found with ID ${user.id}.`;
+      await sendDebugMessage(`handleTelegramLogin: Found existing user. Details: ${details}`);
     }
 
     const secretKey = new TextEncoder().encode(JWT_SECRET);
@@ -76,19 +79,17 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       .setExpirationTime('5m')
       .sign(secretKey);
     
+    await sendDebugMessage(`handleTelegramLogin: Successfully created temp token for user ID ${user.id}.`);
     return { tempToken, details };
 
   } catch (error) {
-      console.error('Error in handleTelegramLogin:', error);
-      // Return the full error message and stack trace for maximum debugging detail.
       const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
-      return { error: `An internal error occurred during login:\n${errorMessage}` };
+      console.error('Error in handleTelegramLogin:', errorMessage);
+      await sendDebugMessage(`CRITICAL ERROR in handleTelegramLogin: ${errorMessage}`);
+      return { error: `Login Error: ${errorMessage}` };
   }
 }
 
-/**
- * Generates and stores a short-lived code for linking a Telegram group.
- */
 export async function generateGroupLinkCode(groupId: string, groupTitle: string): Promise<{ code?: string; error?: string }> {
     try {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
