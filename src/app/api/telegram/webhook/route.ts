@@ -641,17 +641,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: 'ok', message: 'Webhook received, but no action taken.' });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    console.error('Critical error in webhook handler:', errorMessage, error);
+    const errorMessage = error instanceof Error ? `${error.name}: ${error.message}` : 'An unknown error occurred';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace available.';
+    console.error('Critical error in webhook handler:', errorMessage, errorStack);
+
     try {
         const body = await request.json().catch(() => ({}));
         const chatId = body?.message?.chat?.id;
         if (chatId) {
-            await sendTelegramMessage(chatId, { text: `Критична помилка на сервері. Зверніться до адміністратора.` });
+            // Truncate the stack trace to avoid hitting Telegram's message length limit.
+            const detailedError = `🔴 Server Error 🔴\n\nMessage: ${errorMessage}\n\nStack (first 500 chars):\n${errorStack.substring(0, 500)}`;
+            await sendTelegramMessage(chatId, { text: detailedError });
         }
     } catch (sendError) {
         console.error("Failed to send critical error message to user:", sendError);
     }
+    
+    // Still return a 500 error to the webhook itself.
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+    

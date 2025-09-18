@@ -80,9 +80,9 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
   } catch (error) {
       console.error('Error in handleTelegramLogin:', error);
-      // Return the full error message and stack trace for debugging
+      // Return the full error message and stack trace for maximum debugging detail.
       const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
-      return { error: `An internal error occurred during login: ${errorMessage}` };
+      return { error: `An internal error occurred during login:\n${errorMessage}` };
   }
 }
 
