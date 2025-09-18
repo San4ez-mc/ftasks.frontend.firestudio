@@ -1,3 +1,5 @@
+'use server';
+
 import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
 import { createSession } from './firestore-service';
@@ -40,6 +42,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     const usersCollection = getDb().collection('users');
     await sendDebugMessage(`handleTelegramLogin: Got Firestore instance. Querying for user...`);
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
+    await sendDebugMessage(`handleTelegramLogin: User query complete. Found ${userQuery.docs.length} users.`);
     let user: any;
     let details: string;
 
@@ -62,7 +65,8 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       details = `Existing user ${first_name} found with ID ${user.id}.`;
       await sendDebugMessage(`handleTelegramLogin: Found existing user. Details: ${details}`);
     }
-
+    
+    await sendDebugMessage(`handleTelegramLogin: User processed. Creating temp session for user ID ${user.id}.`);
     const tempSessionExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     const tempSession = await createSession({
         userId: user.id,
@@ -71,7 +75,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
         type: 'temp',
     });
     
-    await sendDebugMessage(`handleTelegramLogin: Successfully created temp session ${tempSession.id} for user ID ${user.id}.`);
+    await sendDebugMessage(`handleTelegramLogin: Successfully created temp session ${tempSession.id}.`);
     return { tempToken: tempSession.id, details };
 
   } catch (error) {

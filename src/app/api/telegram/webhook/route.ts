@@ -612,15 +612,17 @@ export async function POST(request: NextRequest) {
                 const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);
                 
                 if (details) {
-                    console.log(`User lookup/creation result: ${details}`);
+                    await sendDebugMessage(`User lookup/creation result: ${details}`);
                 }
 
                 if (error || !tempToken) {
                     const errorMessage = error || 'Authentication failed. No token provided.';
+                    await sendDebugMessage(`Authentication failed: ${errorMessage}`);
                     await sendTelegramMessage(chat.id, { text: `Помилка автентифікації: ${errorMessage}` });
                     return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
                 }
                 
+                await sendDebugMessage(`Login link generation successful. Token: ${tempToken}`);
                 const redirectUrl = `${APP_URL}/auth/telegram/callback?token=${tempToken}`;
 
                 await sendTelegramMessage(chat.id, {
