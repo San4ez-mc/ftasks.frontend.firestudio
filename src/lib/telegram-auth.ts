@@ -1,6 +1,7 @@
+
 'use server';
 
-import { getDb } from './firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import type { User } from '@/types/user';
 import { createSession } from './firestore-service';
 import { sendDebugMessage } from '@/app/actions';
@@ -14,7 +15,8 @@ interface TelegramUser {
 }
 
 export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
-    const usersCollection = getDb().collection('users');
+    const db = await getDb();
+    const usersCollection = db.collection('users');
     const userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId).limit(1).get();
     if (userQuery.empty) {
         return null;
@@ -39,8 +41,10 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
         throw new Error('Telegram user ID is required in the data from Telegram.');
     }
 
-    const db = getDb();
-    await sendDebugMessage(`handleTelegramLogin: Got Firestore instance. Querying for user...`);
+    await sendDebugMessage(`handleTelegramLogin: Attempting to get DB instance...`);
+    const db = await getDb();
+    await sendDebugMessage(`handleTelegramLogin: Successfully got DB instance. Querying for user...`);
+    
     const usersCollection = db.collection('users');
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
     await sendDebugMessage(`handleTelegramLogin: User query complete. Found ${userQuery.docs.length} users.`);
@@ -88,10 +92,11 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
 export async function generateGroupLinkCode(groupId: string, groupTitle: string): Promise<{ code?: string; error?: string }> {
     try {
+        const db = await getDb();
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        await getDb().collection('groupLinkCodes').doc(code).set({
+        await db.collection('groupLinkCodes').doc(code).set({
             tgGroupId: groupId,
             groupTitle,
             expiresAt,
