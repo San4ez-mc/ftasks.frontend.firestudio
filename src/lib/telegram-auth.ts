@@ -32,9 +32,11 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 }
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
-  if (!JWT_SECRET) {
-    console.error("JWT_SECRET is not defined.");
-    return { error: 'Server configuration error: JWT_SECRET is missing.' };
+  // More robust check for the secret key
+  if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    const errorMessage = 'Server configuration error: JWT_SECRET is missing or too short. Please ensure it is set in environment variables and is at least 32 characters long.';
+    console.error(errorMessage);
+    return { error: errorMessage };
   }
   
   const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
@@ -56,7 +58,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
         firstName: first_name,
         lastName: last_name || '',
         telegramUsername: username || '',
-        avatar: photo_url || '',
+        avatar: photo_url || `https://i.pravatar.cc/150?u=${username || telegramUserId}`,
       };
       await newUserRef.set(newUser);
       user = { id: newUserRef.id, ...newUser };
@@ -78,7 +80,8 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
   } catch (error) {
       console.error('Error in handleTelegramLogin:', error);
-      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      // Return the full error message and stack trace for debugging
+      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
       return { error: `An internal error occurred during login: ${errorMessage}` };
   }
 }
