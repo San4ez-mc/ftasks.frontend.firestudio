@@ -74,7 +74,6 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     return { tempToken, details };
 
   } catch (error) {
-      console.error('Error in handleTelegramLogin:', error);
       const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
       return { error: `Login Error: ${errorMessage}` };
   }
