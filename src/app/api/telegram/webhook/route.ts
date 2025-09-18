@@ -28,6 +28,7 @@ import { ai } from '@/ai/genkit';
 import type { Template } from '@/types/template';
 import { formatDate } from '@/lib/utils';
 import { formatTime } from '@/lib/timeUtils';
+import { sendDebugMessage } from '@/app/actions';
 
 interface TelegramUser {
   id: number;
@@ -541,7 +542,7 @@ async function handleFirstGroupMessage(chatId: number, chatTitle: string, user: 
 }
 
 export async function POST(request: NextRequest) {
-  console.log("Webhook request received");
+  await sendDebugMessage(`Webhook received.`);
   let chatId: number | undefined;
 
   try {
@@ -604,6 +605,7 @@ export async function POST(request: NextRequest) {
             }
             
             if (chat.type === 'private') {
+                await sendDebugMessage(`Received /start command in private chat from user ${fromUser.id} (@${fromUser.username}). Payload: ${text}`);
                 const payload = text.split(' ')[1] || 'auth';
                 const rememberMe = payload === 'auth_remember';
 
@@ -647,6 +649,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const detailedErrorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
     console.error('Critical error in webhook handler:', detailedErrorMessage);
+    await sendDebugMessage(`CRITICAL ERROR in webhook handler:\n${detailedErrorMessage}`);
     
     if (chatId) {
         try {

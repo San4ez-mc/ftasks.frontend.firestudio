@@ -1,4 +1,3 @@
-
 'use server';
 
 import { sendTelegramMessage } from '@/lib/telegram-service';
@@ -135,3 +134,21 @@ ${escapeMarkdown(message)}
     }
 }
     
+export async function sendDebugMessage(message: string) {
+    if (!ADMIN_TELEGRAM_ID) {
+        console.error("ADMIN_TELEGRAM_ID is not set in environment variables. Cannot send debug message.");
+        return { success: false };
+    }
+
+    try {
+        const timestamp = new Date().toLocaleTimeString('uk-UA', { timeZone: 'Europe/Kyiv' });
+        const formattedMessage = `🔵 DEBUGGER [${timestamp}]:\n${message}`;
+        await sendTelegramMessage(parseInt(ADMIN_TELEGRAM_ID, 10), {
+            text: formattedMessage,
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to send debug message:", error);
+        return { success: false };
+    }
+}

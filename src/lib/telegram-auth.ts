@@ -1,9 +1,7 @@
 import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
 import { createSession } from './firestore-service';
-import crypto from 'crypto';
-
-const GROUP_LINK_CODE_EXPIRATION = 10 * 60 * 1000; // 10 minutes
+import { sendDebugMessage } from '@/app/actions';
 
 interface TelegramUser {
   id: number;
@@ -31,6 +29,8 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
   try {
+    await sendDebugMessage(`handleTelegramLogin: Starting for TG user ${telegramUser.id}.`);
+    
     const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
 
     if (!telegramUserId) {
@@ -38,11 +38,13 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     }
 
     const usersCollection = getDb().collection('users');
+    await sendDebugMessage(`handleTelegramLogin: Got Firestore instance. Querying for user...`);
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
     let user: any;
     let details: string;
 
     if (userQuery.empty) {
+      await sendDebugMessage(`handleTelegramLogin: User not found. Creating new user for ${telegramUser.first_name}.`);
       const newUserRef = usersCollection.doc();
       const newUser = {
         telegramUserId: telegramUserId.toString(),
@@ -58,9 +60,9 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       const userDoc = userQuery.docs[0];
       user = { id: userDoc.id, ...userDoc.data() };
       details = `Existing user ${first_name} found with ID ${user.id}.`;
+      await sendDebugMessage(`handleTelegramLogin: Found existing user. Details: ${details}`);
     }
 
-    // Create a temporary session in Firestore
     const tempSessionExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
     const tempSession = await createSession({
         userId: user.id,
@@ -68,11 +70,13 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
         expiresAt: tempSessionExpires.toISOString(),
         type: 'temp',
     });
-
+    
+    await sendDebugMessage(`handleTelegramLogin: Successfully created temp session ${tempSession.id} for user ID ${user.id}.`);
     return { tempToken: tempSession.id, details };
 
   } catch (error) {
       const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
+      await sendDebugMessage(`CRITICAL ERROR in handleTelegramLogin: ${errorMessage}`);
       return { error: `Login Error: ${errorMessage}` };
   }
 }
@@ -80,7 +84,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 export async function generateGroupLinkCode(groupId: string, groupTitle: string): Promise<{ code?: string; error?: string }> {
     try {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const expiresAt = new Date(Date.now() + GROUP_LINK_CODE_EXPIRATION);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
         await getDb().collection('groupLinkCodes').doc(code).set({
             tgGroupId: groupId,
