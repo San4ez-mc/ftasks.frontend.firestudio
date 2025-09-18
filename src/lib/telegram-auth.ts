@@ -34,7 +34,7 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
   if (!JWT_SECRET) {
     console.error("JWT_SECRET is not defined.");
-    return { error: 'Server configuration error' };
+    return { error: 'Server configuration error: JWT_SECRET is missing.' };
   }
   
   const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
@@ -78,7 +78,8 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
   } catch (error) {
       console.error('Error in handleTelegramLogin:', error);
-      return { error: 'An internal error occurred during login.' };
+      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+      return { error: `An internal error occurred during login: ${errorMessage}` };
   }
 }
 
