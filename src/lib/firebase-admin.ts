@@ -1,15 +1,13 @@
+import admin from 'firebase-admin';
 
-import * as admin from 'firebase-admin';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
-
-let db: Firestore | null = null;
+let db: admin.firestore.Firestore | null = null;
 
 /**
  * A singleton function to get the Firestore instance.
  * It initializes the Firebase Admin SDK only once, on the first call.
  * This is a more robust pattern for serverless environments.
  */
-export function getDb(): Firestore {
+export function getDb(): admin.firestore.Firestore {
   if (db) {
     return db;
   }
@@ -27,6 +25,6 @@ export function getDb(): Firestore {
     }
   }
   
-  db = getFirestore();
+  db = admin.firestore();
   return db;
 }
