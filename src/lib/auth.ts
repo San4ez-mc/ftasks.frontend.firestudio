@@ -2,8 +2,8 @@
 import { NextRequest } from 'next/server';
 import * as jose from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const PERMANENT_JWT_SECRET = process.env.PERMANENT_JWT_SECRET;
+const JWT_SECRET = process.env.JWTSECRET;
+const PERMANENT_JWT_SECRET = process.env.PERMANENTJWTSECRET;
 
 type AuthResult = {
   userId?: string;
@@ -16,7 +16,7 @@ type AuthResult = {
 async function getSecretKey(isPermanent: boolean): Promise<Uint8Array> {
     const secret = isPermanent ? PERMANENT_JWT_SECRET : JWT_SECRET;
     if (!secret) {
-        const secretName = isPermanent ? 'PERMANENT_JWT_SECRET' : 'JWT_SECRET';
+        const secretName = isPermanent ? 'PERMANENTJWTSECRET' : 'JWTSECRET';
         console.error(`${secretName} is not defined in environment variables.`);
         throw new Error('Server configuration error');
     }
