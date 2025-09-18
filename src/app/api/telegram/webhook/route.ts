@@ -650,7 +650,7 @@ export async function POST(request: NextRequest) {
     
     if (chatId) {
         try {
-            await sendTelegramMessage(chatId, { text: `🔴 *Критична помилка на сервері:*\n\n\`\`\`\n${detailedErrorMessage}\n\`\`\`` });
+            await sendTelegramMessage(chatId, { text: `🔴 *Критична помилка на сервері:*\n\n\`\`\`\n${detailedErrorMessage.substring(0, 3800)}\n\`\`\`` });
         } catch (sendError) {
             console.error("Failed to send critical error message to user:", sendError);
         }

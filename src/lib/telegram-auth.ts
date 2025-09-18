@@ -2,7 +2,7 @@ import * as jose from 'jose';
 import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
 
-const JWTSECRET = 'A9b8C7d6E5f4G3h2J1k0L9m8N7b6V5c4X'; // Hardcoded for debugging
+const JWT_SECRET = process.env.JWT_SECRET;
 const GROUP_LINK_CODE_EXPIRATION = 10 * 60 * 1000; // 10 minutes
 
 interface TelegramUser {
@@ -31,8 +31,8 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
   try {
-    if (!JWTSECRET || JWTSECRET.length < 32) {
-      throw new Error('Server configuration error: JWTSECRET is missing or too short. Please ensure it is set in environment variables and is at least 32 characters long.');
+    if (!JWT_SECRET || JWT_SECRET.length < 32) {
+      throw new Error('Server configuration error: JWT_SECRET is missing or too short. Please ensure it is set in environment variables and is at least 32 characters long.');
     }
     
     const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
@@ -64,7 +64,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       details = `Existing user ${first_name} found with ID ${user.id}.`;
     }
 
-    const secretKey = new TextEncoder().encode(JWTSECRET);
+    const secretKey = new TextEncoder().encode(JWT_SECRET);
     const tempToken = await new jose.SignJWT({ userId: user.id, rememberMe })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
