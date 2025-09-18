@@ -14,7 +14,7 @@ export const isAdmin = async (userId: string, companyId: string): Promise<boolea
         return false;
     }
     try {
-        const db = getDb();
+        const db = await getDb();
         const companyDoc = await db.collection('companies').doc(companyId).get();
         if (!companyDoc.exists) {
             return false;
