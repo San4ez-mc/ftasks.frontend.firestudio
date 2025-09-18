@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
-import { getResults, createResult, updateResult, deleteResult } from './actions';
+import { getResults, createResult, updateResult, deleteResult } from '@/app/(app)/results/actions';
 import { getEmployees } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -232,7 +232,7 @@ export default function ResultsPage() {
     }
   };
   
-  const toggleResultCollapse = (id: string) => {
+  const toggleCollapse = (id: string) => {
     setCollapsedResults(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
@@ -354,7 +354,7 @@ export default function ResultsPage() {
               handleDeleteResult={handleDeleteResult}
               handlePostponeResult={handlePostponeResult}
               collapsedResults={collapsedResults}
-              toggleCollapse={toggleResultCollapse}
+              toggleCollapse={toggleCollapse}
               employees={employees}
             />
           ) : (
@@ -500,7 +500,7 @@ function ResultsTable({
           handleDeleteResult={handleDeleteResult}
           handlePostponeResult={handlePostponeResult}
           collapsedResults={collapsedResults}
-          toggleCollapse={toggleResultCollapse}
+          toggleCollapse={toggleCollapse}
         />
         {!collapsedResults.includes(result.id) && (result.subResults || []).map((sr) => (
           <SubResultRows 
@@ -516,7 +516,7 @@ function ResultsTable({
             path={[sr.id]}
             panelOpen={panelOpen}
             collapsedResults={collapsedResults}
-            toggleCollapse={toggleResultCollapse}
+            toggleCollapse={toggleCollapse}
             selectedResultId={selectedResultId}
           />
         ))}
@@ -839,3 +839,6 @@ function ResultsCards({ results, onResultSelect, onResultUpdate }: { results: Re
 
     
 
+
+
+    
