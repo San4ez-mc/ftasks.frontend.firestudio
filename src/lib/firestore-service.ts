@@ -1,3 +1,4 @@
+
 // src/lib/firestore-service.ts
 'use server';
 
@@ -63,7 +64,8 @@ async function handleFirestoreError(error: any, context: string): Promise<any> {
 
 async function getByQuery<T>(collectionName: string, queryField: string, queryValue: string): Promise<T[]> {
   try {
-    const snapshot = await getDb().collection(collectionName).where(queryField, '==', queryValue).get();
+    const db = await getDb();
+    const snapshot = await db.collection(collectionName).where(queryField, '==', queryValue).get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
   } catch (error) {
     return handleFirestoreError(error, `getByQuery on ${collectionName}`);
@@ -72,7 +74,8 @@ async function getByQuery<T>(collectionName: string, queryField: string, queryVa
 
 async function getDocAndValidateCompany<T>(collectionName: string, id: string, companyId: string): Promise<T | null> {
     try {
-        const docRef = getDb().collection(collectionName).doc(id);
+        const db = await getDb();
+        const docRef = db.collection(collectionName).doc(id);
         const doc = await docRef.get();
 
         if (!doc.exists) {
@@ -99,8 +102,9 @@ async function getDocAndValidateCompany<T>(collectionName: string, id: string, c
 
 async function create<T extends { id?: string }>(collectionName: string, data: Omit<T, 'id'>): Promise<T> {
   try {
+    const db = await getDb();
     const { id, ...rest } = data as any;
-    const docRef = await getDb().collection(collectionName).add(rest);
+    const docRef = await db.collection(collectionName).add(rest);
     const newDoc = await docRef.get();
     return { id: newDoc.id, ...newDoc.data() } as T;
   } catch (error) {
@@ -115,7 +119,8 @@ async function update<T>(collectionName: string, docId: string, companyId: strin
         return null;
     }
     
-    const docRef = getDb().collection(collectionName).doc(docId);
+    const db = await getDb();
+    const docRef = db.collection(collectionName).doc(docId);
     await docRef.update(updates);
     
     const updatedDoc = await docRef.get();
@@ -131,7 +136,8 @@ async function remove(collectionName: string, docId: string, companyId: string):
      if (!doc) {
         return { success: false };
     }
-    await getDb().collection(collectionName).doc(docId).delete();
+    const db = await getDb();
+    await db.collection(collectionName).doc(docId).delete();
     return { success: true };
   } catch (error) {
     return handleFirestoreError(error, `remove on ${collectionName}/${docId}`);
@@ -143,7 +149,8 @@ async function remove(collectionName: string, docId: string, companyId: string):
 // --- Session Management ---
 export async function createSession(data: Omit<Session, 'id'>): Promise<Session> {
     try {
-        const docRef = await getDb().collection(SESSIONS_COLLECTION).add(data);
+        const db = await getDb();
+        const docRef = await db.collection(SESSIONS_COLLECTION).add(data);
         return { id: docRef.id, ...data };
     } catch (error) {
         return handleFirestoreError(error, 'createSession');
@@ -152,7 +159,8 @@ export async function createSession(data: Omit<Session, 'id'>): Promise<Session>
 
 export async function getSession(sessionId: string): Promise<(Session & { id: string }) | null> {
     try {
-        const doc = await getDb().collection(SESSIONS_COLLECTION).doc(sessionId).get();
+        const db = await getDb();
+        const doc = await db.collection(SESSIONS_COLLECTION).doc(sessionId).get();
         if (!doc.exists) {
             return null;
         }
@@ -164,7 +172,8 @@ export async function getSession(sessionId: string): Promise<(Session & { id: st
 
 export async function deleteSession(sessionId: string): Promise<{ success: boolean }> {
     try {
-        await getDb().collection(SESSIONS_COLLECTION).doc(sessionId).delete();
+        const db = await getDb();
+        await db.collection(SESSIONS_COLLECTION).doc(sessionId).delete();
         return { success: true };
     } catch (error) {
         return handleFirestoreError(error, `deleteSession for session ${sessionId}`);
@@ -179,7 +188,8 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 }
 export async function getUserById(userId: string): Promise<(User & { id: string }) | null> {
     try {
-        const doc = await getDb().collection(USERS_COLLECTION).doc(userId).get();
+        const db = await getDb();
+        const doc = await db.collection(USERS_COLLECTION).doc(userId).get();
         return doc.exists ? { id: doc.id, ...doc.data() } as User & { id: string } : null;
     } catch (error) {
         return handleFirestoreError(error, `getUserById for user ${userId}`);
@@ -192,13 +202,15 @@ export async function getCompaniesForUser(userId: string): Promise<{id: string, 
 
     const companyIds = employeeLinks.map(link => link.companyId);
     
-    const companiesSnapshot = await getDb().collection(COMPANIES_COLLECTION).where(FieldPath.documentId(), 'in', companyIds).get();
+    const db = await getDb();
+    const companiesSnapshot = await db.collection(COMPANIES_COLLECTION).where(FieldPath.documentId(), 'in', companyIds).get();
     
     return companiesSnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
 }
 
 export async function isUserMemberOfCompany(userId: string, companyId: string): Promise<boolean> {
-    const snapshot = await getDb().collection(EMPLOYEES_COLLECTION)
+    const db = await getDb();
+    const snapshot = await db.collection(EMPLOYEES_COLLECTION)
         .where('userId', '==', userId)
         .where('companyId', '==', companyId)
         .limit(1)
@@ -208,17 +220,18 @@ export async function isUserMemberOfCompany(userId: string, companyId: string): 
 
 export async function createCompanyAndAddUser(userId: string, companyName: string): Promise<{newCompanyId: string}> {
     try {
-        const batch = getDb().batch();
+        const db = await getDb();
+        const batch = db.batch();
 
         const user = await getUserById(userId);
         if (!user) {
             throw new Error(`User with ID ${userId} not found.`);
         }
 
-        const newCompanyRef = getDb().collection(COMPANIES_COLLECTION).doc();
+        const newCompanyRef = db.collection(COMPANIES_COLLECTION).doc();
         batch.set(newCompanyRef, { name: companyName, ownerId: userId });
 
-        const newEmployeeRef = getDb().collection(EMPLOYEES_COLLECTION).doc();
+        const newEmployeeRef = db.collection(EMPLOYEES_COLLECTION).doc();
         batch.set(newEmployeeRef, {
             userId: user.id,
             companyId: newCompanyRef.id,
@@ -235,7 +248,7 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
         });
 
         const trialEndDate = addDays(new Date(), 30);
-        const companyProfileRef = getDb().collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
+        const companyProfileRef = db.collection(COMPANY_PROFILES_COLLECTION).doc(newCompanyRef.id);
         batch.set(companyProfileRef, {
             name: companyName,
             description: `Компанія ${companyName}`,
@@ -254,7 +267,8 @@ export async function createCompanyAndAddUser(userId: string, companyName: strin
 
 export async function removeEmployeeLink(userId: string, companyId: string): Promise<{ success: boolean; message: string }> {
     try {
-        const companyRef = getDb().collection(COMPANIES_COLLECTION).doc(companyId);
+        const db = await getDb();
+        const companyRef = db.collection(COMPANIES_COLLECTION).doc(companyId);
         const companyDoc = await companyRef.get();
         if (!companyDoc.exists) {
             return { success: false, message: "Компанію не знайдено." };
@@ -263,7 +277,7 @@ export async function removeEmployeeLink(userId: string, companyId: string): Pro
             return { success: false, message: "Власник не може покинути компанію. Спочатку передайте права власності." };
         }
 
-        const employeeLinkQuery = await getDb().collection(EMPLOYEES_COLLECTION)
+        const employeeLinkQuery = await db.collection(EMPLOYEES_COLLECTION)
             .where('userId', '==', userId)
             .where('companyId', '==', companyId)
             .limit(1)
@@ -315,7 +329,8 @@ export const getEmployeeLinkForUser = async (userId: string): Promise<{ companyI
 // --- Company Profile ---
 export const getCompanyProfileFromDb = async (companyId: string): Promise<CompanyProfile | null> => {
     try {
-        const docRef = getDb().collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
+        const db = await getDb();
+        const docRef = db.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
         const doc = await docRef.get();
 
         if (!doc.exists) {
@@ -330,7 +345,8 @@ export const getCompanyProfileFromDb = async (companyId: string): Promise<Compan
 
 export const updateCompanyProfileInDb = async (companyId: string, updates: Partial<CompanyProfile>): Promise<CompanyProfile | null> => {
     try {
-        const docRef = getDb().collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
+        const db = await getDb();
+        const docRef = db.collection(COMPANY_PROFILES_COLLECTION).doc(companyId);
         await docRef.update(updates);
         return getCompanyProfileFromDb(companyId);
     } catch(error) {
@@ -344,7 +360,8 @@ export const getDepartmentsForCompany = (companyId: string) => getByQuery<Depart
 
 export async function saveOrgStructure(companyId: string, divisions: Division[], departments: Department[]): Promise<{ success: boolean }> {
     try {
-        const batch = getDb().batch();
+        const db = await getDb();
+        const batch = db.batch();
         const existingDivisions = await getDivisionsForCompany(companyId);
         const existingDepartments = await getDepartmentsForCompany(companyId);
 
@@ -353,25 +370,25 @@ export async function saveOrgStructure(companyId: string, divisions: Division[],
 
         for (const div of existingDivisions) {
             if (!newDivisionIds.has(div.id)) {
-                batch.delete(getDb().collection(DIVISIONS_COLLECTION).doc(div.id));
+                batch.delete(db.collection(DIVISIONS_COLLECTION).doc(div.id));
             }
         }
 
         for (const dept of existingDepartments) {
             if (!newDepartmentIds.has(dept.id)) {
-                batch.delete(getDb().collection(DEPARTMENTS_COLLECTION).doc(dept.id));
+                batch.delete(db.collection(DEPARTMENTS_COLLECTION).doc(dept.id));
             }
         }
 
         for (const div of divisions) {
             const { id, ...data } = div;
-            const ref = getDb().collection(DIVISIONS_COLLECTION).doc(id);
+            const ref = db.collection(DIVISIONS_COLLECTION).doc(id);
             batch.set(ref, { ...data, companyId });
         }
 
         for (const dept of departments) {
             const { id, ...data } = dept;
-            const ref = getDb().collection(DEPARTMENTS_COLLECTION).doc(id);
+            const ref = db.collection(DEPARTMENTS_COLLECTION).doc(id);
             batch.set(ref, { ...data, companyId });
         }
         
@@ -406,7 +423,8 @@ export const deleteAuditFromDb = (companyId: string, id: string) => remove(AUDIT
 
 // --- Telegram Groups ---
 export const linkTelegramGroup = async (code: string, companyId: string): Promise<{ group: TelegramGroup, wasCreated: boolean }> => {
-    const codeRef = getDb().collection(GROUP_LINK_CODES_COLLECTION).doc(code);
+    const db = await getDb();
+    const codeRef = db.collection(GROUP_LINK_CODES_COLLECTION).doc(code);
     const codeDoc = await codeRef.get();
 
     if (!codeDoc.exists) throw new Error("Невірний або застарілий код.");
@@ -449,7 +467,8 @@ export const findTelegramGroupByTgId = async (tgGroupId: string) => {
 export const createTelegramLog = (companyId: string, data: Omit<MessageLog, 'id' | 'companyId'>) => create<MessageLog>(TELEGRAM_LOGS_COLLECTION, { ...data, companyId });
 
 export async function getTelegramLogsByGroupId(companyId: string, groupId: string): Promise<MessageLog[]> {
-    const snapshot = await getDb().collection(TELEGRAM_LOGS_COLLECTION)
+    const db = await getDb();
+    const snapshot = await db.collection(TELEGRAM_LOGS_COLLECTION)
         .where('companyId', '==', companyId)
         .where('groupId', '==', groupId)
         .orderBy('timestamp', 'desc')
@@ -464,7 +483,8 @@ export const getMembersForGroupDb = (companyId: string, groupId: string) => getB
 
 export async function upsertTelegramMember(companyId: string, memberData: Omit<TelegramMember, 'id' | 'companyId' | 'employeeId'>) {
     try {
-        const membersRef = getDb().collection(TELEGRAM_MEMBERS_COLLECTION);
+        const db = await getDb();
+        const membersRef = db.collection(TELEGRAM_MEMBERS_COLLECTION);
         const q = membersRef
             .where('companyId', '==', companyId)
             .where('groupId', '==', memberData.groupId)
