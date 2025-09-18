@@ -8,7 +8,10 @@ import { getCompaniesForUser } from '@/lib/firestore-service';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyToken(request);
+    const authHeader = request.headers.get('Authorization');
+    const token = authHeader?.split(' ')[1];
+
+    const authResult = await verifyToken(token);
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }

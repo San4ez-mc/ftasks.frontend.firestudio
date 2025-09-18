@@ -2,9 +2,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import * as jose from 'jose';
-
-const PERMANENT_JWT_SECRET = process.env.PERMANENT_JWT_SECRET;
+import { getSession } from './firestore-service';
 
 type UserSession = {
     userId: string;
@@ -17,22 +15,17 @@ export async function getUserSession(): Promise<UserSession | null> {
         return null;
     }
 
-    if (!PERMANENT_JWT_SECRET) {
-        console.error("PERMANENT_JWT_SECRET is not set.");
-        return null;
-    }
-
     try {
-        const secretKey = new TextEncoder().encode(PERMANENT_JWT_SECRET);
-        const { payload } = await jose.jwtVerify(token, secretKey);
-        const decoded = payload as { userId: string, companyId: string };
-
-        if (typeof decoded === 'object' && decoded.userId && decoded.companyId) {
-            return { userId: decoded.userId, companyId: decoded.companyId };
+        const session = await getSession(token);
+        
+        // Validate the session from Firestore
+        if (session && session.type === 'permanent' && new Date(session.expiresAt) > new Date() && session.companyId) {
+            return { userId: session.userId, companyId: session.companyId };
         }
+
         return null;
     } catch (error) {
-        console.warn("Failed to verify session token (it might be expired):", error instanceof Error ? error.message : String(error));
+        console.error("Error validating session from Firestore:", error);
         return null;
     }
 }

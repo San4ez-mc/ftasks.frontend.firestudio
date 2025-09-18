@@ -4,12 +4,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { isUserMemberOfCompany, getSession, deleteSession, createSession } from '@/lib/firestore-service';
+import { isUserMemberOfCompany, deleteSession, createSession } from '@/lib/firestore-service';
 
 export async function POST(request: NextRequest) {
   try {
-    // Note: verifyToken now checks a temporary session ID from the DB
-    const authResult = await verifyToken(request);
+    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
+    const authResult = await verifyToken(tempToken);
+
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }
@@ -29,25 +30,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'User is not a member of this company' }, { status: 403 });
     }
     
-    // Invalidate the temporary session
-    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
     if (tempToken) {
         await deleteSession(tempToken);
     }
 
-    // Create a new permanent session
     const permanentSessionExpires = new Date(Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000); // 30 days or 1 day
     const permanentSession = await createSession({
         userId,
         companyId,
-        rememberMe,
+        rememberMe: rememberMe || false,
         expiresAt: permanentSessionExpires.toISOString(),
         type: 'permanent',
     });
 
     const response = NextResponse.json({ success: true });
 
-    // Set the cookie in the response
     const maxAge = (rememberMe || false) ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 1 day
     response.cookies.set('auth_token', permanentSession.id, {
         httpOnly: true,

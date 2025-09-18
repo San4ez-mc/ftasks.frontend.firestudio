@@ -8,7 +8,7 @@ import { getCompaniesForUser } from '@/lib/firestore-service';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyToken(request, true); // Permanent token required
+    const authResult = await verifyToken(request); // Permanent token required
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }

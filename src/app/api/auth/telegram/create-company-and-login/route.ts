@@ -6,7 +6,8 @@ import { createCompanyAndAddUser, deleteSession, createSession } from '@/lib/fir
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await verifyToken(request);
+    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
+    const authResult = await verifyToken(tempToken);
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }
@@ -23,25 +24,21 @@ export async function POST(request: NextRequest) {
 
     const { newCompanyId } = await createCompanyAndAddUser(userId, companyName);
 
-    // Invalidate the temporary session
-    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
     if (tempToken) {
         await deleteSession(tempToken);
     }
     
-    // Create a new permanent session
     const permanentSessionExpires = new Date(Date.now() + (rememberMe ? 30 : 1) * 24 * 60 * 60 * 1000); // 30 days or 1 day
     const permanentSession = await createSession({
         userId,
         companyId: newCompanyId,
-        rememberMe,
+        rememberMe: rememberMe || false,
         expiresAt: permanentSessionExpires.toISOString(),
         type: 'permanent',
     });
     
     const response = NextResponse.json({ success: true });
     
-    // Set the cookie in the response
     const maxAge = (rememberMe || false) ? 30 * 24 * 60 * 60 : 24 * 60 * 60; // 30 days or 1 day
     response.cookies.set('auth_token', permanentSession.id, {
         httpOnly: true,
