@@ -1,4 +1,4 @@
-
+import 'dotenv/config'; // Explicitly load environment variables
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
@@ -542,7 +542,8 @@ async function handleFirstGroupMessage(chatId: number, chatTitle: string, user: 
 
 export async function POST(request: NextRequest) {
   console.log("Webhook request received");
-  
+  let chatId: number | undefined;
+
   try {
     const body = await request.json();
     console.log("Webhook body:", JSON.stringify(body, null, 2));
@@ -550,6 +551,7 @@ export async function POST(request: NextRequest) {
     if (body.message) {
         const message = body.message;
         const chat: TelegramChat = message.chat;
+        chatId = chat.id;
         const fromUser: TelegramUser = message.from;
         const text = (message.text || '') as string;
         const voice = message.voice as TelegramVoice | undefined;
@@ -646,16 +648,12 @@ export async function POST(request: NextRequest) {
     const detailedErrorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
     console.error('Critical error in webhook handler:', detailedErrorMessage);
     
-    try {
-        const textBody = await request.text();
-        const body = JSON.parse(textBody);
-        const chatId = body?.message?.chat?.id;
-        
-        if (chatId) {
-            await sendTelegramMessage(chatId, { text: `🔴 Критична помилка на сервері:\n\n${detailedErrorMessage.substring(0, 3000)}` });
+    if (chatId) {
+        try {
+            await sendTelegramMessage(chatId, { text: `🔴 *Критична помилка на сервері:*\n\n\`\`\`\n${detailedErrorMessage}\n\`\`\`` });
+        } catch (sendError) {
+            console.error("Failed to send critical error message to user:", sendError);
         }
-    } catch (sendError) {
-        console.error("Failed to send critical error message to user:", sendError);
     }
     
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
