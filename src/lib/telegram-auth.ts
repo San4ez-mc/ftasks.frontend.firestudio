@@ -1,8 +1,8 @@
-import * as jose from 'jose';
 import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
+import { createSession } from './firestore-service';
+import crypto from 'crypto';
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const GROUP_LINK_CODE_EXPIRATION = 10 * 60 * 1000; // 10 minutes
 
 interface TelegramUser {
@@ -31,10 +31,6 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
 
 export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe: boolean): Promise<{ tempToken?: string; error?: string; details?: string }> {
   try {
-    if (!JWT_SECRET || JWT_SECRET.length < 32) {
-      throw new Error('Server configuration error: JWT_SECRET is missing or too short. Please ensure it is set in environment variables and is at least 32 characters long.');
-    }
-    
     const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
 
     if (!telegramUserId) {
@@ -64,14 +60,16 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
       details = `Existing user ${first_name} found with ID ${user.id}.`;
     }
 
-    const secretKey = new TextEncoder().encode(JWT_SECRET);
-    const tempToken = await new jose.SignJWT({ userId: user.id, rememberMe })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('5m')
-      .sign(secretKey);
-    
-    return { tempToken, details };
+    // Create a temporary session in Firestore
+    const tempSessionExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const tempSession = await createSession({
+        userId: user.id,
+        rememberMe,
+        expiresAt: tempSessionExpires.toISOString(),
+        type: 'temp',
+    });
+
+    return { tempToken: tempSession.id, details };
 
   } catch (error) {
       const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);

@@ -1,4 +1,3 @@
-
 // src/lib/firestore-service.ts
 'use server';
 
@@ -16,6 +15,7 @@ import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 import type { User } from '@/types/user';
 import type { Department, Division } from '@/types/org-structure';
+import type { Session } from '@/types/session';
 
 
 const RESULTS_COLLECTION = 'results';
@@ -34,6 +34,7 @@ const COMPANIES_COLLECTION = 'companies';
 const USERS_COLLECTION = 'users';
 const DIVISIONS_COLLECTION = 'divisions';
 const DEPARTMENTS_COLLECTION = 'departments';
+const SESSIONS_COLLECTION = 'sessions';
 
 
 // Manual implementation to avoid date-fns dependency issues on the server.
@@ -47,16 +48,11 @@ function addDays(date: Date, days: number): Date {
 async function handleFirestoreError(error: any, context: string): Promise<any> {
     // 5 is the gRPC status code for NOT_FOUND
     if (error.code === 5) {
-        // This specific error can happen on new projects if Firestore is enabled but
-        // the collection (e.g., 'results') hasn't been created yet because no data
-        // has been written, or a required index is missing. Instead of crashing, we log a 
-        // warning and return an empty result to allow the UI to render an empty state.
         console.warn(`Firestore 'NOT_FOUND' error in context: ${context}. This is expected on a new project. Returning empty/null result.`);
         
         if (context.startsWith('getByQuery')) {
-             return []; // Return empty array for queries to non-existent collections/indexes
+             return [];
         }
-        // For functions that expect a single document, return null
         return null;
     }
     const errorMessage = `A database error occurred. Please check server logs. Context: ${context}`;
@@ -143,6 +139,38 @@ async function remove(collectionName: string, docId: string, companyId: string):
 }
 
 // --- Service-Specific Functions ---
+
+// --- Session Management ---
+export async function createSession(data: Omit<Session, 'id'>): Promise<Session> {
+    try {
+        const docRef = await getDb().collection(SESSIONS_COLLECTION).add(data);
+        return { id: docRef.id, ...data };
+    } catch (error) {
+        return handleFirestoreError(error, 'createSession');
+    }
+}
+
+export async function getSession(sessionId: string): Promise<(Session & { id: string }) | null> {
+    try {
+        const doc = await getDb().collection(SESSIONS_COLLECTION).doc(sessionId).get();
+        if (!doc.exists) {
+            return null;
+        }
+        return { id: doc.id, ...doc.data() } as Session & { id: string };
+    } catch (error) {
+        return handleFirestoreError(error, `getSession for session ${sessionId}`);
+    }
+}
+
+export async function deleteSession(sessionId: string): Promise<{ success: boolean }> {
+    try {
+        await getDb().collection(SESSIONS_COLLECTION).doc(sessionId).delete();
+        return { success: true };
+    } catch (error) {
+        return handleFirestoreError(error, `deleteSession for session ${sessionId}`);
+    }
+}
+
 
 // --- Auth Related ---
 export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
@@ -459,5 +487,3 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
-
-    
