@@ -28,8 +28,6 @@ import { ai } from '@/ai/genkit';
 import type { Template } from '@/types/template';
 import { formatDate } from '@/lib/utils';
 import { formatTime } from '@/lib/timeUtils';
-import { sendDebugMessage } from '@/app/actions';
-
 
 interface TelegramUser {
   id: number;
@@ -604,12 +602,14 @@ export async function POST(request: NextRequest) {
             }
             
             if (chat.type === 'private') {
-                await sendDebugMessage(`Received /start command in private chat from user ${fromUser.id} (@${fromUser.username}). Payload: ${text}`);
                 const payload = text.split(' ')[1] || 'auth';
                 const rememberMe = payload === 'auth_remember';
 
                 const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);
-                console.log(`User lookup/creation result: ${details}`);
+                
+                if (details) {
+                    console.log(`User lookup/creation result: ${details}`);
+                }
 
                 if (error || !tempToken) {
                     const errorMessage = error || 'Authentication failed. No token provided.';
@@ -646,8 +646,17 @@ export async function POST(request: NextRequest) {
     const detailedErrorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
     console.error('Critical error in webhook handler:', detailedErrorMessage);
     
-    // We cannot reliably get the chat ID here if the initial body parsing failed.
-    // The best we can do is log it. The error will be sent to the admin via the debug message in the auth flow.
+    try {
+        const textBody = await request.text();
+        const body = JSON.parse(textBody);
+        const chatId = body?.message?.chat?.id;
+        
+        if (chatId) {
+            await sendTelegramMessage(chatId, { text: `🔴 Критична помилка на сервері:\n\n${detailedErrorMessage.substring(0, 3000)}` });
+        }
+    } catch (sendError) {
+        console.error("Failed to send critical error message to user:", sendError);
+    }
     
     return NextResponse.json({ status: 'error', message: 'Internal Server Error' }, { status: 500 });
   }
