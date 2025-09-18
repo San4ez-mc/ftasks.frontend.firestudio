@@ -15,7 +15,7 @@ interface TelegramUser {
 }
 
 export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
-    const db = await getDb();
+    const db = getDb();
     const usersCollection = db.collection('users');
     const userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId).limit(1).get();
     if (userQuery.empty) {
@@ -42,7 +42,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     }
 
     await sendDebugMessage(`handleTelegramLogin: Attempting to get DB instance...`);
-    const db = await getDb();
+    const db = getDb();
     await sendDebugMessage(`handleTelegramLogin: Successfully got DB instance. Querying for user...`);
     
     const usersCollection = db.collection('users');
@@ -84,7 +84,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     return { tempToken: tempSession.id, details };
 
   } catch (error) {
-      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
+      const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : String(error);
       await sendDebugMessage(`CRITICAL ERROR in handleTelegramLogin: ${errorMessage}`);
       return { error: `Login Error: ${errorMessage}` };
   }
@@ -92,7 +92,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
 export async function generateGroupLinkCode(groupId: string, groupTitle: string): Promise<{ code?: string; error?: string }> {
     try {
-        const db = await getDb();
+        const db = getDb();
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
