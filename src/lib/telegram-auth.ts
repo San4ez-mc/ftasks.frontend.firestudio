@@ -39,8 +39,9 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
         throw new Error('Telegram user ID is required in the data from Telegram.');
     }
 
-    const usersCollection = getDb().collection('users');
+    const db = getDb();
     await sendDebugMessage(`handleTelegramLogin: Got Firestore instance. Querying for user...`);
+    const usersCollection = db.collection('users');
     let userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId.toString()).limit(1).get();
     await sendDebugMessage(`handleTelegramLogin: User query complete. Found ${userQuery.docs.length} users.`);
     let user: any;

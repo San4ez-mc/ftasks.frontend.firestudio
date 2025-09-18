@@ -489,7 +489,7 @@ async function handleNaturalLanguageCommand(chat: TelegramChat, user: TelegramUs
 
                 case 'unknown':
                 default:
-                    await sendTelegramMessage(chat.id, { text: "Я не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
+                    await sendTelegramMessage(chat.id, { text: "Я не не зміг вас зрозуміти. Спробуйте сказати, що ви хочете зробити, наприклад: 'створи задачу', 'створи результат', або 'список співробітників'." });
                     break;
             }
         }
@@ -605,8 +605,8 @@ export async function POST(request: NextRequest) {
             }
             
             if (chat.type === 'private') {
-                await sendDebugMessage(`Received /start command in private chat from user ${fromUser.id} (@${fromUser.username}). Payload: ${text}`);
                 const payload = text.split(' ')[1] || 'auth';
+                await sendDebugMessage(`Received /start command in private chat from user ${fromUser.id} (@${fromUser.username}). Payload: ${text}`);
                 const rememberMe = payload === 'auth_remember';
 
                 const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { sendDebugMessage } from '@/app/actions';
 
 let dbInstance: Firestore | null = null;
 
@@ -13,19 +14,28 @@ export function getDb(): Firestore {
     return dbInstance;
   }
   
-  let app: App;
-  if (getApps().length === 0) {
-    try {
-        app = initializeApp();
-        console.log('Firebase Admin SDK initialized successfully.');
-    } catch (error) {
-        console.error('CRITICAL: Firebase Admin SDK initialization failed.', error);
-        throw new Error('Could not initialize Firebase Admin SDK.');
+  try {
+    sendDebugMessage('getDb: Attempting to get Firebase app.');
+    let app: App;
+    if (getApps().length === 0) {
+      sendDebugMessage('getDb: No existing apps found. Initializing new Firebase Admin app...');
+      app = initializeApp();
+      sendDebugMessage('getDb: Firebase Admin SDK initialized successfully.');
+    } else {
+      app = getApp();
+      sendDebugMessage('getDb: Existing Firebase app found.');
     }
-  } else {
-    app = getApp();
-  }
 
-  dbInstance = getFirestore(app);
-  return dbInstance;
+    sendDebugMessage('getDb: Getting Firestore instance.');
+    dbInstance = getFirestore(app);
+    sendDebugMessage('getDb: Firestore instance obtained.');
+    return dbInstance;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\n${error.stack}` : String(error);
+    // Send the error message via Telegram and then re-throw to stop execution.
+    // We don't await this because if it fails, we don't want to crash the crash handler.
+    sendDebugMessage(`CRITICAL ERROR in getDb(): ${errorMessage}`);
+    console.error('CRITICAL: Firebase Admin SDK initialization failed.', error);
+    throw new Error('Could not initialize Firebase Admin SDK.');
+  }
 }
