@@ -12,8 +12,20 @@ async function initializeDb(): Promise<Firestore> {
     
     let app: App;
     if (getApps().length === 0) {
-      app = initializeApp();
-      await sendDebugMessage('initializeDb: initializeApp() completed.');
+      // Explicitly use the FIREBASE_CONFIG env var provided by App Hosting
+      const firebaseConfigEnv = process.env.FIREBASE_CONFIG;
+      if (!firebaseConfigEnv) {
+          await sendDebugMessage("CRITICAL ERROR: FIREBASE_CONFIG environment variable is not set.");
+          throw new Error("FIREBASE_CONFIG environment variable is not set.");
+      }
+      
+      const firebaseConfig = JSON.parse(firebaseConfigEnv);
+      await sendDebugMessage(`initializeDb: Using FIREBASE_CONFIG: ${JSON.stringify(firebaseConfig)}`);
+      
+      // Initialize with the explicit config
+      app = initializeApp(firebaseConfig);
+      await sendDebugMessage('initializeDb: initializeApp() completed with explicit config.');
+
     } else {
       app = getApp();
       await sendDebugMessage('initializeDb: Using existing app.');
@@ -41,14 +53,16 @@ export function getDb(): Promise<Firestore> {
   }
 
   initPromise = new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
+    const timeout = setTimeout(async () => {
       initPromise = null; // Reset for next attempt
+      await sendDebugMessage('CRITICAL ERROR: Firebase Admin SDK initialization timed out after 10 seconds.');
       reject(new Error('Firebase Admin SDK initialization timed out after 10 seconds.'));
     }, 10000);
 
     initializeDb()
       .then(db => {
         clearTimeout(timeout);
+        initPromise = null; // Clear the promise on success
         resolve(db);
       })
       .catch(err => {
