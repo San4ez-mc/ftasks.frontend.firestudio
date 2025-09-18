@@ -2,21 +2,16 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { getUserSession } from '@/lib/session';
 import { getUserById, getCompaniesForUser } from '@/lib/firestore-service';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const authResult = await verifyToken(request); // Use permanent token
-    if (authResult.error) {
-      return NextResponse.json({ message: authResult.error }, { status: authResult.status });
+    const session = await getUserSession();
+    if (!session) {
+      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
     }
-    const { userId } = authResult;
-
-    if (!userId) {
-      return NextResponse.json({ message: 'User ID not found in token' }, { status: 401 });
-    }
+    const { userId } = session;
 
     const user = await getUserById(userId);
     if (!user) {
