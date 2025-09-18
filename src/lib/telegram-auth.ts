@@ -1,4 +1,3 @@
-
 import * as jose from 'jose';
 import { getDb } from './firebase-admin';
 import type { User } from '@/types/user';
@@ -24,7 +23,6 @@ export async function findUserByTelegramId(telegramUserId: string): Promise<(Use
     const userDoc = userQuery.docs[0];
     const userData = userDoc.data();
     
-    // Backward compatibility for old data
     if (userData.photo_url && !userData.avatar) {
         userData.avatar = userData.photo_url;
     }
@@ -41,10 +39,8 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     const { id: telegramUserId, first_name, last_name, username, photo_url } = telegramUser;
 
     if (!telegramUserId) {
-      throw new Error('Telegram user ID is required in the data from Telegram.');
+        throw new Error('Telegram user ID is required in the data from Telegram.');
     }
-
-    await sendDebugMessage(`handleTelegramLogin: Starting for TG user ${telegramUser.id}.`);
 
     const usersCollection = getDb().collection('users');
     await sendDebugMessage(`handleTelegramLogin: Got Firestore instance. Querying for user...`);
@@ -84,7 +80,6 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
   } catch (error) {
       const errorMessage = error instanceof Error ? `${error.name}: ${error.message}\nStack: ${error.stack}` : String(error);
-      console.error('Error in handleTelegramLogin:', errorMessage);
       await sendDebugMessage(`CRITICAL ERROR in handleTelegramLogin: ${errorMessage}`);
       return { error: `Login Error: ${errorMessage}` };
   }
