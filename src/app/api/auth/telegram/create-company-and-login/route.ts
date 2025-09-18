@@ -6,7 +6,8 @@ import { createCompanyAndAddUser, deleteSession, createSession } from '@/lib/fir
 
 export async function POST(request: NextRequest) {
   try {
-    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
+    const authHeader = request.headers.get('Authorization');
+    const tempToken = authHeader?.split(' ')[1];
     const authResult = await verifyToken(tempToken);
     if (authResult.error) {
       return NextResponse.json({ message: authResult.error }, { status: authResult.status });

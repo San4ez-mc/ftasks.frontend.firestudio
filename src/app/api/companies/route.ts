@@ -2,16 +2,23 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import { getUserSession } from '@/lib/session';
+import type { NextRequest } from 'next/server';
+import { verifyToken } from '@/lib/auth';
 import { getCompaniesForUser } from '@/lib/firestore-service';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getUserSession();
-    if (!session) {
-      return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
+    const token = request.cookies.get('auth_token')?.value;
+    const authResult = await verifyToken(token);
+
+    if (authResult.error) {
+      return NextResponse.json({ message: authResult.error }, { status: authResult.status });
     }
-    const { userId } = session;
+    
+    const { userId } = authResult;
+    if (!userId) {
+      return NextResponse.json({ message: 'User ID not found in session' }, { status: 401 });
+    }
     
     const userCompanies = await getCompaniesForUser(userId);
     

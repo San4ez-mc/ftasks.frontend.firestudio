@@ -8,7 +8,8 @@ import { isUserMemberOfCompany, deleteSession, createSession } from '@/lib/fires
 
 export async function POST(request: NextRequest) {
   try {
-    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
+    const authHeader = request.headers.get('Authorization');
+    const tempToken = authHeader?.split(' ')[1];
     const authResult = await verifyToken(tempToken);
 
     if (authResult.error) {
