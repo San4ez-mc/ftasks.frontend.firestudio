@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { isAdmin } from '@/lib/admin';
 import { validatePermanentToken } from '@/lib/auth';
 import { getUserById } from '@/lib/firestore-service';
 
@@ -29,17 +28,10 @@ export async function middleware(request: NextRequest) {
   if (isApiAuthRoute) {
       return NextResponse.next();
   }
-
-  // Handle protected admin routes
-  if (pathname.startsWith('/admin')) {
-      if (!isSessionValid || !(await isAdmin(session!.userId))) {
-          // If not an admin, redirect to the main app page.
-          return NextResponse.redirect(new URL('/', request.url));
-      }
-      // If admin, allow access.
-      return NextResponse.next();
-  }
   
+  // NOTE: The admin check has been moved to the /src/app/(admin)/layout.tsx file
+  // to prevent calling the Firebase Admin SDK from the middleware edge environment.
+
   // If session is invalid and is trying to access a protected page, redirect to login
   if (!isSessionValid && !isAuthPage) {
     const response = NextResponse.redirect(new URL('/login', request.url));

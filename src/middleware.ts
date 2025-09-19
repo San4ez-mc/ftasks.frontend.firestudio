@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { isAdmin } from '@/lib/admin';
 import { validatePermanentToken } from '@/lib/auth';
 import { getUserById } from '@/lib/firestore-service';
 
@@ -30,14 +29,12 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
   }
 
-  // Handle protected admin routes
+  // Handle protected admin routes - REMOVED the DB call from here.
+  // The protection is now handled in the AdminLayout server component.
   if (pathname.startsWith('/admin')) {
-      if (!isSessionValid || !(await isAdmin(session!.userId, session!.companyId))) {
-          // If not an admin, redirect to the main app page.
-          return NextResponse.redirect(new URL('/', request.url));
+      if (!isSessionValid) {
+          return NextResponse.redirect(new URL('/login', request.url));
       }
-      // If admin, allow access.
-      return NextResponse.next();
   }
   
   // If session is invalid and is trying to access a protected page, redirect to login

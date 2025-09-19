@@ -10,6 +10,15 @@ import { getDb } from './firebase-admin';
  * @returns True if the user is the owner of the company, false otherwise.
  */
 export const isAdmin = async (userId: string, companyId: string): Promise<boolean> => {
+    // --- TEMPORARY DEBUGGING STEP ---
+    // The call to getDb() from the middleware seems to be causing the server to crash.
+    // We are temporarily disabling this check to confirm if the rest of the app works.
+    // If the app works with this change, we need a new way to protect admin routes
+    // that doesn't involve a DB call from the middleware.
+    console.log("isAdmin check is temporarily disabled for debugging.");
+    return false;
+
+    /*
     if (!userId || !companyId) {
         return false;
     }
@@ -25,4 +34,5 @@ export const isAdmin = async (userId: string, companyId: string): Promise<boolea
         console.error("Error checking admin status:", error);
         return false;
     }
+    */
 };
