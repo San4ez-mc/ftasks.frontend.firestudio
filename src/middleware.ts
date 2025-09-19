@@ -29,8 +29,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
   }
 
-  // Handle protected admin routes - REMOVED the DB call from here.
-  // The protection is now handled in the AdminLayout server component.
+  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file
+  // to prevent calling the Firebase Admin SDK from the middleware edge environment.
+  // The middleware now only checks if a user is logged in before allowing access to /admin routes.
   if (pathname.startsWith('/admin')) {
       if (!isSessionValid) {
           return NextResponse.redirect(new URL('/login', request.url));
