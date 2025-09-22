@@ -1,7 +1,4 @@
-
 // src/lib/firestore-service.ts
-'use server';
-
 import { getDb } from '@/lib/firebase-admin';
 import { FieldPath } from 'firebase-admin/firestore';
 import type { Task } from '@/types/task';
