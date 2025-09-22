@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Loader2, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, Trash2, Users } from 'lucide-react';
 import type { Audit } from '@/types/audit';
 import { getAudits, createAudit, deleteAudit } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -84,6 +84,21 @@ export default function AuditsListPage() {
           </Tooltip>
         </TooltipProvider>
       </div>
+
+      <Card className="mb-6 bg-primary/5 border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Як працює Командний Аудит?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p><strong>Крок 1: Аудит Власника.</strong> Спочатку власник або керівник проходить основний аудит, відповідаючи на питання AI-консультанта.</p>
+          <p><strong>Крок 2: Запрошення Команди.</strong> Під час розмови система створює персональні посилання для ваших співробітників.</p>
+          <p><strong>Крок 3: Збір Думок.</strong> Ви надсилаєте ці посилання команді, і кожен проходить коротку версію аудиту, сфокусовану на його ролі.</p>
+          <p><strong>Крок 4: Зведений Звіт.</strong> Після завершення система проаналізує всі відповіді та надасть вам комплексний звіт.</p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
