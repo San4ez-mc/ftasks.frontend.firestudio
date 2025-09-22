@@ -17,6 +17,10 @@ export interface Audit {
     id: string;
     companyId: string;
     createdAt: string; // ISO date string
+    conductedBy?: {
+        userId: string;
+        userName: string;
+    };
     isCompleted: boolean;
     isAiComplete?: boolean; // Flag set by AI when it has asked all questions
     structuredSummary: AuditStructure;

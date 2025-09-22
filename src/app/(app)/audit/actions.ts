@@ -14,6 +14,7 @@ import type { Audit, ConversationTurn, WorkPlanItem } from '@/types/audit';
 import type { ConversationalAuditInput, ConversationalAuditOutput, AuditStructure } from '@/ai/types';
 import { getUserSession } from '@/lib/session';
 import { ai } from '@/ai/genkit';
+import { getCurrentEmployee } from '@/app/(app)/company/actions';
 
 async function getCompanyIdOrThrow(): Promise<string> {
     const session = await getUserSession();
@@ -35,8 +36,18 @@ export async function getAudit(id: string): Promise<Audit | null> {
 
 export async function createAudit(): Promise<Audit> {
     const companyId = await getCompanyIdOrThrow();
+    const currentUser = await getCurrentEmployee();
+
+    if (!currentUser || !currentUser.userId) {
+        throw new Error("Could not identify current user to create audit.");
+    }
+
     const newAuditData: Omit<Audit, 'id' | 'companyId'> = {
         createdAt: new Date().toISOString(),
+        conductedBy: {
+            userId: currentUser.userId,
+            userName: `${currentUser.firstName} ${currentUser.lastName}`.trim()
+        },
         isCompleted: false,
         isAiComplete: false,
         structuredSummary: {},
