@@ -3,7 +3,7 @@
 
 import { getDb } from '@/lib/firebase-admin';
 import type { User } from '@/types/user';
-import { createSession } from './firestore-service';
+import { createSession } from '@/lib/firestore-service';
 import { sendDebugMessage } from '@/app/actions';
 
 interface TelegramUser {
@@ -57,6 +57,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
         console.error(errorMessage, queryError);
         return { error: errorMessage };
     }
+
 
     let user: any;
     let details: string;
