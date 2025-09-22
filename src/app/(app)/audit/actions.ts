@@ -7,10 +7,12 @@ import {
     updateAuditInDb,
     deleteAuditFromDb,
     getAllAuditsForCompany,
+    createAuditResultInDb,
 } from '@/lib/firestore-service';
 import { getNextAuditStep } from '@/ai/flows/conversational-audit-flow';
 import { generateWorkPlan as generateWorkPlanFlow } from '@/ai/flows/work-plan-flow';
 import type { Audit, ConversationTurn, WorkPlanItem } from '@/types/audit';
+import type { AuditResult } from '@/types/auditResult';
 import type { ConversationalAuditInput, ConversationalAuditOutput, AuditStructure } from '@/ai/types';
 import { getUserSession } from '@/lib/session';
 import { ai } from '@/ai/genkit';
@@ -201,10 +203,41 @@ export async function retryAiProcessing(auditId: string): Promise<ContinueAuditR
     }
 }
 
-
 export async function generateWorkPlan(summary: AuditStructure): Promise<WorkPlanItem[]> {
     const plan = await generateWorkPlanFlow({ structuredSummary: summary });
     return plan;
+}
+
+export async function finalizeAndSaveAudit(auditId: string): Promise<Audit | null> {
+    const companyId = await getCompanyIdOrThrow();
+    const audit = await getAuditById(companyId, auditId);
+
+    if (!audit || !audit.structuredSummary || !audit.conductedBy) {
+        throw new Error("Audit is not ready for finalization or is missing key data.");
+    }
+
+    // 1. Generate the work plan
+    const workPlan = await generateWorkPlanFlow({ structuredSummary: audit.structuredSummary });
+
+    // 2. Create the final audit result object
+    const auditResultData: Omit<AuditResult, 'id' | 'companyId'> = {
+        auditId: audit.id,
+        createdAt: new Date().toISOString(),
+        conductedBy: audit.conductedBy,
+        structuredSummary: audit.structuredSummary,
+        workPlan: workPlan,
+    };
+    
+    // 3. Save the result to the new collection
+    await createAuditResultInDb(companyId, auditResultData);
+
+    // 4. Update the original audit to mark it as complete
+    const updatedAudit = await updateAuditInDb(companyId, audit.id, {
+        workPlan: workPlan,
+        isCompleted: true,
+    });
+    
+    return updatedAudit;
 }
 
     

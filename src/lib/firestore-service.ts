@@ -12,6 +12,7 @@ import type { Process } from '@/types/process';
 import type { Instruction } from '@/types/instruction';
 import type { CompanyProfile } from '@/types/company-profile';
 import type { Audit } from '@/types/audit';
+import type { AuditResult } from '@/types/auditResult';
 import type { TelegramGroup, MessageLog } from '@/types/telegram-group';
 import type { TelegramMember } from '@/types/telegram-member';
 import type { User } from '@/types/user';
@@ -29,6 +30,7 @@ const GROUPS_COLLECTION = 'telegramGroups';
 const GROUP_LINK_CODES_COLLECTION = 'groupLinkCodes';
 const COMPANY_PROFILES_COLLECTION = 'company_profiles';
 const AUDITS_COLLECTION = 'audits';
+const AUDIT_RESULTS_COLLECTION = 'auditResults';
 const TELEGRAM_LOGS_COLLECTION = 'telegramMessageLogs';
 const TELEGRAM_MEMBERS_COLLECTION = 'telegramMembers';
 const COMPANIES_COLLECTION = 'companies';
@@ -421,6 +423,10 @@ export const createAuditInDb = (companyId: string, data: Omit<Audit, 'id' | 'com
 export const updateAuditInDb = (companyId: string, id: string, updates: Partial<Audit>) => update<Audit>(AUDITS_COLLECTION, id, companyId, updates);
 export const deleteAuditFromDb = (companyId: string, id: string) => remove(AUDITS_COLLECTION, id, companyId);
 
+// --- Audit Results ---
+export const createAuditResultInDb = (companyId: string, data: Omit<AuditResult, 'id' | 'companyId'>) => create<AuditResult>(AUDIT_RESULTS_COLLECTION, { ...data, companyId });
+
+
 // --- Telegram Groups ---
 export const linkTelegramGroup = async (code: string, companyId: string): Promise<{ group: TelegramGroup, wasCreated: boolean }> => {
     const db = await getDb();
@@ -507,3 +513,5 @@ export async function upsertTelegramMember(companyId: string, memberData: Omit<T
 export const linkTelegramMemberToEmployeeInDb = (companyId: string, memberId: string, employeeId: string | null) => {
     return update<TelegramMember>(TELEGRAM_MEMBERS_COLLECTION, memberId, companyId, { employeeId });
 };
+
+    

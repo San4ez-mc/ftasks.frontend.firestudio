@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2, Mic, Square, Wand2, AlertTriangle, Send, Sparkles, FileText, ArrowRight, ClipboardCopy, RefreshCcw } from 'lucide-react';
-import { continueAudit, getAudit, updateAudit, generateWorkPlan, retryAiProcessing } from '../actions';
+import { continueAudit, getAudit, finalizeAndSaveAudit, retryAiProcessing } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import type { Audit, ConversationTurn, WorkPlanItem } from '@/types/audit';
 import type { AuditStructure } from '@/ai/types';
@@ -54,18 +54,14 @@ export default function AuditPage({ params }: AuditPageProps) {
     if (!audit || !audit.structuredSummary) return;
     startTransition(async () => {
         try {
-            const plan = await generateWorkPlan(audit.structuredSummary);
-            const updatedAudit = await updateAudit(audit.id, {
-                workPlan: plan,
-                isCompleted: true,
-            });
+            const updatedAudit = await finalizeAndSaveAudit(audit.id);
             if(updatedAudit) {
                 setAudit(updatedAudit);
             }
-             toast({ title: "Аудит завершено!", description: "План робіт успішно згенеровано." });
+             toast({ title: "Аудит завершено!", description: "План робіт та звіт успішно згенеровано та збережено." });
         } catch (error) {
             console.error("Error finishing audit:", error);
-            toast({ title: "Помилка", description: "Не вдалося згенерувати план робіт.", variant: "destructive" });
+            toast({ title: "Помилка", description: "Не вдалося згенерувати та зберегти звіт.", variant: "destructive" });
         }
     });
   }
@@ -480,3 +476,5 @@ function TeamAuditProposal({ audit }: { audit: Audit }) {
         </Card>
     );
 }
+
+    
