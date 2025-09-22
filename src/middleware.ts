@@ -29,8 +29,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
   }
 
-  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file
-  // to prevent calling the Firebase Admin SDK from the middleware edge environment.
+  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file.
   // The middleware now only checks if a user is logged in before allowing access to /admin routes.
   if (pathname.startsWith('/admin')) {
       if (!isSessionValid) {
