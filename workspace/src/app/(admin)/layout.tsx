@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <AdminSidebarNav />
       </Sidebar>
       <SidebarInset>
-        <Header userIsAdmin={userIsAdmin} />
+        <Header />
         <main className="flex-1 overflow-y-auto bg-muted/40">
           {children}
         </main>
