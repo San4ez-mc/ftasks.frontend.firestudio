@@ -1,3 +1,5 @@
+'use server';
+
 import * as admin from 'firebase-admin';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 

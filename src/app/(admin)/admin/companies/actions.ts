@@ -18,7 +18,7 @@ async function checkAdmin() {
 
 export async function getAllCompanies(): Promise<(CompanyProfile & {userCount: number})[]> {
     await checkAdmin();
-    const db = await getDb();
+    const db = getDb();
     const companiesSnapshot = await db.collection('company_profiles').get();
     const companies = companiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompanyProfile));
 
