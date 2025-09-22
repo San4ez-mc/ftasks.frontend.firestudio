@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from 'react';
 import { Suspense } from 'react';
@@ -14,14 +15,14 @@ function LoadingState() {
   );
 }
 
-export default function AppShell({ children, userIsAdmin }: { children: ReactNode; userIsAdmin: boolean; }) {
+export default function AppShell({ children }: { children: ReactNode; }) {
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarNav />
       </Sidebar>
       <SidebarInset>
-        <Header userIsAdmin={userIsAdmin} />
+        <Header />
         <main className="flex-1 overflow-y-auto">
           <Suspense fallback={<LoadingState />}>{children}</Suspense>
         </main>

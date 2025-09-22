@@ -82,7 +82,7 @@ function SupportChatDialog({ isOpen, onOpenChange }: { isOpen: boolean, onOpenCh
 }
 
 
-export default function Header({ userIsAdmin }: { userIsAdmin: boolean }) {
+export default function Header() {
   const router = useRouter();
   const [isSupportChatOpen, setIsSupportChatOpen] = useState(false);
 
@@ -129,14 +129,6 @@ export default function Header({ userIsAdmin }: { userIsAdmin: boolean }) {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Мій акаунт</DropdownMenuLabel>
               <DropdownMenuSeparator />
-               {userIsAdmin && (
-                  <DropdownMenuItem asChild>
-                      <Link href="/admin">
-                          <Shield className="mr-2 h-4 w-4" />
-                          <span>Сторінка адміністратора</span>
-                      </Link>
-                  </DropdownMenuItem>
-               )}
               <DropdownMenuItem asChild>
                 <Link href="/settings/billing">
                   <Settings className="mr-2 h-4 w-4" />

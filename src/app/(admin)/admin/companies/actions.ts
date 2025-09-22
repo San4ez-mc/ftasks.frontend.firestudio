@@ -8,6 +8,8 @@ import type { CompanyProfile } from '@/types/company-profile';
 import type { Employee } from '@/types/company';
 
 async function checkAdmin() {
+    // This check is temporarily disabled at a lower level (in admin.ts)
+    // to prevent server crashes. The admin layout now handles redirection.
     const session = await getUserSession();
     if (!session || !(await isAdmin(session.userId, session.companyId))) {
         throw new Error("Not authorized");

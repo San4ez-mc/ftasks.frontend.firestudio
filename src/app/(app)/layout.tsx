@@ -1,12 +1,9 @@
 
 import type { ReactNode } from 'react';
-import { getUserSession } from '@/lib/session';
-import { isAdmin } from '@/lib/admin';
 import AppShell from '@/components/layout/app-shell';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const session = await getUserSession();
-  const userIsAdmin = session ? await isAdmin(session.userId, session.companyId) : false;
-
-  return <AppShell userIsAdmin={userIsAdmin}>{children}</AppShell>;
+  // The isAdmin check has been removed to prevent server crashes.
+  // The userIsAdmin prop is no longer needed.
+  return <AppShell>{children}</AppShell>;
 }
