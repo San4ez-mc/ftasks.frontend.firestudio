@@ -125,6 +125,10 @@ export const AuditStructureSchema = z.object({
     tasks: z.array(z.string()).describe("Detailed list of tasks the owner performs."),
     delegationAttempts: z.string().describe("Has the owner tried to delegate core product/service tasks?"),
   }).optional(),
+  keyEmployeeAnalysis: z.object({
+    hasKeyEmployee: z.boolean().describe("Whether the owner feels there is an indispensable employee."),
+    keyEmployeeDescription: z.string().describe("Who the key employee is (the owner or someone else) and details about them."),
+  }).optional(),
   marketing: z.object({
     leadSource: z.string().describe("Main source of leads (e.g., word-of-mouth, ads)."),
     isLeadFlowManaged: z.boolean().describe("Is the lead flow managed and predictable?"),

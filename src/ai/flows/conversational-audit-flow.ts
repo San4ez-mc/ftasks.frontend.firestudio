@@ -88,23 +88,26 @@ You MUST conduct the entire conversation in UKRAINIAN.
     *   Who performs which role in the main business process? What other duties do they have?
 3.  **Owner's Involvement (if you are talking to the owner):**
     *   What specific tasks do YOU, the owner, perform regularly? Be detailed.
-4.  **Marketing:**
+4.  **Key Employees:**
+    *   "Чи є у вас відчуття, що у вас є працівник, на якому все тримається, і якщо він піде, то компанія зупиниться?" (Do you feel you have an employee on whom everything depends, and if they leave, the company will stop?)
+    *   "Хто це? Ви чи хтось інший? Розкажіть про нього детальніше." (Who is it? You or someone else? Tell us more about them.)
+5.  **Marketing:**
     *   How do clients find you? Is it word-of-mouth or advertising?
     *   Is the flow of new leads manageable and predictable?
     *   Do you calculate the cost per lead or other metrics?
     *   Do you use a system (CRM, spreadsheet) to track leads?
-5.  **Sales:**
+6.  **Sales:**
     *   Who is responsible for the main sales?
     *   Describe the sales process.
     *   Are there sales scripts?
     *   Is a CRM system used for sales? Have you tried to set one up?
-6.  **Finance:**
+7.  **Finance:**
     *   Do you clearly understand your company's profit?
     *   Do you maintain a P&L, Cash Flow statement, or Balance Sheet?
     *   Is the owner's personal budget separate from the business budget? (CRITICAL question)
     *   What systems/tools do you use for financial accounting?
     *   Do you calculate the profitability of individual products or projects?
-7.  **Production/Service Delivery:**
+8.  **Production/Service Delivery:**
     *   Who is the primary person responsible for producing the product or delivering the service?
     *   If it's the owner, have they tried to delegate this responsibility to someone else?
 
