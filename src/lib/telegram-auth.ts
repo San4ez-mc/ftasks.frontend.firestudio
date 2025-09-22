@@ -15,7 +15,7 @@ interface TelegramUser {
 }
 
 export async function findUserByTelegramId(telegramUserId: string): Promise<(User & { id: string }) | null> {
-    const db = getDb();
+    const db = await getDb();
     const usersCollection = db.collection('users');
     const userQuery = await usersCollection.where('telegramUserId', '==', telegramUserId).limit(1).get();
     if (userQuery.empty) {
@@ -42,7 +42,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
     }
 
     await sendDebugMessage(`handleTelegramLogin: Attempting to get DB instance...`);
-    const db = getDb();
+    const db = await getDb();
     await sendDebugMessage(`handleTelegramLogin: Successfully got DB instance. Querying for user...`);
     
     const usersCollection = db.collection('users');
@@ -104,7 +104,7 @@ export async function handleTelegramLogin(telegramUser: TelegramUser, rememberMe
 
 export async function generateGroupLinkCode(groupId: string, groupTitle: string): Promise<{ code?: string; error?: string }> {
     try {
-        const db = getDb();
+        const db = await getDb();
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 

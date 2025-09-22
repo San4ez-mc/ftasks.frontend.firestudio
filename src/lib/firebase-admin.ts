@@ -1,3 +1,4 @@
+
 import * as admin from 'firebase-admin';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
@@ -28,7 +29,7 @@ function initializeAdmin() {
  * It ensures that the Admin SDK is initialized before returning the DB instance.
  * @returns The Firestore instance.
  */
-export function getDb(): Firestore {
+export async function getDb(): Promise<Firestore> {
     if (dbInstance) {
         return dbInstance;
     }
