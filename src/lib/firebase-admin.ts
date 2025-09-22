@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeApp, getApps, getApp, type App } from 'firebase-admin/app';
+import * as admin from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { sendDebugMessage } from '@/app/actions';
 
@@ -9,16 +9,16 @@ let dbInstance: Firestore | null = null;
 let initPromise: Promise<Firestore> | null = null;
 
 async function initializeDb(): Promise<Firestore> {
-  await sendDebugMessage(`initializeDb: Starting. Number of existing apps: ${getApps().length}`);
+  await sendDebugMessage(`initializeDb: Starting. Number of existing apps: ${admin.getApps().length}`);
   try {
-    let app: App;
-    if (getApps().length === 0) {
+    let app: admin.App;
+    if (admin.getApps().length === 0) {
       await sendDebugMessage('initializeDb: No existing apps. Calling initializeApp()...');
-      app = initializeApp();
+      app = admin.initializeApp();
       await sendDebugMessage('initializeDb: initializeApp() completed.');
     } else {
       await sendDebugMessage('initializeDb: App already exists. Calling getApp()...');
-      app = getApp();
+      app = admin.getApp();
       await sendDebugMessage('initializeDb: getApp() completed.');
     }
     
