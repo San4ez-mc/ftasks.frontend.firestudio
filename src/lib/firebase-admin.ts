@@ -1,4 +1,3 @@
-
 'use server';
 
 import * as admin from 'firebase-admin';
@@ -18,11 +17,9 @@ function initializeAdmin() {
             // When running in a Google Cloud environment like App Hosting,
             // initializeApp() automatically discovers the service account credentials.
             admin.initializeApp();
-            sendDebugMessage('Firebase Admin SDK initialized successfully.');
         } catch (error: any) {
             const errorMessage = `Firebase Admin SDK initialization failed: ${error.message}`;
             console.error(errorMessage, error);
-            sendDebugMessage(`CRITICAL ERROR: ${errorMessage}`);
             // We throw the error to ensure that any function trying to use the DB fails clearly.
             throw new Error(errorMessage);
         }
