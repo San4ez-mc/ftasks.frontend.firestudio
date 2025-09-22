@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthPage = ['/login', '/select-company', '/create-company', '/auth/telegram/callback', '/payment'].some(path => pathname.startsWith(path));
+  const isAuthPage = ['/login', '/login-tasks', '/select-company', '/create-company', '/auth/telegram/callback', '/payment'].some(path => pathname.startsWith(path));
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
 
   // Allow API routes to handle their own auth
@@ -13,19 +13,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // If no token, and not trying to access an auth page, redirect to login
+  // If no token, and not trying to access a protected page, redirect to login
   if (!token && !isAuthPage) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If there IS a token, and they are trying to access an auth page (like /login), redirect to home
-  if (token && isAuthPage) {
-    // Exception for payment pages
-    if (pathname.startsWith('/payment')) {
-        return NextResponse.next();
-    }
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  // If there IS a token, and they are trying to access an auth page (like /login),
+  // we now ALLOW it to break the redirect loop. The application logic on the page
+  // will handle re-authentication. Previously, this block redirected to '/', causing the loop.
 
   return NextResponse.next();
 }
