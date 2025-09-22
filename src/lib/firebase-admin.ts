@@ -1,53 +1,47 @@
 
 'use server';
 
-import * as admin from 'firebase-admin/app';
+import * as admin from 'firebase-admin';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { sendDebugMessage } from '@/app/actions';
 
 let dbInstance: Firestore | null = null;
-let initPromise: Promise<Firestore> | null = null;
 
-async function initializeDb(): Promise<Firestore> {
-  await sendDebugMessage(`initializeDb: Starting. Number of existing apps: ${admin.getApps().length}`);
-  try {
-    let app: admin.App;
-    if (admin.getApps().length === 0) {
-      await sendDebugMessage('initializeDb: No existing apps. Calling initializeApp()...');
-      app = admin.initializeApp();
-      await sendDebugMessage('initializeDb: initializeApp() completed.');
-    } else {
-      await sendDebugMessage('initializeDb: App already exists. Calling getApp()...');
-      app = admin.getApp();
-      await sendDebugMessage('initializeDb: getApp() completed.');
+/**
+ * Initializes the Firebase Admin SDK if it hasn't been already.
+ * This simplified version avoids complex promise-based singletons and uses the standard
+ * `admin.apps.length` check, which is more robust against bundler issues.
+ */
+function initializeAdmin() {
+    if (admin.apps.length === 0) {
+        try {
+            // When running in a Google Cloud environment like App Hosting,
+            // initializeApp() automatically discovers the service account credentials.
+            admin.initializeApp();
+            sendDebugMessage('Firebase Admin SDK initialized successfully.');
+        } catch (error: any) {
+            const errorMessage = `Firebase Admin SDK initialization failed: ${error.message}`;
+            console.error(errorMessage, error);
+            sendDebugMessage(`CRITICAL ERROR: ${errorMessage}`);
+            // We throw the error to ensure that any function trying to use the DB fails clearly.
+            throw new Error(errorMessage);
+        }
     }
-    
-    await sendDebugMessage('initializeDb: Calling getFirestore()...');
-    dbInstance = getFirestore(app);
-    await sendDebugMessage('initializeDb: getFirestore() completed. DB instance is ready.');
-    
-    return dbInstance;
-  } catch (error: any) {
-    const errorMessage = error.message ? `${error.name}: ${error.message}` : String(error);
-    await sendDebugMessage(`CRITICAL ERROR in initializeDb: ${errorMessage}`);
-    console.error('CRITICAL ERROR: Firebase Admin SDK initialization failed.', error);
-    throw new Error(`Could not initialize Firebase Admin SDK. Details: ${errorMessage}`);
-  }
 }
 
+/**
+ * Provides a singleton instance of the Firestore database.
+ * It ensures that the Admin SDK is initialized before returning the DB instance.
+ * @returns A promise that resolves to the Firestore instance.
+ */
 export async function getDb(): Promise<Firestore> {
-  if (dbInstance) {
-    return Promise.resolve(dbInstance);
-  }
-
-  if (initPromise) {
-    return initPromise;
-  }
-
-  initPromise = initializeDb().catch(err => {
-    initPromise = null; // Reset promise on failure to allow retries
-    throw err;
-  });
-
-  return initPromise;
+    if (dbInstance) {
+        return dbInstance;
+    }
+    
+    initializeAdmin();
+    // getFirestore() can be called multiple times, it will return the same instance.
+    dbInstance = getFirestore();
+    
+    return dbInstance;
 }
