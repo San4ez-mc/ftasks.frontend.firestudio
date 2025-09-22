@@ -1,50 +1,32 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { validatePermanentToken } from '@/lib/auth';
 
-export async function middleware(request: NextRequest) {
-  const tokenCookie = request.cookies.get('auth_token');
-  const token = tokenCookie?.value;
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthPage = ['/login', '/select-company', '/create-company'].some(path => pathname.startsWith(path)) || pathname.startsWith('/auth/telegram/callback') || pathname.startsWith('/payment');
+  const isAuthPage = ['/login', '/select-company', '/create-company', '/auth/telegram/callback', '/payment'].some(path => pathname.startsWith(path));
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
-  
-  const session = token ? await validatePermanentToken(token) : null;
-  const isSessionValid = !!session;
 
-  // Allow public API routes to be accessed without a token.
+  // Allow API routes to handle their own auth
   if (isApiAuthRoute) {
-      return NextResponse.next();
-  }
-  
-  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file
-  // to prevent calling the Firebase Admin SDK from the middleware edge environment.
-  // The middleware now only checks if a user is logged in before allowing access to /admin routes.
-  if (pathname.startsWith('/admin')) {
-      if (!isSessionValid) {
-          return NextResponse.redirect(new URL('/login', request.url));
-      }
+    return NextResponse.next();
   }
 
-  // If session is invalid and is trying to access a protected page, redirect to login
-  if (!isSessionValid && !isAuthPage) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    // Clear the invalid cookie so the user doesn't get stuck in a redirect loop.
-    response.cookies.delete('auth_token');
-    return response;
+  // If no token, and not trying to access an auth page, redirect to login
+  if (!token && !isAuthPage) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If user has a valid session and tries to access an auth page, redirect them to the home page
-  if (isSessionValid && isAuthPage) {
-    // Exception: allow access to payment pages even if logged in
-    if(pathname.startsWith('/payment')) {
+  // If there IS a token, and they are trying to access an auth page (like /login), redirect to home
+  if (token && isAuthPage) {
+    // Exception for payment pages
+    if (pathname.startsWith('/payment')) {
         return NextResponse.next();
     }
     return NextResponse.redirect(new URL('/', request.url));
   }
-  
+
   return NextResponse.next();
 }
 

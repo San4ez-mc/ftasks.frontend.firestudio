@@ -21,6 +21,7 @@ const nextConfig = {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
     config.resolve.fallback = {
       ...config.resolve.fallback,
+      process: false,
     };
     
     // This is a crucial fix. It ensures that 'firebase-admin' is only excluded
