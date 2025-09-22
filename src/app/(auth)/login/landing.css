@@ -95,6 +95,23 @@ h3 {
     color: var(--primary-color);
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.login-link {
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.login-link:hover {
+    color: var(--primary-color);
+}
+
 .cta-button {
     display: inline-block;
     background-color: var(--primary-color);
@@ -399,12 +416,16 @@ h3 {
     }
 }
 
+.mobile-cta {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     h1 { font-size: 2.5rem; }
     h2 { font-size: 2rem; }
     
-    .nav, .header-cta {
+    .nav, .header-actions {
         display: none;
     }
     
@@ -422,10 +443,19 @@ h3 {
         background-color: var(--card-background-color);
         padding: 1rem;
         border-top: 1px solid var(--border-color);
+        gap: 1rem;
     }
     
     .header.active .nav a {
         padding: 0.5rem 0;
+    }
+    
+    .header.active .nav .mobile-cta {
+        display: block;
+        text-align: center;
+        background-color: var(--primary-color);
+        color: var(--background-color) !important;
+        border-radius: 8px;
     }
     
     .steps-container {

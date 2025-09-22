@@ -57,10 +57,12 @@ export default function LoginPage() {
             <a href="#problem">Проблема</a>
             <a href="#features">Переваги</a>
             <a href="#how-it-works">Як це працює</a>
+            <a href="https://t.me/FinekoTasks_Bot?start=auth" className="mobile-cta">Увійти / Спробувати</a>
           </nav>
-          <a href="https://t.me/FinekoTasks_Bot?start=auth" className="cta-button header-cta">
-            Увійти через Telegram
-          </a>
+          <div className="header-actions">
+            <a href="https://t.me/FinekoTasks_Bot?start=auth" className="login-link">Увійти</a>
+            <a href="https://t.me/FinekoTasks_Bot?start=auth" className="cta-button header-cta">Спробувати безкоштовно</a>
+          </div>
           <button className="mobile-menu-toggle">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="12" x2="21" y2="12"></line>
