@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { validatePermanentToken } from '@/lib/auth';
-import { getUserById } from '@/lib/firestore-service';
 
 export async function middleware(request: NextRequest) {
   const tokenCookie = request.cookies.get('auth_token');
@@ -13,24 +12,21 @@ export async function middleware(request: NextRequest) {
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
   
   const session = token ? await validatePermanentToken(token) : null;
-  let isSessionValid = false;
-
-  if (session) {
-    // Session is structurally valid, now check if the user exists in the DB.
-    // This prevents a "ghost session" where the token is valid but the user has been deleted.
-    const user = await getUserById(session.userId);
-    if (user) {
-      isSessionValid = true;
-    }
-  }
+  const isSessionValid = !!session;
 
   // Allow public API routes to be accessed without a token.
   if (isApiAuthRoute) {
       return NextResponse.next();
   }
   
-  // NOTE: The admin check has been moved to the /src/app/(admin)/layout.tsx file
+  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file
   // to prevent calling the Firebase Admin SDK from the middleware edge environment.
+  // The middleware now only checks if a user is logged in before allowing access to /admin routes.
+  if (pathname.startsWith('/admin')) {
+      if (!isSessionValid) {
+          return NextResponse.redirect(new URL('/login', request.url));
+      }
+  }
 
   // If session is invalid and is trying to access a protected page, redirect to login
   if (!isSessionValid && !isAuthPage) {

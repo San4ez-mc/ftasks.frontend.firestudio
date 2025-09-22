@@ -1,59 +1,34 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { validatePermanentToken } from '@/lib/auth';
-import { getUserById } from '@/lib/firestore-service';
 
-export async function middleware(request: NextRequest) {
-  const tokenCookie = request.cookies.get('auth_token');
-  const token = tokenCookie?.value;
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthPage = ['/login', '/select-company', '/create-company'].some(path => pathname.startsWith(path)) || pathname.startsWith('/auth/telegram/callback') || pathname.startsWith('/payment');
+  const isAuthPage = ['/login', '/select-company', '/create-company', '/auth/telegram/callback'].some(path => pathname.startsWith(path)) || pathname.startsWith('/payment');
   const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
-  
-  const session = token ? await validatePermanentToken(token) : null;
-  let isSessionValid = false;
 
-  if (session) {
-    // Session is structurally valid, now check if the user exists in the DB.
-    // This prevents a "ghost session" where the token is valid but the user has been deleted.
-    const user = await getUserById(session.userId);
-    if (user) {
-      isSessionValid = true;
-    }
-  }
-
-  // Allow public API routes to be accessed without a token.
+  // Allow API routes to handle their own auth, they are not protected by this middleware.
   if (isApiAuthRoute) {
+    return NextResponse.next();
+  }
+
+  // If there is no token and the user is not on an auth page, redirect to login.
+  if (!token && !isAuthPage) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // If there IS a token and the user tries to access an auth page (e.g., /login), redirect to the app's home page.
+  if (token && isAuthPage) {
+     // Exception for payment pages which can be accessed while logged in.
+    if (pathname.startsWith('/payment')) {
       return NextResponse.next();
-  }
-  
-  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file
-  // to prevent calling the Firebase Admin SDK from the middleware edge environment.
-  // The middleware now only checks if a user is logged in before allowing access to /admin routes.
-  if (pathname.startsWith('/admin')) {
-      if (!isSessionValid) {
-          return NextResponse.redirect(new URL('/login', request.url));
-      }
-  }
-
-  // If session is invalid and is trying to access a protected page, redirect to login
-  if (!isSessionValid && !isAuthPage) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    // Clear the invalid cookie so the user doesn't get stuck in a redirect loop.
-    response.cookies.delete('auth_token');
-    return response;
-  }
-
-  // If user has a valid session and tries to access an auth page, redirect them to the home page
-  if (isSessionValid && isAuthPage) {
-    // Exception: allow access to payment pages even if logged in
-    if(pathname.startsWith('/payment')) {
-        return NextResponse.next();
     }
     return NextResponse.redirect(new URL('/', request.url));
   }
-  
+
+  // For all other cases, allow the request to proceed.
+  // The actual token validation will now happen in the page layouts.
   return NextResponse.next();
 }
 

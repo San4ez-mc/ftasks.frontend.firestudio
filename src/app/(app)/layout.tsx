@@ -1,9 +1,13 @@
 
 import type { ReactNode } from 'react';
 import AppShell from '@/components/layout/app-shell';
+import { getUserSession } from '@/lib/session';
+import { redirect } from 'next/navigation';
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  // The isAdmin check has been removed to prevent server crashes.
-  // The userIsAdmin prop is no longer needed.
+  const session = await getUserSession();
+  if (!session) {
+    redirect('/login');
+  }
   return <AppShell>{children}</AppShell>;
 }
