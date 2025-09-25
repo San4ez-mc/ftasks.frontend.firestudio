@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Loader2, Trash2, Mic, FileText, ImageIcon, Clock, Users, ShieldCheck, Wand2 } from 'lucide-react';
 import type { Audit } from '@/types/audit';
-import { getAudits, createAudit, deleteAudit } from './actions';
+import { getAudits, createAudit, deleteAudit } from '../actions';
 import { useToast } from '@/hooks/use-toast';
 import { formatDateTime } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -189,3 +189,5 @@ export default function AuditsListPage() {
     </div>
   );
 }
+
+    
