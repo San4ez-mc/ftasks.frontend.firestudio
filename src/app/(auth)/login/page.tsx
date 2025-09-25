@@ -1,22 +1,37 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function LoginPage() {
+  const testUrl = 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
 
-  const handleTestClick = async () => {
+  const handleTestRequest = async (method: 'GET' | 'POST') => {
     try {
-      const response = await fetch('https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/?monospaceUid=404145&embedded=0');
+      const options: RequestInit = {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+
+      if (method === 'POST') {
+        options.body = JSON.stringify({ message: 'Hello from Fineko' });
+      }
+
+      const response = await fetch(testUrl, options);
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.text(); // Use text() in case response is not JSON
-      console.log('Test request successful:', data);
-      alert('Тестовий запит успішно відправлено!');
+      
+      const data = await response.text();
+      console.log(`Test ${method} request successful:`, data);
+      alert(`Тестовий ${method} запит успішно відправлено!`);
     } catch (error) {
-      console.error('Test request failed:', error);
-      alert(`Помилка тестового запиту: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`Test ${method} request failed:`, error);
+      alert(`Помилка тестового ${method} запиту: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -35,8 +50,11 @@ export default function LoginPage() {
               Увійти через Telegram
             </a>
           </Button>
-          <Button onClick={handleTestClick} variant="outline" className="w-full">
-            Тестова кнопка
+          <Button onClick={() => handleTestRequest('GET')} variant="outline" className="w-full">
+            Тестовий GET-запит
+          </Button>
+           <Button onClick={() => handleTestRequest('POST')} variant="outline" className="w-full">
+            Тестовий POST-запит
           </Button>
         </CardContent>
       </Card>
