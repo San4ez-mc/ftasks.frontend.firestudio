@@ -39,65 +39,6 @@ export const AuditSummaryOutputSchema = z.object({
 });
 export type AuditSummaryOutput = z.infer<typeof AuditSummaryOutputSchema>;
 
-// From telegram-command-flow.ts
-const EmployeeSchema = z.object({
-  id: z.string(),
-  name: z.string().describe('The full name of the employee.'),
-});
-
-const TemplateSchema = z.object({
-    id: z.string(),
-    name: z.string().describe('The name of the template.'),
-});
-
-const UserSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-});
-
-export const TelegramCommandInputSchema = z.object({
-  command: z.string().describe('The natural language command from the user.'),
-  employees: z.array(EmployeeSchema).describe('A list of available employees to assign tasks/results to.'),
-  templates: z.array(TemplateSchema).describe('A list of available task templates.'),
-  allowedCommands: z.array(z.string()).describe('A list of commands the user is permitted to execute.'),
-  currentUser: UserSchema.describe('The user who is issuing the command.'),
-});
-export type TelegramCommandInput = z.infer<typeof TelegramCommandInputSchema>;
-
-
-export const TelegramCommandOutputSchema = z.object({
-  command: z.enum([
-        'create_task', 
-        'create_result',
-        'add_sub_results',
-        'list_employees', 
-        'view_tasks',
-        'view_my_tasks',
-        'view_results', 
-        'view_my_results',
-        'edit_task_title', 
-        'add_comment_to_result',
-        'add_comment_to_task',
-        'view_task_details',
-        'list_templates',
-        'create_template',
-        'update_task_status',
-        'update_task_date',
-        'delete_task',
-        'delete_result',
-        'delete_template',
-        'show_help', 
-        'unknown', 
-        'clarify'
-    ])
-    .describe('The recognized command the user wants to execute.'),
-  text: z.string().optional().describe('The raw text associated with the command for backend processing.'),
-  assigneeId: z.string().optional().describe('The ID of the employee mentioned as the assignee. If no specific employee is mentioned, this should be omitted.'),
-});
-export type TelegramCommandOutput = z.infer<typeof TelegramCommandOutputSchema>;
-export const TelegramCommandListSchema = z.array(TelegramCommandOutputSchema);
-
-
 // From conversational-audit-flow.ts
 
 export const ConversationTurnSchema = z.object({
