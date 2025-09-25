@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -30,10 +29,12 @@ export default function CreateCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
+    const startPage = searchParams.get('start') || 'tasks';
+    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
       await createCompanyAndLogin(tempToken, companyName);
-      router.push('/');
+      router.push(redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create company.');
       setIsSubmitting(false);

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -56,9 +55,12 @@ export default function SelectCompanyForm() {
         setIsSubmitting(false);
         return;
     }
+    const startPage = searchParams.get('start') || 'tasks';
+    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
+
     try {
         await selectCompany(tempToken, companyId);
-        router.push('/'); // Redirect to the main app page
+        router.push(redirectUrl); // Redirect to the appropriate page
     } catch(err) {
         setError(err instanceof Error ? err.message : 'Could not select company.');
         setIsSubmitting(false);
@@ -79,10 +81,12 @@ export default function SelectCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
+    const startPage = searchParams.get('start') || 'tasks';
+    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
       await createCompanyAndLogin(tempToken, companyName);
-      router.push('/');
+      router.push(redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create company.');
       setIsSubmitting(false);

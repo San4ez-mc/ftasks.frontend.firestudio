@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -20,6 +19,7 @@ export default function TelegramCallback() {
 
   useEffect(() => {
     const tempToken = searchParams.get('token');
+    const startPage = searchParams.get('start') || 'tasks'; // Default to tasks
 
     if (!tempToken) {
       setError('Authentication token is missing. Please try logging in again.');
@@ -30,20 +30,22 @@ export default function TelegramCallback() {
       try {
         setStatus('Fetching your companies...');
         const companies = await getCompaniesForToken(tempToken);
+        
+        const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
         if (companies.length === 1) {
           // If user has exactly one company, log them in automatically.
           setStatus('Logging you in...');
           await selectCompany(tempToken, companies[0].id);
-          router.push('/');
+          router.push(redirectUrl);
         } else if (companies.length > 1) {
           // If user has multiple companies, let them choose.
           setStatus('Redirecting to company selection...');
-          router.push(`/select-company?token=${tempToken}`);
+          router.push(`/select-company?token=${tempToken}&start=${startPage}`);
         } else {
           // If user has no companies, prompt them to create one.
           setStatus('Redirecting to create your first company...');
-          router.push(`/create-company?token=${tempToken}`);
+          router.push(`/create-company?token=${tempToken}&start=${startPage}`);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred.');
