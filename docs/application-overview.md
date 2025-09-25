@@ -81,7 +81,7 @@ The primary user interaction model is:
 *(These are based on the API documentation and existing types)*
 
 ### User
-```json
+`
 {
   "id": "string",
   "firstName": "string",
@@ -90,19 +90,19 @@ The primary user interaction model is:
   "telegramUserId": "string",
   "telegramUsername": "string"
 }
-```
+`
 
 ### Company
-```json
+`
 {
   "id": "string",
   "name": "string",
   "ownerId": "string (references User.id)"
 }
-```
+`
 
 ### Employee
-```json
+`
 {
   "id": "string",
   "userId": "string (references User.id)",
@@ -115,10 +115,10 @@ The primary user interaction model is:
   "groups": ["string (references Group.id)"],
   "notes": "string"
 }
-```
+`
 
 ### Task
-```json
+`
 {
   "id": "string",
   "title": "string",
@@ -134,10 +134,10 @@ The primary user interaction model is:
   "reporterId": "string (references Employee.id)",
   "resultId": "string (optional, references Result.id)"
 }
-```
+`
 
 ### Result
-```json
+`
 {
   "id": "string",
   "name": "string",
@@ -156,20 +156,20 @@ The primary user interaction model is:
     }
   ]
 }
-```
+`
 
 ### Division
-```json
+`
 {
   "id": "string",
   "name": "string",
   "description": "string",
   "order": "number"
 }
-```
+`
 
 ### Department
-```json
+`
 {
   "id": "string",
   "name": "string",
@@ -177,11 +177,11 @@ The primary user interaction model is:
   "managerId": "string (optional, references Employee.id)",
   "ckp": "string (Valuable Final Product)"
 }
-```
+`
 *Note: A Department-Employee link would be a join table `(departmentId, employeeId)`.*
 
 ### Process
-```json
+`
 {
     "id": "string",
     "name": "string",
@@ -202,10 +202,10 @@ The primary user interaction model is:
         }]
     }]
 }
-```
+`
 
 ### Instruction
-```json
+`
 {
   "id": "string",
   "title": "string",
@@ -218,4 +218,4 @@ The primary user interaction model is:
     }
   ]
 }
-```
+`
