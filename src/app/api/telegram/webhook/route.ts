@@ -1,7 +1,7 @@
 import 'dotenv/config'; // Explicitly load environment variables
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { handleTelegramLogin, generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
+import { generateGroupLinkCode, findUserByTelegramId } from '@/lib/telegram-auth';
 import { parseTelegramCommand } from '@/ai/flows/telegram-command-flow';
 import { 
     createTaskInDb, 
@@ -53,6 +53,7 @@ interface TelegramVoice {
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://studio--fineko-tasktracker.us-central1.hosted.app";
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "FinekoTasks_Bot";
+const API_BASE_URL = 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
 
 
 // --- Formatting Functions ---
@@ -605,33 +606,39 @@ export async function POST(request: NextRequest) {
             }
             
             if (chat.type === 'private') {
-                const payload = text.split(' ')[1] || 'auth';
-                await sendDebugMessage(`Received /start command in private chat from user ${fromUser.id} (@${fromUser.username}). Payload: ${text}`);
-                const rememberMe = payload === 'auth_remember';
+                try {
+                    const response = await fetch(`${API_BASE_URL}auth/telegram/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(fromUser),
+                    });
 
-                const { tempToken, error, details } = await handleTelegramLogin(fromUser, rememberMe);
-                
-                if (details) {
-                    await sendDebugMessage(`User lookup/creation result: ${details}`);
-                }
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Failed to get temporary token from backend.');
+                    }
+                    
+                    const { tempToken } = await response.json();
 
-                if (error || !tempToken) {
-                    const errorMessage = error || 'Authentication failed. No token provided.';
-                    await sendDebugMessage(`Authentication failed: ${errorMessage}`);
+                    if (!tempToken) {
+                        throw new Error('Backend did not return a temporary token.');
+                    }
+
+                    const redirectUrl = `${APP_URL}/auth/telegram/callback?token=${tempToken}`;
+
+                    await sendTelegramMessage(chat.id, {
+                        text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
+                        reply_markup: {
+                            inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]],
+                        }
+                    });
+
+                    return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
                     await sendTelegramMessage(chat.id, { text: `Помилка автентифікації: ${errorMessage}` });
                     return NextResponse.json({ status: 'error', message: errorMessage }, { status: 500 });
                 }
-                
-                await sendDebugMessage(`Login link generation successful. Token: ${tempToken}`);
-                const redirectUrl = `${APP_URL}/auth/telegram/callback?token=${tempToken}`;
-
-                await sendTelegramMessage(chat.id, {
-                    text: "Будь ласка, натисніть кнопку нижче, щоб завершити вхід.",
-                    reply_markup: {
-                        inline_keyboard: [[{ text: "Завершити вхід у FINEKO", url: redirectUrl }]],
-                    }
-                });
-                return NextResponse.json({ status: 'ok', message: 'Login link sent.' });
             }
         } 
         else if (text && (chat.type === 'private' || ( (chat.type === 'group' || chat.type === 'supergroup') && (isBotMentioned || isReplyToBot) ))) {

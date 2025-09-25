@@ -2,7 +2,7 @@
 
 This document outlines the API endpoints required for the FINEKO application to function.
 
-**Base URL**: `https://api.tasks.fineko.space/`
+**Base URL**: `https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/`
 
 ## 1. Authentication
 
