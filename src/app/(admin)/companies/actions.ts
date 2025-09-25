@@ -15,7 +15,10 @@ async function checkAdmin() {
 }
 
 export async function getAllCompanies(): Promise<(CompanyProfile & {userCount: number})[]> {
-    await checkAdmin();
+    const session = await getUserSession();
+    if (!session) {
+        throw new Error("Not authorized");
+    }
     const db = await getDb();
     const companiesSnapshot = await db.collection('company_profiles').get();
     const companies = companiesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CompanyProfile));
