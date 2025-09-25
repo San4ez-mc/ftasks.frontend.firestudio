@@ -22,7 +22,7 @@ import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)
 import { getEmployees } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getMe, logout } from '@/lib/api';
+import { logout } from '@/lib/api';
 
 // --- TOUR STEPS ---
 
@@ -81,30 +81,30 @@ export default function TasksPage() {
     
     startTransition(async () => {
         try {
-            const [fetchedEmployees, me] = await Promise.all([
-                getEmployees(),
-                getMe()
-            ]);
+            const fetchedEmployees = await getEmployees();
+            const session = await getUserSession(); // Fetch session info which includes userId
+            
+            if (!session) {
+                throw new Error("Session is invalid or expired.");
+            }
+            
             setEmployees(fetchedEmployees);
-            const currentUserEmployee = fetchedEmployees.find(e => e.userId === me.id);
+            const currentUserEmployee = fetchedEmployees.find(e => e.userId === session.userId);
             setCurrentUser(currentUserEmployee || null);
+            
+            if (!currentUserEmployee) {
+                 throw new Error("User profile not found in company employees.");
+            }
+
         } catch (error) {
             console.error("Failed to fetch initial page data", error);
-            if (error instanceof Error && (error.message.includes("User not found") || error.message.includes("Invalid or expired token"))) {
-                toast({
-                    title: "Помилка сесії",
-                    description: "Ваш профіль не знайдено або сесія застаріла. Будь ласка, увійдіть знову.",
-                    variant: "destructive",
-                });
-                // This is a critical session error, force logout to clear the bad cookie.
-                logout();
-            } else {
-                toast({
-                    title: "Помилка завантаження",
-                    description: "Не вдалося завантажити дані користувача та співробітників.",
-                    variant: "destructive",
-                });
-            }
+            toast({
+                title: "Помилка сесії",
+                description: "Ваш профіль не знайдено або сесія застаріла. Будь ласка, увійдіть знову.",
+                variant: "destructive",
+            });
+            // This is a critical session error, force logout to clear the bad cookie.
+            logout();
         }
     });
 
@@ -463,3 +463,5 @@ export default function TasksPage() {
     </div>
   );
 }
+
+    

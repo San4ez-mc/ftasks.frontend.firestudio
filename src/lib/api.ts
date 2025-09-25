@@ -1,8 +1,6 @@
 
 'use client';
 
-import { User } from '@/types/user';
-
 // --- Helper Functions for Cookie Management ---
 function setCookie(name: string, value: string, days: number) {
     let expires = "";
@@ -120,14 +118,6 @@ export async function createCompanyAndLogin(tempToken: string, companyName: stri
     return response;
 }
 
-
-/**
- * Fetches the currently authenticated user's profile using the session cookie.
- */
-export async function getMe(): Promise<User & { companies: {id: string, name: string}[] }> {
-    return apiFetch('/auth/me');
-}
-
 /**
  * Logs out the current user by calling the backend to invalidate the token
  * and clearing the local cookie.
@@ -153,3 +143,5 @@ export async function logout() {
 export async function getCompanies(): Promise<Company[]> {
     return apiFetch('/companies');
 }
+
+    
