@@ -31,7 +31,7 @@ function eraseCookie(name: string) {
 
 
 // The API base URL is now set to your external backend.
-const API_BASE_URL = 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
 
 /**
  * A generic fetch wrapper for making API requests.
@@ -71,11 +71,18 @@ type Company = {
     name: string;
 };
 
+type UserProfile = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    companies: Company[];
+}
+
 /**
  * Fetches the user's companies using a temporary token from the Telegram bot.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
-    return apiFetch('/auth/telegram/companies', {
+    return apiFetch('auth/telegram/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
         }
@@ -87,7 +94,7 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
  * then stores it in a cookie.
  */
 export async function selectCompany(tempToken: string, companyId: string): Promise<{ token: string }> {
-    const response = await apiFetch<{ token: string }>('/auth/telegram/select-company', {
+    const response = await apiFetch<{ token: string }>('auth/telegram/select-company', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${tempToken}`
@@ -105,7 +112,7 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
  * and storing it in a cookie.
  */
 export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string }> {
-    const response = await apiFetch<{ token: string }>('/auth/telegram/create-company-and-login', {
+    const response = await apiFetch<{ token: string }>('auth/telegram/create-company-and-login', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${tempToken}`
@@ -124,7 +131,7 @@ export async function createCompanyAndLogin(tempToken: string, companyName: stri
  */
 export async function logout() {
     try {
-        await apiFetch('/auth/logout', { method: 'POST' });
+        await apiFetch('auth/logout', { method: 'POST' });
     } catch (error) {
         console.warn("Logout API call failed, but clearing local cookie anyway.", error);
     } finally {
@@ -134,6 +141,27 @@ export async function logout() {
     }
 }
 
+/**
+ * Fetches the profile of the currently authenticated user from our own API route,
+ * which securely proxies the request to the main backend.
+ */
+export async function getMe(): Promise<UserProfile> {
+    // Note: We are calling our own Next.js API route here, not the external one.
+    // This is the standard way to securely handle sessions from client components.
+    const response = await fetch('/api/auth/me');
+    
+    if (!response.ok) {
+        if (response.status === 401) {
+             console.log("Session expired or invalid. Logging out.");
+             logout();
+        }
+        const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+}
+
 
 // --- Company API ---
 
@@ -141,7 +169,5 @@ export async function logout() {
  * Fetches the list of companies for the authenticated user (using session cookie).
  */
 export async function getCompanies(): Promise<Company[]> {
-    return apiFetch('/companies');
+    return apiFetch('companies');
 }
-
-    

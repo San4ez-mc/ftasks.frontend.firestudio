@@ -1,3 +1,4 @@
+
 import type { NextRequest } from 'next/server';
 import { getSession } from './firestore-service';
 
@@ -13,6 +14,8 @@ type AuthResult = {
  * Verifies a session token by checking the database.
  * @param token The session token string.
  * @returns A promise that resolves to the auth result.
+ * @deprecated This function directly accesses Firestore and should no longer be used for session validation.
+ * Use an API call to the backend (`/api/auth/me`) instead.
  */
 export async function verifyToken(token: string | undefined): Promise<AuthResult> {
   if (!token) {
@@ -35,20 +38,4 @@ export async function verifyToken(token: string | undefined): Promise<AuthResult
     console.error("Error verifying token:", err);
     return { error: 'Internal Server Error during token verification', status: 500 } as AuthResult;
   }
-}
-
-/**
- * Validates a permanent session token from a cookie by looking it up in the database.
- */
-export async function validatePermanentToken(token: string): Promise<{ userId: string; companyId: string } | null> {
-    try {
-        const session = await getSession(token);
-        if (!session || session.type !== 'permanent' || new Date(session.expiresAt) < new Date() || !session.companyId) {
-            return null;
-        }
-        return { userId: session.userId, companyId: session.companyId };
-    } catch (error) {
-        console.error("Error validating permanent token:", error);
-        return null;
-    }
 }

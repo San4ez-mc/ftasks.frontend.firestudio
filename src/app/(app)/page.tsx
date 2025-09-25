@@ -22,7 +22,7 @@ import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)
 import { getEmployees } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { logout } from '@/lib/api';
+import { getMe, logout } from '@/lib/api';
 
 // --- TOUR STEPS ---
 
@@ -81,15 +81,13 @@ export default function TasksPage() {
     
     startTransition(async () => {
         try {
-            const fetchedEmployees = await getEmployees();
-            const session = await getUserSession(); // Fetch session info which includes userId
-            
-            if (!session) {
-                throw new Error("Session is invalid or expired.");
-            }
+            const [fetchedEmployees, me] = await Promise.all([
+                getEmployees(),
+                getMe() // Fetches current user from your backend via /api/auth/me
+            ]);
             
             setEmployees(fetchedEmployees);
-            const currentUserEmployee = fetchedEmployees.find(e => e.userId === session.userId);
+            const currentUserEmployee = fetchedEmployees.find(e => e.userId === me.id);
             setCurrentUser(currentUserEmployee || null);
             
             if (!currentUserEmployee) {
@@ -103,7 +101,6 @@ export default function TasksPage() {
                 description: "Ваш профіль не знайдено або сесія застаріла. Будь ласка, увійдіть знову.",
                 variant: "destructive",
             });
-            // This is a critical session error, force logout to clear the bad cookie.
             logout();
         }
     });
@@ -463,5 +460,3 @@ export default function TasksPage() {
     </div>
   );
 }
-
-    
