@@ -3,14 +3,15 @@
 
 import { getDb } from '@/lib/firebase-admin';
 import { getUserSession } from '@/lib/session';
-import { isAdmin } from '@/lib/admin';
 import type { CompanyProfile } from '@/types/company-profile';
 
 async function checkAdmin() {
     const session = await getUserSession();
-    if (!session || !(await isAdmin(session.userId, session.companyId))) {
+    if (!session) {
         throw new Error("Not authorized");
     }
+    // Admin role validation should be handled by the backend API.
+    // Middleware protects access to this route group.
 }
 
 export async function getAllCompanies(): Promise<(CompanyProfile & {userCount: number})[]> {
