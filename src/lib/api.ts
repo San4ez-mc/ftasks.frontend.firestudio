@@ -49,14 +49,22 @@ type UserProfile = {
 
 /**
  * Fetches the user's companies using a temporary token from the Telegram bot.
+ * This now calls our OWN API route, which proxies to the backend.
+ * This avoids direct client-to-backend calls and the resulting CORS issues.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
-    // This request uses a temporary token in the header, not the session cookie.
-    return apiFetch('auth/telegram/companies', {
+    const response = await fetch('/api/auth/telegram/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
         }
     });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch companies.');
+    }
+
+    return response.json();
 }
 
 /**
