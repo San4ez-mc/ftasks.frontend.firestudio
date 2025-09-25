@@ -21,7 +21,7 @@ Stores global user accounts, authenticated via Telegram.
 | ---------------- | ------------------ | ----------------------------------------- | ----------------------------------- |
 | **id**           | `UUID` / `VARCHAR` | **Primary Key** - Unique user identifier. |                                     |
 | tg_user_id       | `VARCHAR`          | User's unique ID from Telegram.           | **Unique**, Indexed for lookups.    |
-| tg_username      | `VARCHAR`          | User's Telegram @username.                | Optional.                           |
+| telegram_username| `VARCHAR`          | User's Telegram @username.                | Optional.                           |
 | first_name       | `VARCHAR`          | User's first name.                        |                                     |
 | last_name        | `VARCHAR`          | User's last name.                         | Optional.                           |
 | photo_url        | `VARCHAR` (URL)    | URL to the user's Telegram avatar.        | Optional.                           |
