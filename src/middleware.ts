@@ -1,60 +1,25 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { validatePermanentToken } from '@/lib/auth';
-import { getUserById } from '@/lib/firestore-service';
 
-export async function middleware(request: NextRequest) {
-  const tokenCookie = request.cookies.get('auth_token');
-  const token = tokenCookie?.value;
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthPage = ['/login', '/login-tasks', '/select-company', '/create-company', '/auth/telegram/callback', '/payment'].some(path => pathname.startsWith(path));
-  const isApiAuthRoute = pathname.startsWith('/api/auth/') || pathname.startsWith('/api/telegram/webhook');
-
-  // Allow API routes to handle their own auth
-  if (isApiAuthRoute) {
+  const isAuthPage = ['/login', '/login-tasks', '/select-company', '/create-company', '/auth/telegram/callback'].some(path => pathname.startsWith(path));
+  const isPaymentPage = pathname.startsWith('/payment');
+  
+  // Allow access to auth pages, payment pages, and the root landing page regardless of token
+  if (isAuthPage || isPaymentPage || pathname === '/') {
     return NextResponse.next();
   }
-  
-  const session = token ? await validatePermanentToken(token) : null;
-  let isSessionValid = false;
 
-  if (session) {
-    // Session is structurally valid, now check if the user exists in the DB.
-    // This prevents a "ghost session" where the token is valid but the user has been deleted.
-    const user = await getUserById(session.userId);
-    if (user) {
-      isSessionValid = true;
-    }
+  // If there is no token and the user is trying to access any other page, redirect to login
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // The admin *role* check has been moved to the /src/app/(admin)/layout.tsx file
-  // to prevent calling the Firebase Admin SDK from the middleware edge environment.
-  // The middleware now only checks if a user is logged in before allowing access to /admin routes.
-  if (pathname.startsWith('/admin')) {
-      if (!isSessionValid) {
-          return NextResponse.redirect(new URL('/login', request.url));
-      }
-  }
-
-  // If session is invalid and is trying to access a protected page, redirect to login
-  if (!isSessionValid && !isAuthPage) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    // Clear the invalid cookie so the user doesn't get stuck in a redirect loop.
-    response.cookies.delete('auth_token');
-    return response;
-  }
-
-  // If user has a valid session and tries to access an auth page, redirect them to the home page
-  if (isSessionValid && isAuthPage) {
-    // Exception: allow access to payment pages even if logged in
-    if(pathname.startsWith('/payment')) {
-        return NextResponse.next();
-    }
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-  
+  // If there is a token, allow access to application pages
   return NextResponse.next();
 }
 
@@ -63,10 +28,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - landing pages assets
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|landing/.*).*)',
   ],
 };
