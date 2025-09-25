@@ -6,19 +6,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fireb
 
 /**
  * A generic fetch wrapper for making API requests to the external backend.
- * It automatically includes credentials (like the httpOnly auth_token cookie)
- * for requests to the same origin (our Next.js API routes). For direct requests
- * to a different-origin backend, CORS policies must be correctly configured on the backend.
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
     ...options,
     headers,
-    // credentials: 'include' might be needed if your backend is on a different domain
-    // and you need to send cookies. This requires proper CORS setup (Access-Control-Allow-Credentials).
   });
 
   if (!response.ok) {
@@ -49,22 +44,14 @@ type UserProfile = {
 
 /**
  * Fetches the user's companies using a temporary token from the Telegram bot.
- * This now calls our OWN API route, which proxies to the backend.
- * This avoids direct client-to-backend calls and the resulting CORS issues.
+ * This makes a direct request to the external backend.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
-    const response = await fetch('/api/auth/telegram/companies', {
+    return apiFetch('auth/telegram/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
         }
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch companies.');
-    }
-
-    return response.json();
 }
 
 /**
