@@ -12,6 +12,8 @@ The authentication flow is based on Telegram and uses a two-token system: a shor
 
 ### `POST /auth/telegram/login`
 
+**Note: This endpoint should be set as the webhook URL in your Telegram bot's settings.** Telegram will send a POST request with the user's data to this endpoint when they first interact with the bot via the login link.
+
 This is the first step, called by the Next.js webhook. It receives user data from Telegram and issues a temporary JWT.
 
 -   **Request Body**: The Telegram user object.
@@ -348,3 +350,4 @@ Get the message log for a group.
 Link a Telegram member to a company employee.
 - **Request Body**: `{ "employeeId": "emp-1" }`
 - **Response (200 OK)**: The updated `TelegramMember` object.
+
