@@ -33,15 +33,11 @@ const nextConfig = {
   webpack(config, { isServer }) {
     config.experiments = { ...config.experiments, asyncWebAssembly: true };
     
-    // This resolves the "node:process" error by providing a mock for the process object
-    // on the client-side bundle.
     config.resolve.fallback = {
       ...config.resolve.fallback,
       process: require.resolve('process/browser'),
     };
     
-    // This is a crucial fix. It ensures that 'firebase-admin' and 'jose' are only excluded
-    // from the client-side bundle, not the server-side one.
     if (!isServer) {
         config.resolve.alias = {
             ...config.resolve.alias,
