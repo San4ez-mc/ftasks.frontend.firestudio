@@ -1,21 +1,14 @@
 
 import type { ReactNode } from 'react';
-import { redirect } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import AdminSidebarNav from '@/components/layout/admin-sidebar-nav';
 import Header from '@/components/layout/header';
-import { getUserSession } from '@/lib/session';
-import { isAdmin } from '@/lib/admin';
+// Note: The isAdmin check is now the responsibility of the external backend.
+// The frontend should attempt to load the page, and if the backend returns a 403 Forbidden,
+// it should handle it gracefully (e.g., show an "Access Denied" message or redirect).
+// This layout no longer performs a hard redirect.
 
-export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const session = await getUserSession();
-  
-  // Perform the admin check here, in a Node.js environment, instead of the middleware.
-  if (!session || !(await isAdmin(session.userId, session.companyId))) {
-    redirect('/');
-  }
-
-  const userIsAdmin = true; // We know they are an admin if they reach this point
+export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
