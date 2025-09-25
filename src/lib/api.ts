@@ -1,54 +1,24 @@
 
 'use client';
 
-// --- Helper Functions for Cookie Management ---
-function setCookie(name: string, value: string, days: number) {
-    let expires = "";
-    if (days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toUTCString();
-    }
-    // Use SameSite=Lax and Secure in production for better security
-    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-    document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax" + secure;
-}
-
-function getCookie(name: string): string | null {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for(let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-}
-
-function eraseCookie(name: string) {   
-    document.cookie = name+'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-}
-
-
 // The API base URL is now set to your external backend.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
 
 /**
- * A generic fetch wrapper for making API requests.
- * It now reads the token from cookies and sends it as a Bearer token.
+ * A generic fetch wrapper for making API requests to the external backend.
+ * It automatically includes credentials (like the httpOnly auth_token cookie)
+ * for requests to the same origin (our Next.js API routes). For direct requests
+ * to a different-origin backend, CORS policies must be correctly configured on the backend.
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
-  
-  const token = getCookie('auth_token');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
+    // credentials: 'include' might be needed if your backend is on a different domain
+    // and you need to send cookies. This requires proper CORS setup (Access-Control-Allow-Credentials).
   });
 
   if (!response.ok) {
@@ -62,7 +32,6 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
   return response.json() as T;
 }
-
 
 // --- Authentication API ---
 
@@ -82,6 +51,7 @@ type UserProfile = {
  * Fetches the user's companies using a temporary token from the Telegram bot.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
+    // This request uses a temporary token in the header, not the session cookie.
     return apiFetch('auth/telegram/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
@@ -90,52 +60,54 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
 }
 
 /**
- * Exchanges the temporary token and selected company for a permanent token,
- * then stores it in a cookie.
+ * Calls our Next.js API route to exchange the temporary token and selected company
+ * for a permanent token, which the Next.js route will set as an httpOnly cookie.
  */
-export async function selectCompany(tempToken: string, companyId: string): Promise<{ token: string }> {
-    const response = await apiFetch<{ token: string }>('auth/telegram/select-company', {
+export async function selectCompany(tempToken: string, companyId: string): Promise<{ success: boolean }> {
+    const response = await fetch('/api/auth/select-company', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${tempToken}`
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ companyId }),
+        body: JSON.stringify({ tempToken, companyId }),
     });
-    if (response.token) {
-        setCookie('auth_token', response.token, 30); // Store for 30 days
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to select company.');
     }
-    return response;
+    return response.json();
 }
 
 /**
- * Creates a new company and logs the user in by getting a permanent token
- * and storing it in a cookie.
+ * Calls our Next.js API route to create a new company and log the user in.
+ * The Next.js route handles setting the permanent token as an httpOnly cookie.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string }> {
-    const response = await apiFetch<{ token: string }>('auth/telegram/create-company-and-login', {
+export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ success: boolean }> {
+     const response = await fetch('/api/auth/create-company', {
         method: 'POST',
         headers: {
-            'Authorization': `Bearer ${tempToken}`
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ companyName }),
+        body: JSON.stringify({ tempToken, companyName }),
     });
-     if (response.token) {
-        setCookie('auth_token', response.token, 30); // Store for 30 days
+     if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create company.');
     }
-    return response;
+    return response.json();
 }
 
 /**
- * Logs out the current user by calling the backend to invalidate the token
- * and clearing the local cookie.
+ * Logs out the current user by calling our own Next.js API route,
+ * which clears the httpOnly cookie.
  */
 export async function logout() {
     try {
-        await apiFetch('auth/logout', { method: 'POST' });
+        await fetch('/api/auth/logout', { method: 'POST' });
     } catch (error) {
-        console.warn("Logout API call failed, but clearing local cookie anyway.", error);
+        console.warn("Logout API call failed, but redirecting anyway.", error);
     } finally {
-        eraseCookie('auth_token');
         // Force a full reload to clear all client-side state and redirect.
         window.location.href = '/login';
     }
@@ -146,14 +118,15 @@ export async function logout() {
  * which securely proxies the request to the main backend.
  */
 export async function getMe(): Promise<UserProfile> {
-    // Note: We are calling our own Next.js API route here, not the external one.
-    // This is the standard way to securely handle sessions from client components.
     const response = await fetch('/api/auth/me');
     
     if (!response.ok) {
         if (response.status === 401) {
              console.log("Session expired or invalid. Logging out.");
-             logout();
+             // Don't call logout() here to avoid potential loops, just redirect.
+             if (typeof window !== 'undefined') {
+                 window.location.href = '/login';
+             }
         }
         const errorData = await response.json().catch(() => ({ message: 'An unknown error occurred' }));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -167,7 +140,9 @@ export async function getMe(): Promise<UserProfile> {
 
 /**
  * Fetches the list of companies for the authenticated user (using session cookie).
+ * This now needs to go through our API proxy to include the cookie.
  */
 export async function getCompanies(): Promise<Company[]> {
+    // This assumes your backend handles getting companies based on the permanent token.
     return apiFetch('companies');
 }
