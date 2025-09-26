@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,7 @@ export default function SelectCompanyForm() {
     const tempToken = searchParams.get('token');
 
     if (!tempToken) {
-      setError('Authentication token is missing. Please try logging in again.');
+      setError('Токен автентифікації відсутній. Будь ласка, спробуйте увійти знову.');
       setIsLoading(false);
       return;
     }
@@ -37,7 +38,7 @@ export default function SelectCompanyForm() {
         const userCompanies = await getCompaniesForToken(tempToken);
         setCompanies(userCompanies);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch companies.');
+        setError(err instanceof Error ? err.message : 'Не вдалося завантажити компанії.');
       } finally {
         setIsLoading(false);
       }
@@ -51,7 +52,7 @@ export default function SelectCompanyForm() {
     setError(null);
     const tempToken = searchParams.get('token');
     if (!tempToken) {
-        setError("Session expired. Please log in again.");
+        setError("Сесія застаріла. Будь ласка, увійдіть знову.");
         setIsSubmitting(false);
         return;
     }
@@ -62,7 +63,7 @@ export default function SelectCompanyForm() {
         await selectCompany(tempToken, companyId);
         router.push(redirectUrl); // Redirect to the appropriate page
     } catch(err) {
-        setError(err instanceof Error ? err.message : 'Could not select company.');
+        setError(err instanceof Error ? err.message : 'Не вдалося обрати компанію.');
         setIsSubmitting(false);
     }
   };
@@ -74,7 +75,7 @@ export default function SelectCompanyForm() {
 
     const tempToken = searchParams.get('token');
     if (!tempToken) {
-      setError("Your session has expired. Please log in again.");
+      setError("Ваша сесія застаріла. Будь ласка, увійдіть знову.");
       setIsSubmitting(false);
       return;
     }
@@ -88,7 +89,7 @@ export default function SelectCompanyForm() {
       await createCompanyAndLogin(tempToken, companyName);
       router.push(redirectUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create company.');
+      setError(err instanceof Error ? err.message : 'Не вдалося створити компанію.');
       setIsSubmitting(false);
     }
   }
@@ -102,11 +103,11 @@ export default function SelectCompanyForm() {
            <div className="flex items-center justify-center min-h-screen">
                 <Card className="w-full max-w-md text-center">
                     <CardHeader>
-                        <CardTitle className="text-destructive">Authentication Error</CardTitle>
+                        <CardTitle className="text-destructive">Помилка автентифікації</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p>{error}</p>
-                         <Button onClick={() => router.push('/login')} className="mt-4">Go to Login</Button>
+                         <Button onClick={() => router.push('/login')} className="mt-4">Перейти на сторінку входу</Button>
                     </CardContent>
                 </Card>
            </div>

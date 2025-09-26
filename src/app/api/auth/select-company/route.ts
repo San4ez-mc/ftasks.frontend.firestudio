@@ -1,7 +1,8 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev').replace(/\/$/, "");
 
 /**
  * API route to exchange a temporary token and company selection for a permanent token.
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const { tempToken, companyId } = await request.json();
 
     if (!tempToken || !companyId) {
-      return NextResponse.json({ message: 'Missing temporary token or company ID' }, { status: 400 });
+      return NextResponse.json({ message: 'Відсутній тимчасовий токен або ID компанії' }, { status: 400 });
     }
 
     // Forward the request to the main backend
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     const permanentToken = data.token;
     if (!permanentToken) {
-      return NextResponse.json({ message: 'Permanent token not received from backend' }, { status: 500 });
+      return NextResponse.json({ message: 'Постійний токен не отримано від бекенду' }, { status: 500 });
     }
 
     // On success, set the permanent token in a secure, httpOnly cookie
@@ -52,6 +53,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('API /api/auth/select-company error:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ message: 'Внутрішня помилка сервера' }, { status: 500 });
   }
 }

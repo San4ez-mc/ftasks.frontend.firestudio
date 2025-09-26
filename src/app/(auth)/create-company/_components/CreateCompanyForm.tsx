@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ export default function CreateCompanyForm() {
 
     const tempToken = searchParams.get('token');
     if (!tempToken) {
-      setError("Your session has expired. Please log in again.");
+      setError("Ваша сесія застаріла. Будь ласка, увійдіть знову.");
       setIsSubmitting(false);
       return;
     }
@@ -36,7 +37,7 @@ export default function CreateCompanyForm() {
       await createCompanyAndLogin(tempToken, companyName);
       router.push(redirectUrl);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create company.');
+      setError(err instanceof Error ? err.message : 'Не вдалося створити компанію.');
       setIsSubmitting(false);
     }
   };
