@@ -4,29 +4,31 @@ import type { NextRequest } from 'next/server';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev';
 
 /**
- * API route to create a company and exchange a temporary token for a permanent one.
+ * API route to exchange a temporary token and company selection for a permanent token.
  * This acts as a secure proxy to the main backend.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { tempToken, companyName } = await request.json();
+    const { tempToken, companyId } = await request.json();
 
-    if (!tempToken || !companyName) {
-      return NextResponse.json({ message: 'Missing temporary token or company name' }, { status: 400 });
+    if (!tempToken || !companyId) {
+      return NextResponse.json({ message: 'Missing temporary token or company ID' }, { status: 400 });
     }
 
-    const backendResponse = await fetch(`${API_BASE_URL}/auth/telegram/create-company-and-login`, {
+    // Forward the request to the main backend
+    const backendResponse = await fetch(`${API_BASE_URL}/auth/telegram/select-company`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${tempToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ companyName }),
+      body: JSON.stringify({ companyId }),
     });
 
     const data = await backendResponse.json();
 
     if (!backendResponse.ok) {
+      // Forward the error from the backend
       return NextResponse.json(data, { status: backendResponse.status });
     }
 
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Permanent token not received from backend' }, { status: 500 });
     }
 
-    // Set the permanent token in a secure, httpOnly cookie
+    // On success, set the permanent token in a secure, httpOnly cookie
     const response = NextResponse.json({ success: true });
     response.cookies.set({
       name: 'auth_token',
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error('API /api/auth/create-company error:', error);
+    console.error('API /api/auth/select-company error:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
   }
 }

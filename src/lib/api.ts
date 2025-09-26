@@ -2,7 +2,7 @@
 'use client';
 
 // The API base URL is now set to your external backend.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev';
 
 /**
  * A generic fetch wrapper for making API requests to the external backend.
@@ -47,6 +47,8 @@ type UserProfile = {
  * This makes a direct request to the external backend.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
+    // Reverting to a direct call since the backend has fixed CORS.
+    // The proxy is no longer needed for this endpoint.
     return apiFetch('auth/telegram/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
