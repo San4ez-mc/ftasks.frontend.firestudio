@@ -18,11 +18,11 @@ import type { Result } from '@/types/result';
 import { formatTime } from '@/lib/timeUtils';
 import InteractiveTour from '@/components/layout/interactive-tour';
 import type { TourStep } from '@/components/layout/interactive-tour';
-import { getTasksForDate, createTask, updateTask, deleteTask } from '@/app/(app)/tasks/actions';
-import { getEmployees } from '@/app/(app)/company/actions';
+import { getTasksForDate, createTask, updateTask, deleteTask } from './actions';
+import { getEmployees, getCurrentEmployee } from '@/app/(app)/company/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { getMe, logout } from '@/lib/api';
+import { logout } from '@/lib/api';
 
 // --- TOUR STEPS ---
 
@@ -83,14 +83,13 @@ export default function TasksPage() {
         try {
             const [fetchedEmployees, me] = await Promise.all([
                 getEmployees(),
-                getMe() // Fetches current user from your backend via /api/auth/me
+                getCurrentEmployee()
             ]);
             
             setEmployees(fetchedEmployees);
-            const currentUserEmployee = fetchedEmployees.find(e => e.userId === me.id);
-            setCurrentUser(currentUserEmployee || null);
+            setCurrentUser(me);
             
-            if (!currentUserEmployee) {
+            if (!me) {
                  throw new Error("User profile not found in company employees.");
             }
 

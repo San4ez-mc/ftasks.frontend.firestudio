@@ -3,7 +3,7 @@
 
 This document outlines the API endpoints required for the FINEKO application to function with a standalone backend.
 
-**Base URL**: `https://your-backend-api.com/`
+**Base URL**: `https://studio--fineko-tasktracker.us-central1.hosted.app`
 
 ---
 
@@ -57,7 +57,7 @@ Called by the frontend on the `/auth/telegram/callback` page to determine the us
 
 ---
 
-### `POST /api/auth/telegram_select_company.php`
+### `POST /api/auth/select-company`
 
 Called from the `/select-company` page. Exchanges the temporary token and a selected `companyId` for a permanent session token.
 
