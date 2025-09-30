@@ -1,3 +1,4 @@
+
 'use client';
 
 // The API base URL is now set to your external backend.
@@ -5,17 +6,11 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 
 /**
  * A generic fetch wrapper for making API requests to the external backend.
+ * This is intended for client-side use and calls Next.js API routes which act as proxies.
  */
-async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const headers = new Headers(options.headers || {});
-  headers.set('Content-Type', 'application/json');
-
-  const url = `${API_BASE_URL}/${endpoint.replace(/^\//, "")}`;
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const url = `/${endpoint.replace(/^\//, "")}`; // Ensure it's a relative path for proxy calls
+  const response = await fetch(url, options);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Сталася невідома помилка' }));
@@ -28,6 +23,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
   return response.json() as T;
 }
+
 
 // --- Authentication API ---
 
@@ -45,28 +41,24 @@ type UserProfile = {
 
 /**
  * Fetches the user's companies using a temporary token from the Telegram bot.
+ * It calls our Next.js proxy route, which forwards the request to the backend.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
-    const response = await fetch('/api/auth/telegram/companies', {
+    return fetchFromProxy<Company[]>('/api/auth/telegram/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
         }
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Не вдалося завантажити компанії.');
-    }
-
-    return response.json();
 }
+
 
 /**
  * Calls our Next.js API route to exchange the temporary token and selected company
  * for a permanent token, which the Next.js route will set as an httpOnly cookie.
+ * The tempToken is sent in the Authorization header.
  */
 export async function selectCompany(tempToken: string, companyId: string): Promise<{ success: boolean }> {
-    const response = await fetch('/api/auth/select-company', {
+    return fetchFromProxy<{ success: boolean }>('/api/auth/select-company', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -74,20 +66,15 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
         },
         body: JSON.stringify({ companyId }),
     });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Не вдалося обрати компанію.');
-    }
-    return response.json();
 }
 
 /**
  * Calls our Next.js API route to create a new company and log the user in.
+ * The tempToken is sent in the Authorization header.
  * The Next.js route handles setting the permanent token as an httpOnly cookie.
  */
 export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ success: boolean }> {
-     const response = await fetch('/api/auth/create-company', {
+     return fetchFromProxy<{ success: boolean }>('/api/auth/create-company', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -95,11 +82,6 @@ export async function createCompanyAndLogin(tempToken: string, companyName: stri
         },
         body: JSON.stringify({ companyName }),
     });
-     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Не вдалося створити компанію.');
-    }
-    return response.json();
 }
 
 /**
@@ -127,7 +109,6 @@ export async function getMe(): Promise<UserProfile> {
     if (!response.ok) {
         if (response.status === 401) {
              console.log("Сесія застаріла або недійсна. Виконується вихід...");
-             // Don't call logout() here to avoid potential loops, just redirect.
              if (typeof window !== 'undefined') {
                  window.location.href = '/login';
              }
@@ -137,16 +118,4 @@ export async function getMe(): Promise<UserProfile> {
     }
     
     return response.json();
-}
-
-
-// --- Company API ---
-
-/**
- * Fetches the list of companies for the authenticated user (using session cookie).
- * This now needs to go through our API proxy to include the cookie.
- */
-export async function getCompanies(): Promise<Company[]> {
-    // This assumes your backend handles getting companies based on the permanent token.
-    return apiFetch('companies');
 }

@@ -1,3 +1,4 @@
+
 # FINEKO API Documentation
 
 This document outlines the API endpoints required for the FINEKO application to function with a standalone backend.
@@ -127,11 +128,9 @@ Logs out the current user by invalidating their session/token on the server side
 
 ## 2. Companies
 
-*All subsequent API endpoints must be protected and require the permanent session token.*
--   **Required Header**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-
 ### `GET /companies`
 Get a list of companies the authenticated user is a member of.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**:
     ```json
     [
@@ -142,10 +141,12 @@ Get a list of companies the authenticated user is a member of.
 
 ### `GET /companies/profile`
 Get the profile of the currently selected company (from the JWT).
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: `CompanyProfile` object.
 
 ### `PUT /companies/profile`
 Update the profile of the currently selected company.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Partial<CompanyProfile>`
 - **Response (200 OK)**: The updated `CompanyProfile` object.
 
@@ -155,15 +156,18 @@ Update the profile of the currently selected company.
 
 ### `GET /employees`
 Get all employees for the current company.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `Employee` objects.
 
 ### `POST /employees`
 Create a new employee profile (manually).
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Omit<Employee, 'id' | 'companyId' | ...>`
 - **Response (201 Created)**: The newly created `Employee` object.
 
 ### `PUT /employees/{id}`
 Update a specific employee's details.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Partial<Employee>`
 - **Response (200 OK)**: The updated `Employee` object.
 
@@ -173,22 +177,26 @@ Update a specific employee's details.
 
 ### `GET /tasks?date={YYYY-MM-DD}`
 Get tasks for a specific date. The backend should filter based on the user's role (self, subordinate, delegated) from the JWT.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Query Params**: `date` (required)
 - **Response (200 OK)**: Array of `Task` objects.
 
 ### `POST /tasks`
 Create a new task.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Omit<Task, 'id' | 'companyId'>`
 - **Response (201 Created)**: The newly created `Task` object.
 
 ### `PUT /tasks/{id}`
 Update an existing task.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Backend Logic**: If `status` is changed to `'done'` and `assigneeId` is not the same as `reporterId`, the backend should automatically create a new "verification" task assigned to the reporter.
 - **Request Body**: `Partial<Task>`
 - **Response (200 OK)**: The updated `Task` object.
 
 ### `DELETE /tasks/{id}`
 Delete a task.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (204 No Content)**
 
 ---
@@ -197,21 +205,25 @@ Delete a task.
 
 ### `GET /results`
 Get all results for the current company.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `Result` objects.
 
 ### `POST /results`
 Create a new result.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Omit<Result, 'id' | 'companyId'>`
 - **Response (201 Created)**: The newly created `Result` object.
 
 ### `PUT /results/{id}`
 Update an existing result.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Backend Logic**: Similar to tasks, if `completed` is set to `true` by someone other than the reporter, a verification task should be created for the reporter.
 - **Request Body**: `Partial<Result>`
 - **Response (200 OK)**: The updated `Result` object.
 
 ### `DELETE /results/{id}`
 Delete a result.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (204 No Content)**
 
 ---
@@ -220,20 +232,24 @@ Delete a result.
 
 ### `GET /templates`
 Get all task/result templates for the current company.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `Template` objects.
 
 ### `POST /templates`
 Create a new template.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Omit<Template, 'id' | 'companyId'>`
 - **Response (201 Created)**: The new `Template` object.
 
 ### `PUT /templates/{id}`
 Update a template.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Partial<Template>`
 - **Response (200 OK)**: The updated `Template` object.
 
 ### `DELETE /templates/{id}`
 Delete a template.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (204 No Content)**
 
 ---
@@ -242,6 +258,7 @@ Delete a template.
 
 ### `GET /org-structure`
 Get all data needed for the org structure page in one call.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**:
     ```json
     {
@@ -253,6 +270,7 @@ Get all data needed for the org structure page in one call.
 
 ### `POST /org-structure`
 Save the entire org structure. This endpoint should handle creating, updating, and deleting entities in a transaction.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**:
     ```json
     {
@@ -268,24 +286,29 @@ Save the entire org structure. This endpoint should handle creating, updating, a
 
 ### `GET /processes`
 Get all business processes for the company.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `Process` objects.
 
 ### `GET /processes/{id}`
 Get a single business process by its ID.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: `Process` object.
 
 ### `POST /processes`
 Create a new process.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Omit<Process, 'id' | 'companyId'>`
 - **Response (201 Created)**: The new `Process` object.
 
 ### `PUT /processes/{id}`
 Update a process.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Partial<Process>`
 - **Response (200 OK)**: The updated `Process` object.
 
 ### `DELETE /processes/{id}`
 Delete a process.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (204 No Content)**
 
 ---
@@ -294,24 +317,29 @@ Delete a process.
 
 ### `GET /instructions`
 Get all instructions for the company.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `Instruction` objects.
 
 ### `GET /instructions/{id}`
 Get a single instruction by ID.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: `Instruction` object.
 
 ### `POST /instructions`
 Create a new instruction.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Omit<Instruction, 'id' | 'companyId'>`
 - **Response (201 Created)**: The new `Instruction` object.
 
 ### `PUT /instructions/{id}`
 Update an instruction.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `Partial<Instruction>`
 - **Response (200 OK)**: The updated `Instruction` object.
 
 ### `DELETE /instructions/{id}`
 Delete an instruction.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (204 No Content)**
 
 ---
@@ -322,31 +350,38 @@ Delete an instruction.
 
 ### `POST /telegram/link-group`
 Links a Telegram group using a code.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `{ "code": "XYZ123" }`
 - **Response (200 OK)**: `{ "success": true, "message": "...", "data": <TelegramGroup> }`
 
 ### `GET /telegram/groups`
 Get linked Telegram groups.
+-   **Headers**: `Authorization: Bearar <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `TelegramGroup` objects.
 
 ### `GET /telegram/groups/{id}/members`
 Get members of a specific linked group.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `TelegramMember` objects.
 
 ### `POST /telegram/groups/{id}/refresh-members`
 Trigger a refresh of the group's member list from the Telegram API.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Updated array of `TelegramMember` objects.
 
 ### `POST /telegram/groups/{id}/send-message`
 Send a message to the group.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `{ "text": "Hello world" }`
 - **Response (201 Created)**: The `MessageLog` object.
 
 ### `GET /telegram/groups/{id}/logs`
 Get the message log for a group.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `MessageLog` objects.
 
 ### `PUT /telegram/members/{id}`
 Link a Telegram member to a company employee.
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Request Body**: `{ "employeeId": "emp-1" }`
 - **Response (200 OK)**: The updated `TelegramMember` object.
