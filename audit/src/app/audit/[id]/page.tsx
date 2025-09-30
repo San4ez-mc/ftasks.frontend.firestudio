@@ -1,1 +1,1 @@
-// This file is deprecated and has been consolidated into /src/app/(app)/audit/[id]/page.tsx.
+// This file is deprecated and has been removed.

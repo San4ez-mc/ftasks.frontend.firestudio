@@ -1,1 +1,1 @@
-<!-- This file is deprecated and its content has been consolidated into the main project structure. -->
+// This file is deprecated and has been removed.

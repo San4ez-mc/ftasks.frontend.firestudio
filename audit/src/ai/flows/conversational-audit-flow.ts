@@ -1,1 +1,1 @@
-// This file is deprecated and has been consolidated into /src/ai/flows/.
+// This file is deprecated and has been removed.
