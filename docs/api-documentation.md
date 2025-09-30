@@ -346,8 +346,6 @@ Delete an instruction.
 
 ## 10. Telegram Integration
 
-*(These endpoints are called by the Next.js server, acting as a proxy to the main backend)*
-
 ### `POST /telegram/link-group`
 Links a Telegram group using a code.
 -   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
@@ -356,7 +354,7 @@ Links a Telegram group using a code.
 
 ### `GET /telegram/groups`
 Get linked Telegram groups.
--   **Headers**: `Authorization: Bearar <your_permanent_jwt_auth_token>`
+-   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
 - **Response (200 OK)**: Array of `TelegramGroup` objects.
 
 ### `GET /telegram/groups/{id}/members`
