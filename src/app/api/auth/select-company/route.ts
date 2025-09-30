@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -11,13 +12,17 @@ export async function POST(request: NextRequest) {
   try {
     const { companyId } = await request.json();
     const authHeader = request.headers.get('Authorization');
-    const tempToken = authHeader?.split(' ')[1];
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+         return NextResponse.json({ message: 'Відсутній Bearer токен авторизації' }, { status: 401 });
+    }
+    const tempToken = authHeader.split(' ')[1];
 
     if (!tempToken || !companyId) {
       return NextResponse.json({ message: 'Відсутній тимчасовий токен або ID компанії' }, { status: 400 });
     }
 
-    // Forward the request to the main backend with the Authorization header
+    // Forward the request to the main backend with the corrected endpoint
     const backendResponse = await fetch(`${API_BASE_URL}/api/auth/telegram_select_company.php`, {
       method: 'POST',
       headers: {
