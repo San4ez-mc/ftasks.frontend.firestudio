@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // The API base URL for your external backend.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev/';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev').replace(/\/$/, "");
 
 /**
  * API route to get the current user's profile.
@@ -11,7 +11,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fireb
  * It forwards the session token from the incoming request's cookie to the main backend.
  */
 export async function GET(request: NextRequest) {
-  console.log('[PROXY /api/auth/me] Отримано GET-запит від клієнта.');
+  console.log('[PROXY /api/auth/me] Отримано GET-запит.');
   try {
     const token = request.cookies.get('auth_token')?.value;
 
@@ -30,24 +30,38 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log(`[PROXY /api/auth/me] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}`);
+    const responseBody = await backendResponse.text();
+    console.log(`[PROXY /api/auth/me] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}, Тіло: ${responseBody}`);
+    
+    let data;
+    try {
+        data = JSON.parse(responseBody);
+    } catch (e) {
+        console.error('[PROXY /api/auth/me] Не вдалося розпарсити JSON від бекенду.');
+        return NextResponse.json({ 
+            message: 'Відповідь від зовнішнього бекенду не є валідним JSON.',
+            details: {
+                proxyStep: 'backend_response_parsing',
+                backendStatus: backendResponse.status,
+                backendResponse: responseBody
+            }
+        }, { status: 502 }); // 502 Bad Gateway
+    }
 
     if (!backendResponse.ok) {
-      const errorData = await backendResponse.json().catch(() => ({}));
-      console.error('[PROXY /api/auth/me] Зовнішній бекенд повернув помилку:', errorData);
+      console.error('[PROXY /api/auth/me] Зовнішній бекенд повернув помилку:', data);
       return NextResponse.json({
-        message: 'Помилка на стороні зовнішнього бекенду.',
+        message: data.message || 'Помилка на стороні зовнішнього бекенду.',
         details: {
             proxyStep: 'response_from_external_backend',
             backendStatus: backendResponse.status,
-            backendResponse: errorData
+            backendResponse: data
         }
       }, { status: backendResponse.status });
     }
 
-    const userData = await backendResponse.json();
     console.log('[PROXY /api/auth/me] Успішно отримано дані користувача. Відправляю клієнту.');
-    return NextResponse.json(userData);
+    return NextResponse.json(data);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

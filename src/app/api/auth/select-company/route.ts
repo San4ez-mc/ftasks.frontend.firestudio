@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -34,8 +35,23 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ companyId }),
     });
 
-    console.log(`[PROXY /api/auth/select-company] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}`);
-    const data = await backendResponse.json();
+    const responseBody = await backendResponse.text();
+    console.log(`[PROXY /api/auth/select-company] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}, Тіло: ${responseBody}`);
+    
+    let data;
+    try {
+        data = JSON.parse(responseBody);
+    } catch (e) {
+        console.error('[PROXY /api/auth/select-company] Не вдалося розпарсити JSON від бекенду.');
+        return NextResponse.json({ 
+            message: 'Відповідь від зовнішнього бекенду не є валідним JSON.',
+            details: {
+                proxyStep: 'backend_response_parsing',
+                backendStatus: backendResponse.status,
+                backendResponse: responseBody
+            }
+        }, { status: 502 }); // 502 Bad Gateway
+    }
 
     if (!backendResponse.ok) {
       console.error('[PROXY /api/auth/select-company] Зовнішній бекенд повернув помилку:', data);
