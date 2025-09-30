@@ -4,6 +4,10 @@ import type { NextRequest } from 'next/server';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev').replace(/\/$/, "");
 
+/**
+ * API route to exchange a temporary token and company selection for a permanent token.
+ * This acts as a secure proxy to the main backend.
+ */
 export async function POST(request: NextRequest) {
   console.log('[PROXY /api/auth/select-company] Отримано POST-запит від клієнта.');
   
