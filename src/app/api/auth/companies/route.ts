@@ -8,30 +8,52 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fireb
  * This acts as a secure server-side proxy to the main backend to avoid CORS issues.
  */
 export async function GET(request: NextRequest) {
+  console.log('[PROXY /api/auth/companies] Отримано GET-запит від клієнта.');
   try {
     const tempToken = request.headers.get('Authorization')?.split(' ')[1];
 
     if (!tempToken) {
+      console.error('[PROXY /api/auth/companies] Помилка: Bearer токен відсутній.');
       return NextResponse.json({ message: 'Temporary token is missing' }, { status: 401 });
     }
 
-    // The PHP backend endpoint remains the same
-    const backendResponse = await fetch(`${API_BASE_URL}/auth/telegram/companies`, {
+    const backendUrl = `${API_BASE_URL}/auth/telegram/companies`;
+    console.log(`[PROXY /api/auth/companies] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
+
+    const backendResponse = await fetch(backendUrl, {
       headers: {
         'Authorization': `Bearer ${tempToken}`,
       },
     });
+    
+    console.log(`[PROXY /api/auth/companies] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}`);
 
     if (!backendResponse.ok) {
-      const errorData = await backendResponse.json().catch(() => ({ message: 'Backend responded with an error' }));
-      return NextResponse.json(errorData, { status: backendResponse.status });
+      const errorData = await backendResponse.json().catch(() => ({ message: 'Бекенд відповів помилкою без тіла' }));
+      console.error('[PROXY /api/auth/companies] Зовнішній бекенд повернув помилку:', errorData);
+      return NextResponse.json({
+        message: 'Помилка на стороні зовнішнього бекенду.',
+        details: {
+            proxyStep: 'response_from_external_backend',
+            backendStatus: backendResponse.status,
+            backendResponse: errorData
+        }
+      }, { status: backendResponse.status });
     }
 
     const companiesData = await backendResponse.json();
+    console.log('[PROXY /api/auth/companies] Успішно отримано дані. Відправляю клієнту.');
     return NextResponse.json(companiesData);
 
   } catch (error) {
-    console.error('API proxy error for /api/auth/companies:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[PROXY /api/auth/companies] Неочікувана помилка в проксі-маршруті:`, error);
+    return NextResponse.json({ 
+        message: 'Внутрішня помилка сервера в проксі-маршруті.', 
+        details: {
+             proxyStep: 'unexpected_error',
+             error: errorMessage,
+        }
+    }, { status: 500 });
   }
 }

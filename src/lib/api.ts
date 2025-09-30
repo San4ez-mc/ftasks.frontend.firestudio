@@ -6,28 +6,36 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 /**
  * A generic fetch wrapper for making API requests to the Next.js proxy routes.
  * This is intended for client-side use.
+ * It now includes detailed error logging to the browser console.
  */
 async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `/${endpoint.replace(/^\//, "")}`; // Ensure it's a relative path for proxy calls
-  const response = await fetch(url, options);
+  
+  try {
+    const response = await fetch(url, options);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ 
-        message: 'Сталася невідома помилка',
-        details: 'Не вдалося розпарсити відповідь про помилку від сервера.'
-    }));
-    
-    // Log the detailed error from the proxy to the browser console
-    console.error("Помилка від API проксі:", errorData);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+          message: `Сталася невідома помилка. Сервер відповів зі статусом ${response.status}`,
+          details: 'Не вдалося розпарсити відповідь про помилку від сервера.'
+      }));
+      
+      console.error(`[API PROXY CLIENT ERROR] for ${endpoint}:`, errorData);
 
-    throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
+      throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
+    }
+
+    if (response.status === 204) { // No Content
+      return null as T;
+    }
+
+    return response.json() as T;
+
+  } catch (error) {
+    console.error(`[API PROXY CLIENT CATCH] for ${endpoint}:`, error);
+    // Re-throw the error so the calling function knows something went wrong.
+    throw error;
   }
-
-  if (response.status === 204) { // No Content
-    return null as T;
-  }
-
-  return response.json() as T;
 }
 
 
@@ -107,18 +115,24 @@ export async function logout() {
  * which securely proxies the request to the main backend.
  */
 export async function getMe(): Promise<UserProfile> {
-    const response = await fetch('/api/auth/me');
-    
-    if (!response.ok) {
-        if (response.status === 401) {
-             console.log("Сесія застаріла або недійсна. Виконується вихід...");
-             if (typeof window !== 'undefined') {
-                 window.location.href = '/login';
-             }
+    try {
+        const response = await fetch('/api/auth/me');
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                 console.log("Сесія застаріла або недійсна. Виконується вихід...");
+                 if (typeof window !== 'undefined') {
+                     window.location.href = '/login';
+                 }
+            }
+            const errorData = await response.json().catch(() => ({ message: 'Сталася невідома помилка' }));
+            console.error('[API CLIENT ERROR] for /api/auth/me:', errorData);
+            throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
         }
-        const errorData = await response.json().catch(() => ({ message: 'Сталася невідома помилка' }));
-        throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
+        
+        return response.json();
+    } catch (error) {
+        console.error("[API CLIENT CATCH] for /api/auth/me:", error);
+        throw error;
     }
-    
-    return response.json();
 }

@@ -11,31 +11,53 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fireb
  * It forwards the session token from the incoming request's cookie to the main backend.
  */
 export async function GET(request: NextRequest) {
+  console.log('[PROXY /api/auth/me] Отримано GET-запит від клієнта.');
   try {
     const token = request.cookies.get('auth_token')?.value;
 
     if (!token) {
+      console.error('[PROXY /api/auth/me] Помилка: auth_token cookie відсутній.');
       return NextResponse.json({ message: 'Not authenticated' }, { status: 401 });
     }
+    
+    const backendUrl = `${API_BASE_URL}/auth/me`;
+    console.log(`[PROXY /api/auth/me] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     // Forward the request to your main backend's /auth/me endpoint
-    const backendResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+    const backendResponse = await fetch(backendUrl, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
 
+    console.log(`[PROXY /api/auth/me] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}`);
+
     if (!backendResponse.ok) {
-      // If the backend says the token is invalid, return its response status and body
       const errorData = await backendResponse.json().catch(() => ({}));
-      return NextResponse.json(errorData, { status: backendResponse.status });
+      console.error('[PROXY /api/auth/me] Зовнішній бекенд повернув помилку:', errorData);
+      return NextResponse.json({
+        message: 'Помилка на стороні зовнішнього бекенду.',
+        details: {
+            proxyStep: 'response_from_external_backend',
+            backendStatus: backendResponse.status,
+            backendResponse: errorData
+        }
+      }, { status: backendResponse.status });
     }
 
     const userData = await backendResponse.json();
+    console.log('[PROXY /api/auth/me] Успішно отримано дані користувача. Відправляю клієнту.');
     return NextResponse.json(userData);
 
   } catch (error) {
-    console.error('API /auth/me error:', error);
-    return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[PROXY /api/auth/me] Неочікувана помилка в проксі-маршруті:`, error);
+    return NextResponse.json({ 
+        message: 'Внутрішня помилка сервера в проксі-маршруті.', 
+        details: {
+             proxyStep: 'unexpected_error',
+             error: errorMessage,
+        }
+    }, { status: 500 });
   }
 }
