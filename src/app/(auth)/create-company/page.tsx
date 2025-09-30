@@ -1,4 +1,3 @@
-
 import { Suspense } from 'react';
 import CreateCompanyForm from './_components/CreateCompanyForm';
 import { Loader2 } from 'lucide-react';

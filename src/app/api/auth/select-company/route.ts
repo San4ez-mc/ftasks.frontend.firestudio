@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
     try {
         data = JSON.parse(responseBody);
     } catch (e) {
-        console.error('[PROXY /api/auth/select-company] Не вдалося розпарсити JSON від бекенду.');
+        console.error('[PROXY /api/auth/select-company] Не вдалося розпарсити JSON від бекенду. Raw response:', responseBody);
         return NextResponse.json({ 
             message: 'Відповідь від зовнішнього бекенду не є валідним JSON.',
             details: {

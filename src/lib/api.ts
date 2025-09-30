@@ -1,8 +1,4 @@
-
 'use client';
-
-// The API base URL is now set to your external backend.
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev').replace(/\/$/, "");
 
 /**
  * A generic fetch wrapper with enhanced error logging for making API requests 
@@ -15,27 +11,21 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
     const response = await fetch(url, options);
 
     if (!response.ok) {
-        // Attempt to parse the error response as JSON.
-        const errorData = await response.json().catch(() => {
-            // If JSON parsing fails, it means the server sent something else (like HTML error page).
-            return {
-                message: `Сервер відповів зі статусом ${response.status}. Можливо, URL проксі-маршруту (${url}) неправильний або файл відсутній.`,
-                details: 'Не вдалося розпарсити відповідь про помилку від сервера як JSON.'
-            };
-        });
-
-        // Log the detailed error information to the browser console.
-        console.error(`[API Proxy Client] Помилка для '${url}':`, errorData.message);
-        if (errorData.details) {
-            console.error(`[API Proxy Client] Деталі:`, errorData.details);
-             if (errorData.details.backendResponse) {
-                console.error("--- RAW BACKEND RESPONSE ---");
-                console.error(errorData.details.backendResponse);
-                console.error("--------------------------");
-            }
+        if (response.status === 404) {
+            const errorMsg = `Помилка 404 (Не знайдено) для проксі-маршруту: '${url}'. Перевірте, чи існує файл за шляхом 'src/app${url}/route.ts'.`;
+            console.error(`[API Proxy Client]`, errorMsg);
+            throw new Error(errorMsg);
         }
 
-        // Throw a user-friendly error to be caught by the calling function.
+        const errorData = await response.json().catch(() => ({}));
+        
+        console.error(`[API Proxy Client ERROR] for ${endpoint}:`, errorData.details || errorData);
+        if (errorData.details?.backendResponse) {
+            console.error("--- RAW BACKEND RESPONSE ---");
+            console.error(errorData.details.backendResponse);
+            console.error("--------------------------");
+        }
+
         throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
     }
     
@@ -46,8 +36,7 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
     return response.json() as T;
 
   } catch (error) {
-    // This catches network errors or errors thrown from the block above
-    console.error(`[API Proxy Client] Критична помилка запиту до '${url}':`, error);
+    console.error(`[API Proxy Client] Помилка мережі або парсингу для '${url}':`, error);
     throw error;
   }
 }

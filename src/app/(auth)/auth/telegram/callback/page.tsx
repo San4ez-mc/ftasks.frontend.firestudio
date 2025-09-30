@@ -1,4 +1,3 @@
-
 import { Suspense } from 'react';
 import TelegramCallback from './_components/TelegramCallback';
 import { Loader2 } from 'lucide-react';
