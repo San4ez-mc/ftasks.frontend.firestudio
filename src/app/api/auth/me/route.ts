@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     });
 
     const responseBody = await backendResponse.text();
-    console.log(`[PROXY /api/auth/me] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}, Тіло: ${responseBody}`);
+    console.log(`[PROXY /api/auth/me] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}`);
     
     let data;
     try {

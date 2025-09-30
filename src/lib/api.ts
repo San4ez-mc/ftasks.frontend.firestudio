@@ -15,16 +15,28 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      if (response.status === 404) {
-        const errorMessage = `Помилка 404 (Не знайдено) для проксі-маршруту: '${url}'. Перевірте, чи існує файл-обробник за шляхом 'src/app${url}/route.ts'.`;
-        console.error(`[API Proxy Client]`, errorMessage);
-        throw new Error(errorMessage);
-      }
-      
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = `Помилка від проксі-маршруту '${url}' (Статус: ${response.status}): ${errorData.message || 'Невідома помилка сервера.'}`;
-      console.error(`[API Proxy Client] Деталі:`, errorData);
-      throw new Error(errorMessage);
+        // Attempt to parse the error response as JSON.
+        const errorData = await response.json().catch(() => {
+            // If JSON parsing fails, it means the server sent something else (like HTML error page).
+            return {
+                message: `Сервер відповів зі статусом ${response.status}. Можливо, URL проксі-маршруту (${url}) неправильний або файл відсутній.`,
+                details: 'Не вдалося розпарсити відповідь про помилку від сервера як JSON.'
+            };
+        });
+
+        // Log the detailed error information to the browser console.
+        console.error(`[API Proxy Client] Помилка для '${url}':`, errorData.message);
+        if (errorData.details) {
+            console.error(`[API Proxy Client] Деталі:`, errorData.details);
+             if (errorData.details.backendResponse) {
+                console.error("--- RAW BACKEND RESPONSE ---");
+                console.error(errorData.details.backendResponse);
+                console.error("--------------------------");
+            }
+        }
+
+        // Throw a user-friendly error to be caught by the calling function.
+        throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
     }
     
     if (response.status === 204) { // No Content
@@ -118,15 +130,11 @@ export async function logout() {
  */
 export async function getMe(): Promise<UserProfile> {
     try {
-        // This one uses fetchFromProxy directly for better error handling
         return await fetchFromProxy<UserProfile>('api/auth/me');
     } catch (error: any) {
-        // If the error is 401, it's an auth issue, redirect to login
-        if (error.message && error.message.includes('Статус: 401')) {
+        if (typeof window !== 'undefined' && error.message.includes('401')) {
              console.log("Сесія застаріла або недійсна. Виконується вихід...");
-             if (typeof window !== 'undefined') {
-                 window.location.href = '/login';
-             }
+             window.location.href = '/login';
         }
         // Re-throw other errors to be handled by the calling component
         throw error;

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ message: 'ID компанії відсутній.' }, { status: 400 });
     }
 
-    const backendUrl = `${API_BASE_URL}/api/auth/select-company/`;
+    const backendUrl = `${API_BASE_URL}/api/auth/select-company`;
     console.log(`[PROXY /api/auth/select-company] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     const backendResponse = await fetch(backendUrl, {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     });
 
     const responseBody = await backendResponse.text();
-    console.log(`[PROXY /api/auth/select-company] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}, Тіло: ${responseBody}`);
+    console.log(`[PROXY /api/auth/select-company] Отримано відповідь від зовнішнього бекенду зі статусом: ${backendResponse.status}`);
     
     let data;
     try {
