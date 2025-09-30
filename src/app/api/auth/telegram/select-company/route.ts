@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to the main backend with the corrected endpoint
-    const backendResponse = await fetch(`${API_BASE_URL}/api/auth/telegram_select_company.php`, {
+    const backendResponse = await fetch(`${API_BASE_URL}/api/auth/select-company`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${tempToken}`,

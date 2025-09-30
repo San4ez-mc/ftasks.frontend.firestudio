@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ message: 'ID компанії відсутній.' }, { status: 400 });
     }
 
-    const backendUrl = `${API_BASE_URL}/api/auth/telegram_select_company.php`;
+    const backendUrl = `${API_BASE_URL}/api/auth/select-company/`;
     console.log(`[PROXY /api/auth/select-company] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     const backendResponse = await fetch(backendUrl, {
