@@ -4,15 +4,22 @@
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev').replace(/\/$/, "");
 
 /**
- * A generic fetch wrapper for making API requests to the external backend.
- * This is intended for client-side use and calls Next.js API routes which act as proxies.
+ * A generic fetch wrapper for making API requests to the Next.js proxy routes.
+ * This is intended for client-side use.
  */
 async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `/${endpoint.replace(/^\//, "")}`; // Ensure it's a relative path for proxy calls
   const response = await fetch(url, options);
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Сталася невідома помилка' }));
+    const errorData = await response.json().catch(() => ({ 
+        message: 'Сталася невідома помилка',
+        details: 'Не вдалося розпарсити відповідь про помилку від сервера.'
+    }));
+    
+    // Log the detailed error from the proxy to the browser console
+    console.error("Помилка від API проксі:", errorData);
+
     throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
   }
 
@@ -40,7 +47,6 @@ type UserProfile = {
 
 /**
  * Fetches the user's companies using a temporary token from the Telegram bot.
- * It calls our Next.js proxy route, which forwards the request to the backend.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
     return fetchFromProxy<Company[]>('/api/auth/companies', {
@@ -50,7 +56,6 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
     });
 }
 
-
 /**
  * Calls our Next.js API route to exchange the temporary token and selected company
  * for a permanent token, which the Next.js route will set as an httpOnly cookie.
@@ -59,12 +64,13 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
     return fetchFromProxy<{ success: boolean }>('/api/auth/select-company', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${tempToken}`,
+            'Content-Type': 'application/json',
         },
         body: JSON.stringify({ companyId }),
     });
 }
+
 
 /**
  * Calls our Next.js API route to create a new company and log the user in.
