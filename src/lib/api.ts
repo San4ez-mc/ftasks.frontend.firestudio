@@ -66,13 +66,13 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
  * for a permanent token, which the Next.js route will set as an httpOnly cookie.
  */
 export async function selectCompany(tempToken: string, companyId: string): Promise<{ success: boolean }> {
-    // This call goes to our OWN Next.js API route (the proxy)
     const response = await fetch('/api/auth/select-company', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tempToken}`,
         },
-        body: JSON.stringify({ tempToken, companyId }),
+        body: JSON.stringify({ companyId }),
     });
 
     if (!response.ok) {
@@ -91,8 +91,9 @@ export async function createCompanyAndLogin(tempToken: string, companyName: stri
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tempToken}`,
         },
-        body: JSON.stringify({ tempToken, companyName }),
+        body: JSON.stringify({ companyName }),
     });
      if (!response.ok) {
         const errorData = await response.json();
@@ -109,7 +110,7 @@ export async function logout() {
     try {
         await fetch('/api/auth/logout', { method: 'POST' });
     } catch (error) {
-        console.warn("Logout API call failed, but redirecting anyway.", error);
+        console.warn("Помилка при виході з системи, але все одно перенаправляємо.", error);
     } finally {
         // Force a full reload to clear all client-side state and redirect.
         window.location.href = '/login';
@@ -125,7 +126,7 @@ export async function getMe(): Promise<UserProfile> {
     
     if (!response.ok) {
         if (response.status === 401) {
-             console.log("Session expired or invalid. Logging out.");
+             console.log("Сесія застаріла або недійсна. Виконується вихід...");
              // Don't call logout() here to avoid potential loops, just redirect.
              if (typeof window !== 'undefined') {
                  window.location.href = '/login';
