@@ -1,4 +1,3 @@
-
 'use client';
 
 // The API base URL is now set to your external backend.
@@ -67,6 +66,7 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
  * for a permanent token, which the Next.js route will set as an httpOnly cookie.
  */
 export async function selectCompany(tempToken: string, companyId: string): Promise<{ success: boolean }> {
+    // This call goes to our OWN Next.js API route (the proxy)
     const response = await fetch('/api/auth/select-company', {
         method: 'POST',
         headers: {

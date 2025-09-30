@@ -10,14 +10,20 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
  */
 export async function POST(request: NextRequest) {
   try {
-    const { tempToken, companyId } = await request.json();
+    const { companyId } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+         return NextResponse.json({ message: 'Відсутній Bearer токен авторизації' }, { status: 401 });
+    }
+    const tempToken = authHeader.split(' ')[1];
 
     if (!tempToken || !companyId) {
       return NextResponse.json({ message: 'Відсутній тимчасовий токен або ID компанії' }, { status: 400 });
     }
 
-    // Forward the request to the main backend with the Authorization header
-    const backendResponse = await fetch(`${API_BASE_URL}/auth/telegram/select-company`, {
+    // Forward the request to the main backend with the corrected endpoint
+    const backendResponse = await fetch(`${API_BASE_URL}/api/auth/telegram_select_company.php`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${tempToken}`,
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error('API /api/auth/select-company error:', error);
+    console.error('API /api/auth/telegram/select-company error:', error);
     return NextResponse.json({ message: 'Внутрішня помилка сервера' }, { status: 500 });
   }
 }

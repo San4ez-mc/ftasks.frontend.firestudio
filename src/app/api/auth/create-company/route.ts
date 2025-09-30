@@ -10,7 +10,8 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
  */
 export async function POST(request: NextRequest) {
   try {
-    const { tempToken, companyName } = await request.json();
+    const { companyName } = await request.json();
+    const tempToken = request.headers.get('Authorization')?.split(' ')[1];
 
     if (!tempToken || !companyName) {
       return NextResponse.json({ message: 'Відсутній тимчасовий токен або назва компанії' }, { status: 400 });
