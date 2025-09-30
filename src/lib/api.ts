@@ -1,4 +1,3 @@
-
 'use client';
 
 // The API base URL is now set to your external backend.
@@ -44,7 +43,7 @@ type UserProfile = {
  * It calls our Next.js proxy route, which forwards the request to the backend.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
-    return fetchFromProxy<Company[]>('/api/auth/telegram/companies', {
+    return fetchFromProxy<Company[]>('/api/auth/companies', {
         headers: {
             'Authorization': `Bearer ${tempToken}`
         }
@@ -55,7 +54,6 @@ export async function getCompaniesForToken(tempToken: string): Promise<Company[]
 /**
  * Calls our Next.js API route to exchange the temporary token and selected company
  * for a permanent token, which the Next.js route will set as an httpOnly cookie.
- * The tempToken is sent in the Authorization header.
  */
 export async function selectCompany(tempToken: string, companyId: string): Promise<{ success: boolean }> {
     return fetchFromProxy<{ success: boolean }>('/api/auth/select-company', {
@@ -70,7 +68,6 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
 
 /**
  * Calls our Next.js API route to create a new company and log the user in.
- * The tempToken is sent in the Authorization header.
  * The Next.js route handles setting the permanent token as an httpOnly cookie.
  */
 export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ success: boolean }> {
