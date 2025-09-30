@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -5,28 +6,29 @@
  * to the Next.js proxy routes.
  */
 async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `/${endpoint.replace(/^\//, "")}`; // Ensure it's a relative path
+  const url = `/api/${endpoint.replace(/^\/api\//, '')}`; // Ensure the path starts with /api/
 
   try {
     const response = await fetch(url, options);
 
     if (!response.ok) {
-        if (response.status === 404) {
-            const errorMsg = `Помилка 404 (Не знайдено) для проксі-маршруту: '${url}'. Перевірте, чи існує файл за шляхом 'src/app${url}/route.ts'.`;
-            console.error(`[API Proxy Client]`, errorMsg);
-            throw new Error(errorMsg);
-        }
+      if (response.status === 404) {
+        const errorMessage = `Помилка 404 (Не знайдено) для проксі-маршруту: '${url}'. Перевірте, чи існує файл-обробник за шляхом 'src/app${url}/route.ts'.`;
+        console.error(`[API Proxy Client]`, errorMessage);
+        throw new Error(errorMessage);
+      }
 
-        const errorData = await response.json().catch(() => ({}));
-        
-        console.error(`[API Proxy Client ERROR] for ${endpoint}:`, errorData.details || errorData);
-        if (errorData.details?.backendResponse) {
-            console.error("--- RAW BACKEND RESPONSE ---");
-            console.error(errorData.details.backendResponse);
-            console.error("--------------------------");
-        }
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = `Помилка від проксі-маршруту '${url}' (Статус: ${response.status}): ${errorData.message || 'Невідома помилка сервера.'}`;
+      
+      console.error(`[API Proxy Client] Деталі:`, errorData.details || errorData);
+      if(errorData.details?.backendResponse) {
+          console.error("--- RAW BACKEND RESPONSE ---");
+          console.error(errorData.details.backendResponse);
+          console.error("--------------------------");
+      }
 
-        throw new Error(errorData.message || `HTTP помилка! Статус: ${response.status}`);
+      throw new Error(errorMessage);
     }
     
     if (response.status === 204) { // No Content
@@ -36,7 +38,7 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
     return response.json() as T;
 
   } catch (error) {
-    console.error(`[API Proxy Client] Помилка мережі або парсингу для '${url}':`, error);
+    console.error(`[API Proxy Client] Критична помилка запиту до '${url}':`, error);
     throw error;
   }
 }
@@ -44,78 +46,29 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
 
 // --- Authentication API ---
 
-type Company = {
-    id: string;
-    name: string;
-};
-
 type UserProfile = {
     id: string;
     firstName: string;
     lastName: string;
-    companies: Company[];
+    // Add other fields as needed from your /auth/me endpoint
 }
 
 /**
- * Fetches the user's companies using a temporary token from the Telegram bot.
+ * Sends a JWT to the server to be set as a secure httpOnly cookie.
+ * @param token The JWT string received from the Telegram bot.
  */
-export async function getCompaniesForToken(tempToken: string): Promise<Company[]> {
-    return fetchFromProxy<Company[]>('api/auth/companies', {
-        headers: {
-            'Authorization': `Bearer ${tempToken}`
-        }
-    });
-}
-
-/**
- * Calls our Next.js API route to exchange the temporary token and selected company
- * for a permanent token, which the Next.js route will set as an httpOnly cookie.
- */
-export async function selectCompany(tempToken: string, companyId: string): Promise<{ success: boolean }> {
-    return fetchFromProxy<{ success: boolean }>('api/auth/select-company', {
+export async function setAuthToken(token: string): Promise<{ success: boolean }> {
+    return fetchFromProxy<{ success: boolean }>('auth/set-token', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${tempToken}`,
         },
-        body: JSON.stringify({ companyId }),
-    });
-}
-
-
-/**
- * Calls our Next.js API route to create a new company and log the user in.
- * The Next.js route handles setting the permanent token as an httpOnly cookie.
- */
-export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ success: boolean }> {
-     return fetchFromProxy<{ success: boolean }>('api/auth/create-company', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${tempToken}`,
-        },
-        body: JSON.stringify({ companyName }),
+        body: JSON.stringify({ token }),
     });
 }
 
 /**
- * Logs out the current user by calling our own Next.js API route,
- * which clears the httpOnly cookie.
- */
-export async function logout() {
-    try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-        console.warn("Помилка при виході з системи, але все одно перенаправляємо.", error);
-    } finally {
-        // Force a full reload to clear all client-side state and redirect.
-        window.location.href = '/login';
-    }
-}
-
-/**
- * Fetches the profile of the currently authenticated user from our own API route,
- * which securely proxies the request to the main backend.
+ * Fetches the profile of the currently authenticated user.
  */
 export async function getMe(): Promise<UserProfile> {
     try {
@@ -125,7 +78,39 @@ export async function getMe(): Promise<UserProfile> {
              console.log("Сесія застаріла або недійсна. Виконується вихід...");
              window.location.href = '/login';
         }
-        // Re-throw other errors to be handled by the calling component
         throw error;
     }
 }
+
+/**
+ * Logs out the current user by clearing the auth cookie.
+ */
+export async function logout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+        console.warn("Помилка при виході з системи, але все одно перенаправляємо.", error);
+    } finally {
+        window.location.href = '/login';
+    }
+}
+
+// --- New App API ---
+
+export async function getOrgStructure(): Promise<any> {
+    return fetchFromProxy<any>('org-structure');
+}
+
+export async function createTask(title: string, assignee_id: number): Promise<{ status: string; task_id: string; }> {
+    return fetchFromProxy<{ status: string; task_id: string; }>('tasks/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, assignee_id }),
+    });
+}
+
+export async function getTasks(assignee_id?: number): Promise<any[]> {
+    const endpoint = assignee_id ? `tasks/get?assignee_id=${assignee_id}` : 'tasks/get';
+    return fetchFromProxy<any[]>(endpoint);
+}
+

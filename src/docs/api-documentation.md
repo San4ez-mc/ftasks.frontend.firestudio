@@ -1,384 +1,145 @@
-# FINEKO API Documentation
+# Документація API
 
-This document outlines the API endpoints required for the FINEKO application to function with a standalone backend.
+Цей документ надає детальний огляд кінцевих точок (ендпоінтів) API, доступних у додатку PHP-Audit.
 
-**Base URL**: `https://studio--fineko-tasktracker.us-central1.hosted.app`
+## Автентифікація
 
----
+Усі кінцеві точки API (за винятком `/companies/create` та вебхука Telegram) вимагають `Bearer` токен для автентифікації. Токен необхідно передавати в заголовку `Authorization`.
 
-## 1. Authentication
+**Приклад заголовка:**
+```
+Authorization: Bearer <ваш_jwt_токен>
+```
 
-The authentication flow is based on Telegram and uses a two-token system: a short-lived temporary token for setup and a permanent token for the user session.
-
-### `POST /auth/telegram/login`
-
-**Note: This endpoint should be set as the webhook URL in your Telegram bot's settings.** Telegram will send a POST request with the user's data to this endpoint when they first interact with the bot via the login link.
-
-This is the first step, called by the Next.js webhook. It receives user data from Telegram and issues a temporary JWT.
-
--   **Request Body**: The Telegram user object.
-    ```json
-    {
-      "id": 123456789,
-      "first_name": "John",
-      "last_name": "Doe",
-      "username": "johndoe",
-      "language_code": "en",
-      "photo_url": "..."
-    }
-    ```
--   **Response (200 OK)**: A JSON object containing the temporary token.
-    ```json
-    {
-      "tempToken": "your_temporary_jwt_token"
-    }
-    ```
--   **Backend Logic**:
-    -   Find a user in the `users` table by `tg_user_id`.
-    -   If the user doesn't exist, create a new one.
-    -   Generate a JWT with a very short expiration (e.g., 5 minutes) containing the internal `userId`.
+JWT токен видається після успішного входу через Telegram-бота. Детальніше дивіться у [Схемі входу](./login-flow.md).
 
 ---
 
-### `GET /auth/telegram/companies`
+## Кінцеві точки (Endpoints)
 
-Called by the frontend on the `/auth/telegram/callback` page to determine the user's next step.
+### 1. Створити нову компанію
 
--   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
--   **Response (200 OK)**: An array of Company objects the user is a member of. Can be empty.
-    ```json
-    [
-      { "id": "company-1", "name": "Fineko Development" },
-      { "id": "company-2", "name": "My Startup Project" }
-    ]
-    ```
--   **Response (401 Unauthorized)**: If the temporary token is invalid or expired.
+Створює нову компанію в системі.
 
----
+**Примітка:** Наразі ця кінцева точка є публічною і не вимагає автентифікації. У робочому середовищі доступ до неї має бути обмежений лише для супер-адміністраторів.
 
-### `POST /api/auth/select-company`
+- **Ендпоінт:** `POST /companies/create`
+- **Метод:** `POST`
+- **Тіло запиту:**
 
-Called from the `/select-company` page. Exchanges the temporary token and a selected `companyId` for a permanent session token.
+  ```json
+  {
+    "name": "Нова Чудова Компанія"
+  }
+  ```
 
--   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
--   **Request Body**:
-    ```json
-    {
-      "companyId": "company-1"
-    }
-    ```
--   **Response (200 OK)**: The permanent token. The frontend will store this in a secure, session cookie.
-    ```json
-    {
-      "token": "your_permanent_jwt_auth_token"
-    }
-    ```
--   **Response (401 Unauthorized)**: If the temporary token is invalid.
--   **Response (403 Forbidden)**: If the user is not a member of the requested company.
+- **Успішна відповідь (201 Created):**
+
+  ```json
+  {
+    "status": "success",
+    "message": "Компанію успішно створено.",
+    "company_id": "2"
+  }
+  ```
+
+- **Відповіді з помилками:**
+  - `400 Bad Request`: Якщо поле `name` відсутнє або порожнє.
+  - `409 Conflict`: Якщо компанія з такою назвою вже існує.
 
 ---
 
-### `POST /auth/telegram/create-company-and-login`
+### 2. Отримати організаційну структуру
 
-Called from the `/create-company` page for new users. Creates a company and issues a permanent session token.
+Отримує повну ієрархічну структуру компанії, пов'язаної з автентифікованим користувачем.
 
--   **Headers**: `Authorization: Bearer <temporary_jwt_token>`
--   **Request Body**:
-    ```json
+- **Ендпоінт:** `GET /org-structure`
+- **Метод:** `GET`
+- **Успішна відповідь (200 OK):**
+
+  Масив відділів. Кожен відділ містить свої секції та користувачів.
+
+  ```json
+  [
     {
-      "companyName": "My New Company"
-    }
-    ```
--   **Response (200 OK)**: The permanent token.
-    ```json
-    {
-      "token": "your_permanent_jwt_auth_token"
-    }
-    ```
--   **Response (401 Unauthorized)**: If the temporary token is invalid.
-
----
-
-### `GET /auth/me`
-
-Retrieves the profile of the currently authenticated user using the permanent token. This should be called when the main app loads to get user context.
-
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
--   **Response (200 OK)**:
-    ```json
-    {
-      "id": "user-1",
-      "firstName": "Oleksandr",
-      "lastName": "Matsuk",
-      "companies": [
-        { "id": "company-1", "name": "Fineko Development" }
+      "id": 1,
+      "name": "ІТ-відділ",
+      "sections": [
+        {
+          "id": 1,
+          "name": "Розробка",
+          "users": [
+            {
+              "id": 1,
+              "full_name": "Admin User"
+            }
+          ]
+        }
       ]
     }
-    ```
+  ]
+  ```
 
-### `POST /auth/logout`
-
-Logs out the current user by invalidating their session/token on the server side (e.g., by deleting it from a sessions table or adding to a denylist).
-
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
--   **Response (204 No Content)**
+- **Відповіді з помилками:**
+  - `401 Unauthorized`: Якщо токен відсутній або недійсний.
+  - `403 Forbidden`: Якщо з токеном користувача не пов'язана жодна компанія.
 
 ---
 
-## 2. Companies
+### 3. Створити нову задачу
 
-### `GET /companies`
-Get a list of companies the authenticated user is a member of.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**:
-    ```json
-    [
-      { "id": "company-1", "name": "Fineko Development" },
-      { "id": "company-2", "name": "My Startup Project" }
-    ]
-    ```
+Створює нову задачу в компанії користувача.
 
-### `GET /companies/profile`
-Get the profile of the currently selected company (from the JWT).
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: `CompanyProfile` object.
+- **Ендпоінт:** `POST /tasks/create`
+- **Метод:** `POST`
+- **Тіло запиту:**
 
-### `PUT /companies/profile`
-Update the profile of the currently selected company.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Partial<CompanyProfile>`
-- **Response (200 OK)**: The updated `CompanyProfile` object.
+  ```json
+  {
+    "title": "Виправити помилку входу",
+    "assignee_id": 2
+  }
+  ```
 
----
+- **Успішна відповідь (201 Created):**
 
-## 3. Employees
+  ```json
+  {
+    "status": "success",
+    "task_id": "1"
+  }
+  ```
 
-### `GET /employees`
-Get all employees for the current company.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `Employee` objects.
-
-### `POST /employees`
-Create a new employee profile (manually).
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Omit<Employee, 'id' | 'companyId' | ...>`
-- **Response (201 Created)**: The newly created `Employee` object.
-
-### `PUT /employees/{id}`
-Update a specific employee's details.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Partial<Employee>`
-- **Response (200 OK)**: The updated `Employee` object.
+- **Відповіді з помилками:**
+  - `400 Bad Request`: Якщо `title` або `assignee_id` відсутні чи недійсні.
+  - `401 Unauthorized`: Якщо токен відсутній або недійсний.
+  - `404 Not Found`: Якщо вказаний `assignee_id` не існує в компанії користувача.
 
 ---
 
-## 4. Tasks
+### 4. Отримати задачі
 
-### `GET /tasks?date={YYYY-MM-DD}`
-Get tasks for a specific date. The backend should filter based on the user's role (self, subordinate, delegated) from the JWT.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Query Params**: `date` (required)
-- **Response (200 OK)**: Array of `Task` objects.
+Отримує список задач для компанії користувача. Можна фільтрувати за `assignee_id`.
 
-### `POST /tasks`
-Create a new task.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Omit<Task, 'id' | 'companyId'>`
-- **Response (201 Created)**: The newly created `Task` object.
+- **Ендпоінт:** `GET /tasks/get`
+- **Метод:** `GET`
+- **Параметри запиту (необов'язкові):**
+  - `assignee_id`: Фільтрує задачі за ID призначеного користувача.
 
-### `PUT /tasks/{id}`
-Update an existing task.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Backend Logic**: If `status` is changed to `'done'` and `assigneeId` is not the same as `reporterId`, the backend should automatically create a new "verification" task assigned to the reporter.
-- **Request Body**: `Partial<Task>`
-- **Response (200 OK)**: The updated `Task` object.
+- **Успішна відповідь (200 OK):**
 
-### `DELETE /tasks/{id}`
-Delete a task.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (204 No Content)**
+  Масив об'єктів задач.
 
----
-
-## 5. Results (Goals)
-
-### `GET /results`
-Get all results for the current company.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `Result` objects.
-
-### `POST /results`
-Create a new result.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Omit<Result, 'id' | 'companyId'>`
-- **Response (201 Created)**: The newly created `Result` object.
-
-### `PUT /results/{id}`
-Update an existing result.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Backend Logic**: Similar to tasks, if `completed` is set to `true` by someone other than the reporter, a verification task should be created for the reporter.
-- **Request Body**: `Partial<Result>`
-- **Response (200 OK)**: The updated `Result` object.
-
-### `DELETE /results/{id}`
-Delete a result.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (204 No Content)**
-
----
-
-## 6. Templates
-
-### `GET /templates`
-Get all task/result templates for the current company.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `Template` objects.
-
-### `POST /templates`
-Create a new template.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Omit<Template, 'id' | 'companyId'>`
-- **Response (201 Created)**: The new `Template` object.
-
-### `PUT /templates/{id}`
-Update a template.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Partial<Template>`
-- **Response (200 OK)**: The updated `Template` object.
-
-### `DELETE /templates/{id}`
-Delete a template.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (204 No Content)**
-
----
-
-## 7. Organizational Structure
-
-### `GET /org-structure`
-Get all data needed for the org structure page in one call.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**:
-    ```json
+  ```json
+  [
     {
-      "divisions": [...],
-      "departments": [...],
-      "employees": [...]
+      "id": 1,
+      "title": "Виправити помилку входу",
+      "assignee_name": "Tester One",
+      "reporter_name": "Admin User"
     }
-    ```
+  ]
+  ```
 
-### `POST /org-structure`
-Save the entire org structure. This endpoint should handle creating, updating, and deleting entities in a transaction.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**:
-    ```json
-    {
-      "divisions": [...],
-      "departments": [...]
-    }
-    ```
-- **Response (200 OK)**: `{ "success": true }`
-
----
-
-## 8. Business Processes
-
-### `GET /processes`
-Get all business processes for the company.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `Process` objects.
-
-### `GET /processes/{id}`
-Get a single business process by its ID.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: `Process` object.
-
-### `POST /processes`
-Create a new process.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Omit<Process, 'id' | 'companyId'>`
-- **Response (201 Created)**: The new `Process` object.
-
-### `PUT /processes/{id}`
-Update a process.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Partial<Process>`
-- **Response (200 OK)**: The updated `Process` object.
-
-### `DELETE /processes/{id}`
-Delete a process.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (204 No Content)**
-
----
-
-## 9. Instructions (Knowledge Base)
-
-### `GET /instructions`
-Get all instructions for the company.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `Instruction` objects.
-
-### `GET /instructions/{id}`
-Get a single instruction by ID.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: `Instruction` object.
-
-### `POST /instructions`
-Create a new instruction.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Omit<Instruction, 'id' | 'companyId'>`
-- **Response (201 Created)**: The new `Instruction` object.
-
-### `PUT /instructions/{id}`
-Update an instruction.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `Partial<Instruction>`
-- **Response (200 OK)**: The updated `Instruction` object.
-
-### `DELETE /instructions/{id}`
-Delete an instruction.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (204 No Content)**
-
----
-
-## 10. Telegram Integration
-
-### `POST /telegram/link-group`
-Links a Telegram group using a code.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `{ "code": "XYZ123" }`
-- **Response (200 OK)**: `{ "success": true, "message": "...", "data": <TelegramGroup> }`
-
-### `GET /telegram/groups`
-Get linked Telegram groups.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `TelegramGroup` objects.
-
-### `GET /telegram/groups/{id}/members`
-Get members of a specific linked group.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `TelegramMember` objects.
-
-### `POST /telegram/groups/{id}/refresh-members`
-Trigger a refresh of the group's member list from the Telegram API.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Updated array of `TelegramMember` objects.
-
-### `POST /telegram/groups/{id}/send-message`
-Send a message to the group.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `{ "text": "Hello world" }`
-- **Response (201 Created)**: The `MessageLog` object.
-
-### `GET /telegram/groups/{id}/logs`
-Get the message log for a group.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Response (200 OK)**: Array of `MessageLog` objects.
-
-### `PUT /telegram/members/{id}`
-Link a Telegram member to a company employee.
--   **Headers**: `Authorization: Bearer <your_permanent_jwt_auth_token>`
-- **Request Body**: `{ "employeeId": "emp-1" }`
-- **Response (200 OK)**: The updated `TelegramMember` object.
+- **Відповіді з помилками:**
+  - `401 Unauthorized`: Якщо токен відсутній або недійсний.
