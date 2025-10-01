@@ -3,10 +3,14 @@
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getCompaniesForToken, selectCompany, createCompanyAndLogin } from '@/lib/api';
 import { Loader2, ArrowLeft } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 type Company = {
   id: string;
@@ -150,7 +154,7 @@ function SelectCompanyForm() {
           ) : (
              <form onSubmit={handleCreateCompany} className="space-y-4">
                 <div>
-                    <label htmlFor="companyName">Назва компанії</label>
+                    <Label htmlFor="companyName">Назва компанії</Label>
                     <Input id="companyName" name="companyName" placeholder="Ваша компанія" required disabled={isSubmitting} />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
@@ -172,16 +176,8 @@ function SelectCompanyForm() {
 
 export default function SelectCompanyPage() {
     return (
-        <Suspense fallback={<LoadingState />}>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
             <SelectCompanyForm />
         </Suspense>
     )
-}
-
-function LoadingState() {
-  return (
-     <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-     </div>
-  )
 }
