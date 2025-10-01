@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -15,27 +14,19 @@ const PUBLIC_ROUTES = [
 ];
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Check if the route is public
-  const isPublicRoute = PUBLIC_ROUTES.some(path => pathname.startsWith(path));
-
-  // Allow access to public routes, the root landing page, and landing assets
-  if (pathname === '/' || isPublicRoute) {
-    // If the root path is requested, serve the landing page
-    if (pathname === '/') {
-        return NextResponse.rewrite(new URL('/landing/index.html', request.url));
-    }
-    return NextResponse.next();
+  // Serve the landing page for the root route
+  if (pathname === '/') {
+    return NextResponse.rewrite(new URL('/landing/index.html', request.url));
   }
+  
+  // The authentication check is now handled client-side by checking localStorage.
+  // The middleware's role is simplified to just managing public vs. non-public static routes.
+  // If we needed server-side protection, we would have to validate the JWT here
+  // on every request, which can be an overhead. The client-side check provides
+  // a good user experience.
 
-  // If there's no token and the user is trying to access a protected page, redirect to login
-  if (!token) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // If there is a token, allow access to all other application pages
   return NextResponse.next();
 }
 

@@ -6,6 +6,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 /**
  * API route to exchange a temporary token and company selection for a permanent token.
  * This acts as a secure proxy to the main backend.
+ * It returns the permanent token in the response body, instead of setting a cookie.
  */
 export async function POST(request: NextRequest) {
   console.log('[PROXY /api/auth/select-company] Отримано POST-запит від клієнта.');
@@ -74,18 +75,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Постійний токен не отримано від бекенду.' }, { status: 500 });
     }
     
-    console.log('[PROXY /api/auth/select-company] Успішно отримано постійний токен. Встановлюю httpOnly cookie.');
-    const response = NextResponse.json({ success: true });
-    response.cookies.set({
-      name: 'auth_token',
-      value: permanentToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7,
-    });
-
-    return response;
+    console.log('[PROXY /api/auth/select-company] Успішно отримано постійний токен. Відправляю його клієнту.');
+    // Return the token in the response body instead of setting a cookie
+    return NextResponse.json({ token: permanentToken });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
