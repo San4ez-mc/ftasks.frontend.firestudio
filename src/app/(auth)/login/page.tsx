@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <Button asChild className="w-full" size="lg">
-            <Link href="https://t.me/FinekoTasks_Bot?start=auth">
+            <Link href="https://t.me/FinekoTasks_Bot?start=tasks">
               Увійти через Telegram
             </Link>
           </Button>
