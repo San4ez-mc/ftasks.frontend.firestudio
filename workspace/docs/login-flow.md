@@ -1,51 +1,56 @@
-# Login Flow via Telegram
+# Процес Авторизації
 
-This document describes the authentication process for users to gain access to the API.
+Цей документ описує повний процес автентифікації користувачів, починаючи з фронтенду і закінчуючи отриманням доступу до API.
 
-## Overview
+## Загальний Огляд
 
-The entire authentication process is handled via a Telegram bot. The user interacts with the bot to prove their identity and select which company they want to work with. Upon successful authentication, the bot issues a long-lived JSON Web Token (JWT) that can be used to access the main API.
+Процес починається на фронтенді. Неавторизований користувач перенаправляється в Telegram для ідентифікації, після чого повертається на фронтенд для вибору або створення компанії. Успішне завершення цього кроку надає користувачеві довгоживучий JWT для доступу до API.
 
-## Step-by-Step Process
+## Покроковий Процес
 
-1.  **User Starts Interaction with Telegram Bot**
+1.  **Початок на Фронтенді та Перевірка Сесії**
 
-    - The user finds the bot in Telegram and sends the `/start` command.
+    - Користувач заходить на сайт (наприклад, на головну сторінку).
+    - Фронтенд-додаток перевіряє наявність дійсного JWT у локальному сховищі.
+    - **Якщо токен є і він валідний:** користувач бачить основний інтерфейс (наприклад, сторінку задач).
+    - **Якщо токена немає:** користувача перенаправляє на сторінку входу.
 
-2.  **Bot Requests Authentication Code**
+2.  **Перехід до Telegram для Ідентифікації**
 
-    - The bot asks the user to provide a unique authentication code. This code is typically provided to the user by a company administrator.
-    - The user sends the code to the bot (e.g., `B4A-32C`).
+    - На сторінці входу є кнопка "Увійти через Telegram".
+    - Вона містить посилання на Telegram-бота, яке включає параметр `start` для зворотньої переадресації. Наприклад, `https://t.me/FinekoTasks_Bot?start=tasks`.
+    - Цей параметр (`tasks`) зберігається на фронтенді, щоб знати, куди повернути користувача після успішного входу.
 
-3.  **Backend Verifies the Code**
+3.  **Отримання Тимчасового Токена в Telegram**
 
-    - The Telegram webhook receives the code and validates it against the `telegram_auth_codes` table in the database.
-    - It checks:
-        - If the code exists.
-        - If the code has not expired.
-        - If the code is associated with a valid company.
+    - Користувач натискає `start` у боті.
+    - Бекенд генерує **короткоживучий тимчасовий токен**, пов'язаний з Telegram ID користувача.
+    - Бот надсилає кнопку "Увійти", яка містить посилання на фронтенд з цим токеном: `https://<your-app-url>/auth/telegram/callback?token=<temporary_token>`.
 
-4.  **Bot Issues a JWT**
+4.  **Повернення на Фронтенд та Отримання Списку Компаній**
 
-    - If the code is valid, the backend generates a JWT.
-    - **The JWT payload contains:** `user_id`, `company_id`, and an expiration date (`exp`).
-    - This token links the user's Telegram identity to a specific user profile and a specific company in the database.
+    - Користувач натискає кнопку і повертається на фронтенд.
+    - Фронтенд-додаток отримує тимчасовий токен з URL і негайно робить з ним запит на бекенд (`/api/auth/telegram-companies`) для отримання списку компаній, доступних користувачеві.
 
-5.  **Bot Sends Token to User**
+5.  **Вибір або Створення Компанії (Ключовий Етап)**
 
-    - The bot sends a message back to the user containing the generated JWT.
-    - This token is now ready to be used for all subsequent API requests.
+    - **Сценарій 1: Якщо список компаній порожній.**
+        - Фронтенд показує форму для створення нової компанії. Користувач вводить назву та інші дані і відправляє запит на `/api/auth/telegram-create-company`.
+    - **Сценарій 2: Якщо у списку лише одна компанія.**
+        - Фронтенд автоматично, без участі користувача, відправляє її ID на ендпоінт `/api/auth/telegram-select-company`.
+    - **Сценарій 3: Якщо у списку кілька компаній.**
+        - Фронтенд показує користувачеві список для вибору. Після вибору, ID компанії відправляється на `/api/auth/telegram-select-company`.
 
-## Using the JWT
+6.  **Отримання Постійного Токена**
 
-To make authenticated requests, the user must include the JWT in the `Authorization` header as a `Bearer` token.
+    - У відповідь на успішний запит створення або вибору компанії бекенд генерує і повертає **довгоживучий JWT**.
+    - Цей токен містить `userId`, `companyId` та термін дії (напр., 30 днів).
 
-**Example:**
+7.  **Завершення Авторизації та Переадресація**
 
-```http
-GET /org-structure
-Host: your-api-domain.com
-Authorization: Bearer <the_jwt_token_from_the_bot>
-```
+    - Фронтенд отримує та зберігає постійний JWT у локальному сховищі.
+    - Використовуючи збережений на кроці 2 параметр `start`, фронтенд перенаправляє користувача на відповідну сторінку (наприклад, `/tasks`).
 
-This simplified flow ensures that only verified users who have been explicitly granted access can interact with the API.
+## Використання Постійного JWT
+
+Для всіх подальших запитів до захищених ендпоінтів API фронтенд повинен додавати цей JWT у заголовок `Authorization` як `Bearer` токен.
