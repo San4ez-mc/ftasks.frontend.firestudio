@@ -1,3 +1,4 @@
+
 'use client';
 
 const TOKEN_STORAGE_KEY = 'authToken';
@@ -5,16 +6,19 @@ const TOKEN_STORAGE_KEY = 'authToken';
 /**
  * A generic fetch wrapper with enhanced error logging for making API requests 
  * to the Next.js proxy routes.
- * It automatically adds the Authorization header if a token is found in localStorage.
  */
 async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `/${endpoint.replace(/^\//, '')}`; // Ensure the path is relative
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
-  
   const headers = new Headers(options.headers || {});
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
+  
+  // For most requests, we use the permanent token from localStorage.
+  // The Authorization header can be overridden for initial auth steps that use a temporary token.
+  if (!headers.has('Authorization')) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_STORAGE_KEY) : null;
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
   }
 
   options.headers = headers;
@@ -66,12 +70,11 @@ export async function getCompaniesForToken(tempToken: string): Promise<{ id: str
 }
 
 /**
- * Exchanges a temporary token and a selected company ID for a permanent token,
- * which is then stored in localStorage.
+ * Exchanges a temporary token and a selected company ID for a permanent token.
  * @param tempToken The temporary JWT.
  * @param companyId The ID of the company the user selected.
  */
-export async function selectCompany(tempToken: string, companyId: string): Promise<void> {
+export async function selectCompany(tempToken: string, companyId: string): Promise<{ token: string }> {
   const response = await fetchFromProxy<{ token: string }>('api/auth/select-company', {
     method: 'POST',
     headers: {
@@ -80,20 +83,18 @@ export async function selectCompany(tempToken: string, companyId: string): Promi
     },
     body: JSON.stringify({ companyId }),
   });
-  if (response.token) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
-  } else {
+  if (!response.token) {
     throw new Error('Permanent token was not received from the server.');
   }
+  return response;
 }
 
 /**
- * Creates a new company and exchanges the temporary token for a permanent session,
- * storing the token in localStorage.
+ * Creates a new company and exchanges the temporary token for a permanent one.
  * @param tempToken The temporary JWT.
  * @param companyName The name for the new company.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<void> {
+export async function createCompanyAndLogin(tempToken: string, companyName: string): Promise<{ token: string }> {
     const response = await fetchFromProxy<{ token: string }>('api/auth/create-company', {
         method: 'POST',
         headers: {
@@ -102,11 +103,10 @@ export async function createCompanyAndLogin(tempToken: string, companyName: stri
         },
         body: JSON.stringify({ companyName }),
     });
-    if (response.token) {
-        localStorage.setItem(TOKEN_STORAGE_KEY, response.token);
-    } else {
+    if (!response.token) {
         throw new Error('Permanent token was not received from the server.');
     }
+    return response;
 }
 
 
@@ -126,7 +126,7 @@ export async function getMe(): Promise<UserProfile> {
     try {
         return await fetchFromProxy<UserProfile>('api/auth/me');
     } catch (error: any) {
-        if (typeof window !== 'undefined' && error.message.includes('401')) {
+        if (typeof window !== 'undefined' && (error.message.includes('401') || error.message.includes('Not authenticated'))) {
              console.log("Session expired or invalid. Logging out.");
              logout();
         }
@@ -141,7 +141,7 @@ export async function logout() {
     try {
         // Notify the server, even if it's just to log the event.
         // This is a fire-and-forget call.
-        fetch('/api/auth/logout', { method: 'POST' });
+        await fetchFromProxy('/api/auth/logout', { method: 'POST' });
     } catch (error) {
         console.warn("Server-side logout call failed, but proceeding with client-side logout.", error);
     } finally {
