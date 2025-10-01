@@ -19,7 +19,7 @@ export default function TelegramCallback() {
 
   useEffect(() => {
     const tempToken = searchParams.get('token');
-    const startPage = searchParams.get('start') || 'tasks'; // Default to tasks
+    const startPage = searchParams.get('start') || ''; // Default to root
 
     if (!tempToken) {
       setError('Токен автентифікації відсутній. Будь ласка, спробуйте увійти знову.');

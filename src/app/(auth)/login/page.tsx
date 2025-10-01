@@ -16,7 +16,7 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <Button asChild className="w-full" size="lg">
-            <Link href="https://t.me/FinekoTasks_Bot?start=tasks">
+            <Link href="https://t.me/FinekoTasks_Bot?start=auth">
               Увійти через Telegram
             </Link>
           </Button>
