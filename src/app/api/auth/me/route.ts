@@ -1,6 +1,7 @@
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 
 // The API base URL for your external backend.
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-firebase-php-audit-1758820822645.cluster-ha3ykp7smfgsutjta5qfx7ssnm.cloudworkstations.dev').replace(/\/$/, "");
@@ -13,7 +14,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 export async function GET(request: NextRequest) {
   console.log('[PROXY /api/auth/me] Отримано GET-запит.');
   try {
-    const token = request.cookies.get('auth_token')?.value;
+    const token = request.headers.get('Authorization')?.split(' ')[1];
 
     if (!token) {
       console.error('[PROXY /api/auth/me] Помилка: auth_token cookie відсутній.');

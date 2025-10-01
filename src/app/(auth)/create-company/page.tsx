@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import CreateCompanyForm from './_components/CreateCompanyForm';
 import { Loader2 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function CreateCompanyPage() {
     return (
         <Suspense fallback={<LoadingState />}>

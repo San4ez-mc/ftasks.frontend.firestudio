@@ -2,6 +2,8 @@ import { Suspense } from 'react';
 import TelegramCallback from './_components/TelegramCallback';
 import { Loader2 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 // This is the parent Page component. It's now a server component by default.
 export default function TelegramCallbackPage() {
   return (
