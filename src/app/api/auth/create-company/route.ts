@@ -13,15 +13,15 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 export async function POST(request: NextRequest) {
   console.log('[PROXY /api/auth/create-company] Отримано POST-запит від клієнта.');
   try {
-    const { companyName } = await request.json();
+    const { name, description } = await request.json();
     const tempToken = request.headers.get('Authorization')?.split(' ')[1];
 
-    if (!tempToken || !companyName) {
+    if (!tempToken || !name) {
       console.error('[PROXY /api/auth/create-company] Помилка: відсутній Bearer токен або назва компанії.');
       return NextResponse.json({ message: 'Відсутній тимчасовий токен або назва компанії' }, { status: 400 });
     }
     
-    const backendUrl = `${API_BASE_URL}/auth/telegram/create-company-and-login`;
+    const backendUrl = `${API_BASE_URL}/api/auth/telegram-create-company`;
     console.log(`[PROXY /api/auth/create-company] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     const backendResponse = await fetch(backendUrl, {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${tempToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ companyName }),
+      body: JSON.stringify({ name, description }),
     });
 
     const responseBody = await backendResponse.text();
@@ -63,15 +63,8 @@ export async function POST(request: NextRequest) {
       }, { status: backendResponse.status });
     }
 
-    const permanentToken = data.token;
-    if (!permanentToken) {
-      console.error('[PROXY /api/auth/create-company] Помилка: постійний токен не отримано від бекенду.');
-      return NextResponse.json({ message: 'Постійний токен не отримано від бекенду' }, { status: 500 });
-    }
-
     console.log('[PROXY /api/auth/create-company] Успішно отримано постійний токен. Відправляю його клієнту.');
-    // Return the token in the response body
-    return NextResponse.json({ token: permanentToken });
+    return NextResponse.json(data);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

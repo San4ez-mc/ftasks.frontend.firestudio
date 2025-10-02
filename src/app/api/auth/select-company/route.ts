@@ -76,7 +76,6 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('[PROXY /api/auth/select-company] Успішно отримано постійний токен. Відправляю його клієнту.');
-    // Return the token in the response body. The new spec has it nested under data.jwt
     return NextResponse.json(data);
 
   } catch (error) {
