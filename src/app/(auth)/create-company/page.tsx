@@ -31,11 +31,12 @@ function CreateCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
+    const description = formData.get('companyDescription') as string || '';
     const startPage = searchParams.get('start') || 'tasks';
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-      const permanentToken = await createCompanyAndLogin(tempToken, companyName);
+      const permanentToken = await createCompanyAndLogin(tempToken, companyName, description);
       localStorage.setItem('authToken', permanentToken);
       router.push(redirectUrl);
     } catch (err) {
