@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Temporary token is missing' }, { status: 401 });
     }
 
-    const backendUrl = `${API_BASE_URL}/auth/telegram/companies`;
+    const backendUrl = `${API_BASE_URL}/api/auth/telegram-companies`;
     console.log(`[PROXY /api/auth/companies] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     const backendResponse = await fetch(backendUrl, {
