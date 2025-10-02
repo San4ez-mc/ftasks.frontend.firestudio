@@ -29,11 +29,13 @@ export default function CreateCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
+    const description = formData.get('companyDescription') as string;
     const startPage = searchParams.get('start') || 'tasks';
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-      await createCompanyAndLogin(tempToken, companyName);
+      const permanentToken = await createCompanyAndLogin(tempToken, companyName, description);
+      localStorage.setItem('authToken', permanentToken);
       router.push(redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося створити компанію.');
@@ -53,6 +55,10 @@ export default function CreateCompanyForm() {
             <div>
               <Label htmlFor="companyName">Назва компанії</Label>
               <Input id="companyName" name="companyName" placeholder="Acme Inc." required disabled={isSubmitting} />
+            </div>
+             <div>
+              <Label htmlFor="companyDescription">Опис (необов'язково)</Label>
+              <Input id="companyDescription" name="companyDescription" placeholder="Чим займається ваша компанія" disabled={isSubmitting} />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
