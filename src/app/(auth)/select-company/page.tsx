@@ -1,10 +1,9 @@
 'use client';
 
-import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { getCompaniesForToken, selectCompany, createCompanyAndLogin } from '@/lib/api';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -58,7 +57,7 @@ function SelectCompanyForm() {
         setIsSubmitting(false);
         return;
     }
-    const startPage = searchParams.get('start') || 'tasks';
+    const startPage = searchParams.get('start') || '';
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
@@ -85,7 +84,7 @@ function SelectCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
-    const startPage = searchParams.get('start') || 'tasks';
+    const startPage = searchParams.get('start') || '';
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
