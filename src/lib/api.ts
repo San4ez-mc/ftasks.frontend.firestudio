@@ -26,27 +26,26 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
 
   try {
     const response = await fetch(url, options);
-    const responseBody = await response.text();
-
-    let data: BackendResponse<T>;
-    try {
-        data = JSON.parse(responseBody);
-    } catch (e) {
-         console.error(`[API Proxy Client CATCH] Invalid JSON from ${endpoint}:`, responseBody);
-         throw new Error('Відповідь від зовнішнього бекенду не є валідним JSON.');
-    }
     
-    if (!response.ok || data.status === 'error') {
-        console.error(`[API Proxy Client ERROR] for ${endpoint}:`, data.details || data);
-        if (data.details?.backendResponse) {
-          console.error("--- RAW BACKEND RESPONSE ---");
-          console.error(data.details.backendResponse);
-          console.error("--------------------------");
+    if (!response.ok) {
+        let errorData;
+        try {
+            errorData = await response.json();
+            console.error(`[API Proxy Client ERROR] for ${endpoint}:`, errorData);
+        } catch (e) {
+            console.error(`[API Proxy Client ERROR] for ${endpoint}:`, { status: response.status, statusText: response.statusText });
+            throw new Error('Failed to parse error response from server.');
         }
-        throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
     }
     
-    return data;
+    // Handle 204 No Content case
+    if (response.status === 204) {
+        return { status: 'success' } as BackendResponse<T>;
+    }
+    
+    const responseBody = await response.json();
+    return responseBody as BackendResponse<T>;
 
   } catch (error) {
     console.error(`[API Proxy Client CATCH] for ${endpoint}:`, error);
@@ -159,3 +158,4 @@ export async function logout() {
         }
     }
 }
+

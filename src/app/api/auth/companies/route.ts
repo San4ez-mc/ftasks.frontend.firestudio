@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -8,7 +9,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 /**
  * API route to fetch a user's companies using a temporary token.
  * This acts as a secure server-side proxy to the main backend.
- * Per the new spec, this now uses the POST method.
+ * It now correctly handles POST requests as per the documentation.
  */
 export async function POST(request: NextRequest) {
   console.log('[PROXY /api/auth/companies] Отримано POST-запит від клієнта.');
@@ -24,12 +25,11 @@ export async function POST(request: NextRequest) {
     console.log(`[PROXY /api/auth/companies] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     const backendResponse = await fetch(backendUrl, {
-      method: 'POST', // Use POST as per the new specification
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${tempToken}`,
         'Content-Type': 'application/json',
       },
-      // The spec doesn't mention a body, so we send an empty one for the POST request.
       body: JSON.stringify({}),
     });
     
@@ -53,14 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (!backendResponse.ok) {
       console.error('[PROXY /api/auth/companies] Зовнішній бекенд повернув помилку:', data);
-      return NextResponse.json({
-        message: data.message || 'Помилка на стороні зовнішнього бекенду.',
-        details: {
-            proxyStep: 'response_from_external_backend',
-            backendStatus: backendResponse.status,
-            backendResponse: data
-        }
-      }, { status: backendResponse.status });
+      return NextResponse.json(data, { status: backendResponse.status });
     }
 
     console.log('[PROXY /api/auth/companies] Успішно отримано дані. Відправляю клієнту.');
