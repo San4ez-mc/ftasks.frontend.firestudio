@@ -39,7 +39,6 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
         throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
     }
     
-    // Handle 204 No Content case
     if (response.status === 204) {
         return { status: 'success' } as BackendResponse<T>;
     }
@@ -100,7 +99,7 @@ export async function selectCompany(tempToken: string, companyId: number): Promi
  * @param companyName The name for the new company.
  * @param description An optional description for the new company.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string, description: string): Promise<string> {
+export async function createCompanyAndLogin(tempToken: string, companyName: string, description?: string): Promise<string> {
     const response = await fetchFromProxy<{ jwt: string }>('api/auth/create-company', {
         method: 'POST',
         headers: {
@@ -158,4 +157,3 @@ export async function logout() {
         }
     }
 }
-
