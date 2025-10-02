@@ -101,7 +101,7 @@ export async function selectCompany(tempToken: string, companyId: number): Promi
  * @param companyName The name for the new company.
  * @param description An optional description for the new company.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string, description?: string): Promise<string> {
+export async function createCompanyAndLogin(tempToken: string, companyName: string, description: string): Promise<string> {
     const response = await fetchFromProxy<{ jwt: string }>('api/auth/create-company', {
         method: 'POST',
         headers: {
