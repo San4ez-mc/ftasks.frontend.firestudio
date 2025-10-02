@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ function SelectCompanyForm() {
         setIsSubmitting(false);
         return;
     }
-    const startPage = searchParams.get('start') || '';
+    const startPage = searchParams.get('start') || 'tasks';
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
@@ -85,11 +86,12 @@ function SelectCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
-    const startPage = searchParams.get('start') || '';
+    const description = formData.get('companyDescription') as string || '';
+    const startPage = searchParams.get('start') || 'tasks';
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-      const permanentToken = await createCompanyAndLogin(tempToken, companyName);
+      const permanentToken = await createCompanyAndLogin(tempToken, companyName, description);
       localStorage.setItem('authToken', permanentToken);
       router.push(redirectUrl);
     } catch (err) {
@@ -156,6 +158,10 @@ function SelectCompanyForm() {
                 <div>
                     <Label htmlFor="companyName">Назва компанії</Label>
                     <Input id="companyName" name="companyName" placeholder="Ваша компанія" required disabled={isSubmitting} />
+                </div>
+                <div>
+                    <Label htmlFor="companyDescription">Опис (необов'язково)</Label>
+                    <Input id="companyDescription" name="companyDescription" placeholder="Чим займається ваша компанія" disabled={isSubmitting} />
                 </div>
                 {error && <p className="text-sm text-destructive">{error}</p>}
                 <div className="flex gap-2">
