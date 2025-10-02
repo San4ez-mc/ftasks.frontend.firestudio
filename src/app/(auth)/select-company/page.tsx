@@ -3,12 +3,12 @@
 import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getCompaniesForToken, selectCompany, createCompanyAndLogin } from '@/lib/api';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,8 +58,8 @@ function SelectCompanyForm() {
         setIsSubmitting(false);
         return;
     }
-    const startPage = searchParams.get('start') || '';
-    const redirectUrl = startPage === 'tasks' ? '/' : '/';
+    const startPage = searchParams.get('start') || 'tasks';
+    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
         const { token: permanentToken } = await selectCompany(tempToken, companyId);
@@ -85,8 +85,8 @@ function SelectCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
-    const startPage = searchParams.get('start') || '';
-    const redirectUrl = startPage === 'tasks' ? '/' : '/';
+    const startPage = searchParams.get('start') || 'tasks';
+    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
       const { token: permanentToken } = await createCompanyAndLogin(tempToken, companyName);

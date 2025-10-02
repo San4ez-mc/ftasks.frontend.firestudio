@@ -10,6 +10,8 @@ import { createCompanyAndLogin } from '@/lib/api';
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 function CreateCompanyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,8 +32,8 @@ function CreateCompanyForm() {
 
     const formData = new FormData(event.currentTarget);
     const companyName = formData.get('companyName') as string;
-    const startPage = searchParams.get('start') || '';
-    const redirectUrl = startPage === 'tasks' ? '/' : '/';
+    const startPage = searchParams.get('start') || 'tasks';
+    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
       const { token: permanentToken } = await createCompanyAndLogin(tempToken, companyName);
