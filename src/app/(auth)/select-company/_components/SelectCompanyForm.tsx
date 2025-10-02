@@ -10,8 +10,9 @@ import { getCompaniesForToken, selectCompany, createCompanyAndLogin } from '@/li
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 type Company = {
-  id: string;
+  id: number;
   name: string;
+  role: string;
 };
 
 export default function SelectCompanyForm() {
@@ -46,7 +47,7 @@ export default function SelectCompanyForm() {
     fetchCompanies();
   }, [searchParams]);
 
-  const handleSelectCompany = async (companyId: string) => {
+  const handleSelectCompany = async (companyId: number) => {
     setIsSubmitting(true);
     setError(null);
     const tempToken = searchParams.get('token');
@@ -59,8 +60,9 @@ export default function SelectCompanyForm() {
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-        await selectCompany(tempToken, companyId);
-        router.push(redirectUrl); // Redirect to the appropriate page
+        const permanentToken = await selectCompany(tempToken, companyId);
+        localStorage.setItem('authToken', permanentToken);
+        router.push(redirectUrl);
     } catch(err) {
         setError(err instanceof Error ? err.message : 'Не вдалося обрати компанію.');
         setIsSubmitting(false);
@@ -85,7 +87,8 @@ export default function SelectCompanyForm() {
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-      await createCompanyAndLogin(tempToken, companyName);
+      const permanentToken = await createCompanyAndLogin(tempToken, companyName);
+      localStorage.setItem('authToken', permanentToken);
       router.push(redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не вдалося створити компанію.');
@@ -97,7 +100,7 @@ export default function SelectCompanyForm() {
       return <div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
   
-  if (error && !isSubmitting) { // Only show full-page error if not in the middle of a submission attempt
+  if (error && !isSubmitting) {
       return (
            <div className="flex items-center justify-center min-h-screen">
                 <Card className="w-full max-w-md text-center">
