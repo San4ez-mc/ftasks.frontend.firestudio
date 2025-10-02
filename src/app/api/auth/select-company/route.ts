@@ -8,7 +8,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 /**
  * API route to exchange a temporary token and company selection for a permanent token.
  * This acts as a secure proxy to the main backend.
- * It returns the permanent token in the response body, instead of setting a cookie.
+ * It returns the permanent token in the response body.
  */
 export async function POST(request: NextRequest) {
   console.log('[PROXY /api/auth/select-company] Отримано POST-запит від клієнта.');
@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     const tempToken = authHeader?.split(' ')[1];
     
+    // The client sends `companyId` (camelCase)
     const { companyId } = await request.json();
     
     if (!tempToken) {
@@ -29,8 +30,11 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ message: 'ID компанії відсутній.' }, { status: 400 });
     }
 
-    const backendUrl = `${API_BASE_URL}/api/auth/select-company`;
+    const backendUrl = `${API_BASE_URL}/api/auth/telegram-select-company`;
     console.log(`[PROXY /api/auth/select-company] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
+
+    // The backend expects `company_id` (snake_case)
+    const backendPayload = { company_id: companyId };
 
     const backendResponse = await fetch(backendUrl, {
       method: 'POST',
@@ -38,7 +42,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${tempToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ companyId }),
+      body: JSON.stringify(backendPayload),
     });
 
     const responseBody = await backendResponse.text();
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
                 backendStatus: backendResponse.status,
                 backendResponse: responseBody
             }
-        }, { status: 502 }); // 502 Bad Gateway
+        }, { status: 502 });
     }
 
     if (!backendResponse.ok) {
@@ -70,16 +74,10 @@ export async function POST(request: NextRequest) {
         }
       }, { status: backendResponse.status });
     }
-
-    const permanentToken = data.token;
-    if (!permanentToken) {
-      console.error('[PROXY /api/auth/select-company] Помилка: постійний токен не отримано від бекенду.');
-      return NextResponse.json({ message: 'Постійний токен не отримано від бекенду.' }, { status: 500 });
-    }
     
     console.log('[PROXY /api/auth/select-company] Успішно отримано постійний токен. Відправляю його клієнту.');
-    // Return the token in the response body instead of setting a cookie
-    return NextResponse.json({ token: permanentToken });
+    // Return the token in the response body. The new spec has it nested under data.jwt
+    return NextResponse.json(data);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

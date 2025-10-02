@@ -7,10 +7,11 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://9000-fire
 
 /**
  * API route to fetch a user's companies using a temporary token.
- * This acts as a secure server-side proxy to the main backend to avoid CORS issues.
+ * This acts as a secure server-side proxy to the main backend.
+ * Per the new spec, this now uses the POST method.
  */
-export async function GET(request: NextRequest) {
-  console.log('[PROXY /api/auth/companies] Отримано GET-запит від клієнта.');
+export async function POST(request: NextRequest) {
+  console.log('[PROXY /api/auth/companies] Отримано POST-запит від клієнта.');
   try {
     const tempToken = request.headers.get('Authorization')?.split(' ')[1];
 
@@ -23,9 +24,13 @@ export async function GET(request: NextRequest) {
     console.log(`[PROXY /api/auth/companies] Звертаюсь до зовнішнього бекенду: ${backendUrl}`);
 
     const backendResponse = await fetch(backendUrl, {
+      method: 'POST', // Use POST as per the new specification
       headers: {
         'Authorization': `Bearer ${tempToken}`,
+        'Content-Type': 'application/json',
       },
+      // The spec doesn't mention a body, so we send an empty one for the POST request.
+      body: JSON.stringify({}),
     });
     
     const responseBody = await backendResponse.text();
@@ -45,7 +50,6 @@ export async function GET(request: NextRequest) {
             }
         }, { status: 502 }); // 502 Bad Gateway
     }
-
 
     if (!backendResponse.ok) {
       console.error('[PROXY /api/auth/companies] Зовнішній бекенд повернув помилку:', data);

@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 export const dynamic = 'force-dynamic';
 
 type Company = {
-  id: string;
+  id: number;
   name: string;
+  role: string;
 };
 
 function SelectCompanyForm() {
@@ -48,7 +49,7 @@ function SelectCompanyForm() {
     fetchCompanies();
   }, [searchParams]);
 
-  const handleSelectCompany = async (companyId: string) => {
+  const handleSelectCompany = async (companyId: number) => {
     setIsSubmitting(true);
     setError(null);
     const tempToken = searchParams.get('token');
@@ -61,7 +62,7 @@ function SelectCompanyForm() {
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-        const { token: permanentToken } = await selectCompany(tempToken, companyId);
+        const permanentToken = await selectCompany(tempToken, companyId);
         localStorage.setItem('authToken', permanentToken);
         router.push(redirectUrl);
     } catch(err) {
@@ -88,7 +89,7 @@ function SelectCompanyForm() {
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-      const { token: permanentToken } = await createCompanyAndLogin(tempToken, companyName);
+      const permanentToken = await createCompanyAndLogin(tempToken, companyName);
       localStorage.setItem('authToken', permanentToken);
       router.push(redirectUrl);
     } catch (err) {

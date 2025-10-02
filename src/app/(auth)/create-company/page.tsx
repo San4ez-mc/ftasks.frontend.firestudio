@@ -1,13 +1,12 @@
 'use client';
 
-import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createCompanyAndLogin } from '@/lib/api';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +35,7 @@ function CreateCompanyForm() {
     const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
     try {
-      const { token: permanentToken } = await createCompanyAndLogin(tempToken, companyName);
+      const permanentToken = await createCompanyAndLogin(tempToken, companyName);
       localStorage.setItem('authToken', permanentToken);
       router.push(redirectUrl);
     } catch (err) {
@@ -58,6 +57,10 @@ function CreateCompanyForm() {
               <Label htmlFor="companyName">Назва компанії</Label>
               <Input id="companyName" name="companyName" placeholder="Acme Inc." required disabled={isSubmitting} />
             </div>
+             <div>
+              <Label htmlFor="companyDescription">Опис (необов'язково)</Label>
+              <Input id="companyDescription" name="companyDescription" placeholder="Чим займається ваша компанія" disabled={isSubmitting} />
+            </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -73,16 +76,8 @@ function CreateCompanyForm() {
 
 export default function CreateCompanyPage() {
     return (
-        <Suspense fallback={<LoadingState />}>
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
             <CreateCompanyForm />
         </Suspense>
     )
-}
-
-function LoadingState() {
-  return (
-     <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-     </div>
-  )
 }

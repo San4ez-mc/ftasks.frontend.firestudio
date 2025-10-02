@@ -1,14 +1,17 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getCompaniesForToken, selectCompany } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 
 type Company = {
-  id: string;
+  id: number;
   name: string;
+  role: string;
 };
+
+export const dynamic = 'force-dynamic';
 
 function TelegramCallback() {
   const router = useRouter();
@@ -18,7 +21,7 @@ function TelegramCallback() {
 
   useEffect(() => {
     const tempToken = searchParams.get('token');
-    const startPage = searchParams.get('start') || ''; // Default to root
+    const startPage = searchParams.get('start') || 'tasks';
 
     if (!tempToken) {
       setError('Токен автентифікації відсутній. Будь ласка, спробуйте увійти знову.');
@@ -30,20 +33,17 @@ function TelegramCallback() {
         setStatus('Отримуємо ваші компанії...');
         const companies = await getCompaniesForToken(tempToken);
         
-        const redirectUrl = startPage === 'tasks' ? '/' : '/';
+        const redirectUrl = startPage === 'audit' ? '/audit' : '/';
 
         if (companies.length === 1) {
-          // If user has exactly one company, log them in automatically.
           setStatus('Виконуємо вхід...');
-          const { token: permanentToken } = await selectCompany(tempToken, companies[0].id);
+          const permanentToken = await selectCompany(tempToken, companies[0].id);
           localStorage.setItem('authToken', permanentToken);
           router.push(redirectUrl);
-        } else if (companies.length > 1) {
-          // If user has multiple companies, let them choose.
+        } else if (companies.length > 0) {
           setStatus('Перенаправлення на вибір компанії...');
           router.push(`/select-company?token=${tempToken}&start=${startPage}`);
         } else {
-          // If user has no companies, prompt them to create one.
           setStatus('Перенаправлення на створення компанії...');
           router.push(`/create-company?token=${tempToken}&start=${startPage}`);
         }
@@ -74,19 +74,8 @@ function TelegramCallback() {
 
 export default function TelegramCallbackPage() {
   return (
-    <Suspense fallback={<LoadingState />}>
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
       <TelegramCallback />
     </Suspense>
   );
-}
-
-function LoadingState() {
-  return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-muted/40 text-center p-4">
-      <div className="flex items-center gap-4 text-lg font-semibold">
-        <Loader2 className="h-6 w-6 animate-spin" />
-        <p>Ініціалізація...</p>
-      </div>
-    </div>
-  )
 }
