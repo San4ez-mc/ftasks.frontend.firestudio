@@ -2,11 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { getCompaniesForToken, selectCompany, createCompanyAndLogin } from '@/lib/api';
+import { getCompaniesForToken, selectCompany } from '@/lib/api';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 type Company = {
@@ -18,7 +16,6 @@ type Company = {
 export default function SelectCompanyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [showCreate, setShowCreate] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,31 +66,10 @@ export default function SelectCompanyForm() {
     }
   };
   
-  const handleCreateCompany = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
+  const handleRedirectToCreate = () => {
     const tempToken = searchParams.get('token');
-    if (!tempToken) {
-      setError("Ваша сесія застаріла. Будь ласка, увійдіть знову.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const formData = new FormData(event.currentTarget);
-    const companyName = formData.get('companyName') as string;
     const startPage = searchParams.get('start') || 'tasks';
-    const redirectUrl = startPage === 'audit' ? '/audit' : '/';
-
-    try {
-      const permanentToken = await createCompanyAndLogin(tempToken, companyName);
-      localStorage.setItem('authToken', permanentToken);
-      router.push(redirectUrl);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не вдалося створити компанію.');
-      setIsSubmitting(false);
-    }
+    router.push(`/create-company?token=${tempToken}&start=${startPage}`);
   }
   
   if (isLoading) {
@@ -124,7 +100,6 @@ export default function SelectCompanyForm() {
           <CardDescription>Оберіть існуючу компанію або створіть нову.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!showCreate ? (
             <>
               <div className="space-y-2">
                 {companies.map((company) => (
@@ -144,27 +119,11 @@ export default function SelectCompanyForm() {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Назад
                 </Button>
-                <Button variant="outline" onClick={() => setShowCreate(true)} className="w-full flex-1" disabled={isSubmitting}>
+                <Button variant="outline" onClick={handleRedirectToCreate} className="w-full flex-1" disabled={isSubmitting}>
                     Створити нову компанію
                 </Button>
               </div>
             </>
-          ) : (
-             <form onSubmit={handleCreateCompany} className="space-y-4">
-                <div>
-                    <Label htmlFor="companyName">Назва компанії</Label>
-                    <Input id="companyName" name="companyName" placeholder="Ваша компанія" required disabled={isSubmitting} />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <div className="flex gap-2">
-                    <Button type="button" variant="ghost" onClick={() => setShowCreate(false)} disabled={isSubmitting}>Назад</Button>
-                    <Button type="submit" className="flex-1" disabled={isSubmitting}>
-                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Створити та увійти
-                    </Button>
-                </div>
-             </form>
-          )}
         </CardContent>
       </Card>
     </div>

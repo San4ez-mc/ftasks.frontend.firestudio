@@ -1,3 +1,4 @@
+
 'use client';
 
 const TOKEN_STORAGE_KEY = 'authToken';
@@ -6,16 +7,11 @@ type BackendResponse<T> = {
   status: 'success' | 'error';
   data?: T;
   message?: string;
-  // This is for more detailed error logging from custom proxy routes
   details?: any;
 };
 
-/**
- * A generic fetch wrapper with enhanced error logging for making API requests 
- * to the Next.js proxy routes.
- */
-async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `/${endpoint.replace(/^\//, '')}`; // Ensure the path is relative
+async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<BackendResponse<T>> {
+  const url = `/${endpoint.replace(/^\//, '')}`;
 
   const headers = new Headers(options.headers || {});
   
@@ -37,7 +33,7 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
         data = JSON.parse(responseBody);
     } catch (e) {
          console.error(`[API Proxy Client CATCH] Invalid JSON from ${endpoint}:`, responseBody);
-         throw new Error('Відповідь від сервера не є валідним JSON.');
+         throw new Error('Відповідь від зовнішнього бекенду не є валідним JSON.');
     }
     
     if (!response.ok || data.status === 'error') {
@@ -50,11 +46,7 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
         throw new Error(data.message || `HTTP error! Status: ${response.status}`);
     }
     
-    if (response.status === 204 || !data.data) { // No Content or empty data
-      return null as T;
-    }
-
-    return data.data as T;
+    return data;
 
   } catch (error) {
     console.error(`[API Proxy Client CATCH] for ${endpoint}:`, error);
@@ -80,7 +72,7 @@ export async function getCompaniesForToken(tempToken: string): Promise<CompanyFr
     },
     body: JSON.stringify({}),
   });
-  return response.companies || [];
+  return response.data?.companies || [];
 }
 
 /**
@@ -95,11 +87,10 @@ export async function selectCompany(tempToken: string, companyId: number): Promi
       'Authorization': `Bearer ${tempToken}`,
       'Content-Type': 'application/json',
     },
-    // The proxy will transform this to company_id
-    body: JSON.stringify({ companyId }), 
+    body: JSON.stringify({ company_id: companyId }), 
   });
-  if (response.jwt) {
-    return response.jwt;
+  if (response.data?.jwt) {
+    return response.data.jwt;
   }
   throw new Error('Permanent token (jwt) was not received from the server.');
 }
@@ -110,17 +101,17 @@ export async function selectCompany(tempToken: string, companyId: number): Promi
  * @param companyName The name for the new company.
  * @param description An optional description for the new company.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string, description: string): Promise<string> {
+export async function createCompanyAndLogin(tempToken: string, companyName: string, description?: string): Promise<string> {
     const response = await fetchFromProxy<{ jwt: string }>('api/auth/create-company', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${tempToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: companyName, description }),
+        body: JSON.stringify({ name: companyName, description: description || '' }),
     });
-    if (response.jwt) {
-        return response.jwt;
+    if (response.data?.jwt) {
+        return response.data.jwt;
     }
     throw new Error('Permanent token (jwt) was not received from the server.');
 }
@@ -132,8 +123,7 @@ type UserProfile = {
     id: string;
     firstName: string;
     lastName: string;
-    // Add other fields as needed from your /auth/me endpoint
-}
+};
 
 /**
  * Fetches the profile of the currently authenticated user.
@@ -141,8 +131,8 @@ type UserProfile = {
 export async function getMe(): Promise<UserProfile> {
     try {
         const response = await fetchFromProxy<{user: UserProfile}>('api/auth/me');
-        if (response.user) {
-            return response.user;
+        if (response.data?.user) {
+            return response.data.user;
         }
         throw new Error('User profile not found in response');
     } catch (error: any) {
