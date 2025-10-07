@@ -1,1 +1,1 @@
-// This is a duplicate file and can be safely deleted. The primary file is in /src/app/api/auth/set-token/route.ts
+// This is a duplicate file and can be safely deleted.

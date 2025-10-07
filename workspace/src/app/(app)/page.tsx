@@ -1,1 +1,1 @@
-// This is a duplicate file and can be safely deleted. The primary file is in /src/app/(app)/page.tsx
+// This is a duplicate file and can be safely deleted.

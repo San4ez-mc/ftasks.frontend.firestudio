@@ -1,1 +1,1 @@
-// This is a duplicate file and can be safely deleted. The primary file is in /docs/login-flow.md
+<!-- This is a duplicate file and can be safely deleted. -->
