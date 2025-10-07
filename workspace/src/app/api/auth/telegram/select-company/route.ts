@@ -1,3 +1,1 @@
-// This file is deprecated and can be safely removed.
-// It is kept temporarily to resolve build issues.
-export {};
+// This is a duplicate file and can be safely deleted.
