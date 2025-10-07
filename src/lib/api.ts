@@ -2,6 +2,11 @@
 'use client';
 
 const TOKEN_STORAGE_KEY = 'authToken';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, "");
+
+if (!API_BASE_URL) {
+    console.error("Помилка конфігурації: Змінна NEXT_PUBLIC_API_BASE_URL не встановлена. Додаток не зможе спілкуватися з бекендом.");
+}
 
 type BackendResponse<T> = {
   status: 'success' | 'error';
@@ -10,8 +15,11 @@ type BackendResponse<T> = {
   details?: any;
 };
 
-async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): Promise<BackendResponse<T>> {
-  const url = `/${endpoint.replace(/^\//, '')}`;
+/**
+ * A generic fetch wrapper for making API requests directly to the external backend.
+ */
+async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<BackendResponse<T>> {
+  const url = `${API_BASE_URL}/${endpoint.replace(/^\/?(api\/)?/, '')}`;
 
   const headers = new Headers(options.headers || {});
   
@@ -20,6 +28,10 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
+  }
+  
+  if (!headers.has('Content-Type') && options.body) {
+      headers.set('Content-Type', 'application/json');
   }
 
   options.headers = headers;
@@ -31,11 +43,10 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
         let errorData;
         try {
             errorData = await response.json();
-            console.error(`[API Proxy Client ERROR] for ${endpoint}:`, errorData);
         } catch (e) {
-            console.error(`[API Proxy Client ERROR] for ${endpoint}:`, { status: response.status, statusText: response.statusText });
-            throw new Error('Failed to parse error response from server.');
+            throw new Error(`HTTP error! Status: ${response.status}. Не вдалося розпарсити відповідь про помилку.`);
         }
+        console.error(`[API Client ERROR] for ${endpoint}:`, errorData);
         throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
     }
     
@@ -47,7 +58,7 @@ async function fetchFromProxy<T>(endpoint: string, options: RequestInit = {}): P
     return responseBody as BackendResponse<T>;
 
   } catch (error) {
-    console.error(`[API Proxy Client CATCH] for ${endpoint}:`, error);
+    console.error(`[API Client CATCH] for ${endpoint}:`, error);
     throw error;
   }
 }
@@ -62,11 +73,10 @@ type CompanyFromApi = { id: number; name: string; role: string };
  * @param tempToken The temporary JWT received in the callback.
  */
 export async function getCompaniesForToken(tempToken: string): Promise<CompanyFromApi[]> {
-  const response = await fetchFromProxy<{ companies: CompanyFromApi[] }>('api/auth/companies', {
+  const response = await apiFetch<{ companies: CompanyFromApi[] }>('auth/telegram-companies', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${tempToken}`,
-      'Content-Type': 'application/json',
     },
     body: JSON.stringify({}),
   });
@@ -79,11 +89,10 @@ export async function getCompaniesForToken(tempToken: string): Promise<CompanyFr
  * @param companyId The ID of the company the user selected.
  */
 export async function selectCompany(tempToken: string, companyId: number): Promise<string> {
-  const response = await fetchFromProxy<{ jwt: string }>('api/auth/select-company', {
+  const response = await apiFetch<{ jwt: string }>('auth/telegram-select-company', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${tempToken}`,
-      'Content-Type': 'application/json',
     },
     body: JSON.stringify({ company_id: companyId }), 
   });
@@ -99,12 +108,11 @@ export async function selectCompany(tempToken: string, companyId: number): Promi
  * @param companyName The name for the new company.
  * @param description An optional description for the new company.
  */
-export async function createCompanyAndLogin(tempToken: string, companyName: string, description?: string): Promise<string> {
-    const response = await fetchFromProxy<{ jwt: string }>('api/auth/create-company', {
+export async function createCompanyAndLogin(tempToken: string, companyName: string, description: string): Promise<string> {
+    const response = await apiFetch<{ jwt: string }>('auth/telegram-create-company', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${tempToken}`,
-            'Content-Type': 'application/json',
         },
         body: JSON.stringify({ name: companyName, description: description || '' }),
     });
@@ -128,7 +136,7 @@ type UserProfile = {
  */
 export async function getMe(): Promise<UserProfile> {
     try {
-        const response = await fetchFromProxy<{user: UserProfile}>('api/auth/me');
+        const response = await apiFetch<{user: UserProfile}>('auth/me');
         if (response.data?.user) {
             return response.data.user;
         }
@@ -147,7 +155,7 @@ export async function getMe(): Promise<UserProfile> {
  */
 export async function logout() {
     try {
-        await fetchFromProxy('/api/auth/logout', { method: 'POST' });
+        await apiFetch('/auth/logout', { method: 'POST' });
     } catch (error) {
         console.warn("Server-side logout call failed, but proceeding with client-side logout.", error);
     } finally {
