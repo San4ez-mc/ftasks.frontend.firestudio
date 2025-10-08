@@ -1,123 +1,123 @@
-# FINEKO Application Overview & Technical Specification
+# Огляд та технічна специфікація додатку FINEKO
 
-## 1. High-Level Concept
+## 1. Загальна концепція
 
-FINEKO is a comprehensive business management tool designed to enhance productivity and organization within a company. It integrates daily task management, long-term goal setting (Results), organizational structure mapping, business process visualization, and knowledge sharing (Instructions) into a single, cohesive platform. The application is built around a clear hierarchy and emphasizes accountability and clarity in all operations.
+FINEKO — це комплексний інструмент для управління бізнесом, розроблений для підвищення продуктивності та організованості всередині компанії. Він об'єднує управління щоденними задачами, постановку довгострокових цілей (Результати), картографування організаційної структури, візуалізацію бізнес-процесів та обмін знаннями (Інструкції) в єдину, цілісну платформу. Додаток побудований навколо чіткої ієрархії та акцентує увагу на підзвітності та ясності в усіх операціях.
 
-The primary user interaction model is:
-1.  User logs in via Telegram.
-2.  User selects a Company (workspace).
-3.  User is directed to the main dashboard, which defaults to the Daily Tasks page.
-
----
-
-## 2. Core Modules & Entities
-
-### 2.1. Authentication & Users
-
--   **Authentication**: The sole method of authentication is through Telegram. The backend receives user data from a Telegram login widget/bot and issues a JWT token for session management.
--   **User (`User`)**: Represents an individual who can log in. A user account is global and can be associated with multiple companies.
--   **Employee (`Employee`)**: Represents a user's profile *within* a specific company. It contains company-specific details like position, status, and notes.
-
-### 2.2. Companies
-
--   A **Company** is the primary workspace or organization. All data such as tasks, employees, and results are scoped to a single company.
--   A user can be a member of or own multiple companies and must select one after logging in to proceed.
-
-### 2.3. Tasks (`Task`)
-
--   **Concept**: Tasks are the day-to-day operational units of work. They are atomic, actionable items assigned to a specific user with a specific due date.
--   **Eisenhower Matrix**: Tasks are categorized using the Eisenhower Matrix (`type` field) to help with prioritization:
-    -   `important-urgent`
-    -   `important-not-urgent`
-    -   `not-important-urgent`
-    -   `not-important-not-urgent`
--   **Time Tracking**: Each task has an `expectedTime` and an `actualTime` to track efficiency.
--   **Relationship**: A Task is always assigned to one `assignee` and created by one `reporter`. It can optionally be linked to a `Result` to show how daily work contributes to larger goals.
-
-### 2.4. Results (`Result`)
-
--   **Concept**: Results represent larger, strategic goals or Key Results (as in OKRs). They have a longer-term deadline and are used to track progress on significant company objectives.
--   **Hierarchy**: A Result can be broken down into smaller, measurable **Sub-Results** (`subResults`). Each sub-result is a simple checklist item (name, completed status).
--   **Relationship**: A Result is assigned to one `assignee` and created by one `reporter`. It serves as a parent container for multiple `Tasks` that contribute to its completion.
-
-### 2.5. Organizational Structure
-
--   **Concept**: Defines the company's hierarchy and reporting lines. It's a visual tool to understand who does what.
--   **Divisions (`Division`)**: The highest-level organizational units (e.g., Finance, Marketing, Operations).
--   **Departments (`Department`)**: Sub-units within a Division (e.g., the "Sales" department is in the "Public Relations" division).
--   **ЦКП (Valuable Final Product)**: A key concept for each department is its "Цінний Кінцевий Продукт" – the valuable, final output that the department is responsible for producing. This defines its purpose.
--   **Relationship**: The structure is `Division` -> `Department` -> `Employee`. An employee is assigned to one or more departments and has a manager.
-
-### 2.6. Business Processes (`Process`)
-
--   **Concept**: A visual tool for mapping and standardizing company workflows (similar to BPMN - Business Process Model and Notation).
--   **Lanes**: Each process is divided into horizontal "lanes," where each lane represents a specific role or department (e.g., "HR Manager," "Accountant").
--   **Steps**: Within each lane are individual steps that represent actions or decisions in the process. Steps are ordered and can be connected to create a flow.
--   **Data Save Points**: Certain steps can be marked as points where data is created or updated in an external system (e.g., "CRM," "Google Sheets"), providing clarity on data flow.
-
-### 2.7. Instructions (`Instruction`)
-
--   **Concept**: A knowledge base or wiki for the company. It's a collection of documents that contain guidelines, procedures, and important information.
--   **Rich Content**: Content is stored as HTML to support formatting, images, and embedded videos.
--   **Access Control**: Each instruction has an `accessList` that specifies which users can view or edit it, allowing for private or department-specific documentation.
-
-### 2.8. Templates (`Template`)
-
--   **Concept**: Used to automate the creation of recurring tasks or results.
--   **Example**: A "Weekly Report" template could automatically generate a new task every Monday for the responsible employee.
--   **Relationship**: A template is a blueprint that generates `Task` instances based on a defined schedule (`repeatability`).
-
-### 2.9. Telegram Groups
-
--   **Concept**: Allows linking company work to communication in Telegram. System notifications, task updates, and reports can be sent to linked groups.
--   **Linking**: A Telegram group is linked to the company workspace using a unique code provided by a bot.
--   **Member Mapping**: Once linked, Telegram group members can be mapped to `Employee` profiles within FINEKO.
+Основна модель взаємодії з користувачем:
+1.  Користувач входить у систему через Telegram.
+2.  Користувач обирає Компанію (робочий простір).
+3.  Користувач потрапляє на головну панель інструментів, яка за замовчуванням є сторінкою "Задачі щоденні".
 
 ---
 
-## 3. Data Models & Relationships
+## 2. Основні модулі та сутності
 
-*(These are based on the API documentation and existing types)*
+### 2.1. Автентифікація та Користувачі
 
-### User
+-   **Автентифікація**: Єдиний метод автентифікації — через Telegram. Бекенд отримує дані користувача від віджета/бота Telegram і видає токен JWT для управління сесією.
+-   **Користувач (`User`)**: Представляє особу, яка може увійти в систему. Обліковий запис користувача є глобальним і може бути пов'язаний з кількома компаніями.
+-   **Співробітник (`Employee`)**: Представляє профіль користувача *всередині* конкретної компанії. Він містить специфічні для компанії дані, такі як посада, статус та нотатки.
+
+### 2.2. Компанії
+
+-   **Компанія** — це основний робочий простір або організація. Всі дані, такі як задачі, співробітники та результати, прив'язані до однієї компанії.
+-   Користувач може бути членом або власником кількох компаній і повинен обрати одну після входу, щоб продовжити.
+
+### 2.3. Задачі (`Task`)
+
+-   **Концепція**: Задачі — це щоденні операційні одиниці роботи. Це атомарні, дієві елементи, призначені конкретному користувачеві з конкретною датою виконання.
+-   **Матриця Ейзенхауера**: Задачі класифікуються за допомогою матриці Ейзенхауера (поле `type`) для допомоги в пріоритезації:
+    -   `important-urgent` (важливі-термінові)
+    -   `important-not-urgent` (важливі-нетермінові)
+    -   `not-important-urgent` (неважливі-термінові)
+    -   `not-important-not-urgent` (неважливі-нетермінові)
+-   **Облік часу**: Кожна задача має `expectedTime` (очікуваний час) та `actualTime` (фактичний час) для відстеження ефективності.
+-   **Зв'язок**: Задача завжди призначається одному `assignee` (виконавцю) і створюється одним `reporter` (постановником). Вона може бути опціонально пов'язана з `Result` (Результатом), щоб показати, як щоденна робота сприяє досягненню більших цілей.
+
+### 2.4. Результати (`Result`)
+
+-   **Концепція**: Результати представляють більші, стратегічні цілі або Ключові Результати (як в OKR). Вони мають довгостроковий дедлайн і використовуються для відстеження прогресу у досягненні значущих цілей компанії.
+-   **Ієрархія**: Результат може бути розбитий на менші, вимірювані **Під-результати** (`subResults`). Кожен під-результат — це простий елемент чек-листа (назва, статус завершення).
+-   **Зв'язок**: Результат призначається одному `assignee` (виконавцю) і створюється одним `reporter` (постановником). Він служить батьківським контейнером для кількох `Tasks` (Задач), які сприяють його виконанню.
+
+### 2.5. Організаційна структура
+
+-   **Концепція**: Визначає ієрархію та підпорядкування в компанії. Це візуальний інструмент для розуміння, хто за що відповідає.
+-   **Відділення (`Division`)**: Найвищий рівень організаційних одиниць (наприклад, Фінанси, Маркетинг, Операційний відділ).
+-   **Відділи (`Department`)**: Підрозділи всередині Відділення (наприклад, відділ "Продажів" знаходиться у відділенні "Роботи з публікою").
+-   **ЦКП (Цінний Кінцевий Продукт)**: Ключова концепція для кожного відділу. Це цінний, фінальний продукт, за виробництво якого відповідає відділ. Це визначає його мету.
+-   **Зв'язок**: Структура має вигляд `Відділення` -> `Відділ` -> `Співробітник`. Співробітник призначається до одного або кількох відділів і має керівника.
+
+### 2.6. Бізнес-процеси (`Process`)
+
+-   **Концепція**: Візуальний інструмент для картографування та стандартизації робочих процесів компанії (схожий на BPMN - Business Process Model and Notation).
+-   **Доріжки (Lanes)**: Кожен процес розділений на горизонтальні "доріжки", де кожна доріжка представляє певну роль або відділ (наприклад, "HR-менеджер", "Бухгалтер").
+-   **Кроки (Steps)**: У межах кожної доріжки є окремі кроки, які представляють дії або рішення в процесі. Кроки впорядковані та можуть бути з'єднані для створення потоку.
+-   **Точки збереження даних**: Певні кроки можуть бути позначені як точки, де дані створюються або оновлюються у зовнішній системі (наприклад, "CRM", "Google Sheets"), що забезпечує ясність потоку даних.
+
+### 2.7. Інструкції (`Instruction`)
+
+-   **Концепція**: База знань або вікі для компанії. Це збірка документів, що містять інструкції, процедури та важливу інформацію.
+-   **Багатий контент**: Вміст зберігається у форматі HTML для підтримки форматування, зображень та вбудованих відео.
+-   **Контроль доступу**: Кожна інструкція має `accessList`, який визначає, які користувачі можуть переглядати або редагувати її, дозволяючи створювати приватну або специфічну для відділу документацію.
+
+### 2.8. Шаблони (`Template`)
+
+-   **Концепція**: Використовуються для автоматизації створення повторюваних задач або результатів.
+-   **Приклад**: Шаблон "Щотижневий звіт" може автоматично генерувати нову задачу щопонеділка для відповідального співробітника.
+-   **Зв'язок**: Шаблон — це креслення, яке генерує екземпляри `Task` на основі визначеного розкладу (`repeatability`).
+
+### 2.9. Групи Telegram
+
+-   **Концепція**: Дозволяє пов'язувати роботу компанії зі спілкуванням у Telegram. Системні сповіщення, оновлення задач та звіти можуть надсилатися до підключених груп.
+-   **Підключення**: Група Telegram підключається до робочого простору компанії за допомогою унікального коду, наданого ботом.
+-   **Зіставлення учасників**: Після підключення учасники групи Telegram можуть бути зіставлені з профілями `Employee` у FINEKO.
+
+---
+
+## 3. Моделі даних та зв'язки
+
+*(На основі документації API та існуючих типів)*
+
+### User (Користувач)
 `
 {
   "id": "string",
   "firstName": "string",
   "lastName": "string",
-  "avatar": "string (URL)",
+  "avatar": "string (посилання)",
   "telegramUserId": "string",
   "telegramUsername": "string"
 }
 `
 
-### Company
+### Company (Компанія)
 `
 {
   "id": "string",
   "name": "string",
-  "ownerId": "string (references User.id)"
+  "ownerId": "string (посилається на User.id)"
 }
 `
 
-### Employee
+### Employee (Співробітник)
 `
 {
   "id": "string",
-  "userId": "string (references User.id)",
-  "companyId": "string (references Company.id)",
+  "userId": "string (посилається на User.id)",
+  "companyId": "string (посилається на Company.id)",
   "firstName": "string",
   "lastName": "string",
-  "avatar": "string (URL)",
+  "avatar": "string (посилання)",
   "status": "'active' | 'vacation' | 'inactive'",
-  "positions": ["string (references Position.id)"],
-  "groups": ["string (references Group.id)"],
+  "positions": ["string (посилається на Position.id)"],
+  "groups": ["string (посилається на Group.id)"],
   "notes": "string"
 }
 `
 
-### Task
+### Task (Задача)
 `
 {
   "id": "string",
@@ -126,17 +126,17 @@ The primary user interaction model is:
   "dueDate": "string (YYYY-MM-DD)",
   "status": "'todo' | 'done'",
   "type": "'important-urgent' | 'important-not-urgent' | ...",
-  "expectedTime": "number (minutes)",
-  "actualTime": "number (minutes)",
+  "expectedTime": "number (хвилини)",
+  "actualTime": "number (хвилини)",
   "expectedResult": "string",
   "actualResult": "string",
-  "assigneeId": "string (references Employee.id)",
-  "reporterId": "string (references Employee.id)",
-  "resultId": "string (optional, references Result.id)"
+  "assigneeId": "string (посилається на Employee.id)",
+  "reporterId": "string (посилається на Employee.id)",
+  "resultId": "string (необов'язково, посилається на Result.id)"
 }
 `
 
-### Result
+### Result (Результат)
 `
 {
   "id": "string",
@@ -144,8 +144,8 @@ The primary user interaction model is:
   "status": "string",
   "completed": "boolean",
   "deadline": "string (YYYY-MM-DD)",
-  "assigneeId": "string (references Employee.id)",
-  "reporterId": "string (references Employee.id)",
+  "assigneeId": "string (посилається на Employee.id)",
+  "reporterId": "string (посилається на Employee.id)",
   "description": "string",
   "expectedResult": "string",
   "subResults": [
@@ -158,7 +158,7 @@ The primary user interaction model is:
 }
 `
 
-### Division
+### Division (Відділення)
 `
 {
   "id": "string",
@@ -168,19 +168,19 @@ The primary user interaction model is:
 }
 `
 
-### Department
+### Department (Відділ)
 `
 {
   "id": "string",
   "name": "string",
-  "divisionId": "string (references Division.id)",
-  "managerId": "string (optional, references Employee.id)",
-  "ckp": "string (Valuable Final Product)"
+  "divisionId": "string (посилається на Division.id)",
+  "managerId": "string (необов'язково, посилається на Employee.id)",
+  "ckp": "string (Цінний Кінцевий Продукт)"
 }
 `
-*Note: A Department-Employee link would be a join table `(departmentId, employeeId)`.*
+*Примітка: Зв'язок Відділ-Співробітник буде реалізовано через проміжну таблицю `(departmentId, employeeId)`.*
 
-### Process
+### Process (Процес)
 `
 {
     "id": "string",
@@ -188,13 +188,13 @@ The primary user interaction model is:
     "description": "string",
     "lanes": [{
         "id": "string",
-        "role": "string (e.g., 'HR Manager')",
+        "role": "string (напр., 'HR-менеджер')",
         "steps": [{
             "id": "string",
             "name": "string",
-            "responsibleId": "string (references Employee.id)",
+            "responsibleId": "string (посилається на Employee.id)",
             "order": "number",
-            "connections": [{ "to": "string (references Step.id)" }],
+            "connections": [{ "to": "string (посилається на Step.id)" }],
             "status": "'new' | 'outdated' | 'problematic' | 'ok'",
             "notes": "string",
             "isDataSavePoint": "boolean",
@@ -204,7 +204,7 @@ The primary user interaction model is:
 }
 `
 
-### Instruction
+### Instruction (Інструкція)
 `
 {
   "id": "string",
@@ -213,7 +213,7 @@ The primary user interaction model is:
   "content": "string (HTML)",
   "accessList": [
     {
-      "userId": "string (references User.id)",
+      "userId": "string (посилається на User.id)",
       "access": "'view' | 'edit'"
     }
   ]
